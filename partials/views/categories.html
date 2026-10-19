@@ -1,0 +1,318 @@
+<section id="categories" class="view hidden">
+    <div class="users-header-container">
+        <h1>Kategorien</h1>
+        <div class="users-header-actions">
+            <button class="btn-back-custom" data-target="settings">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M19 12H5"></path>
+                    <path d="M12 19l-7-7 7-7"></path>
+                </svg>
+                ZURÜCK
+            </button>
+            <button id="add-category-btn" class="btn-add-bg">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 5v14M5 12h14"></path>
+                </svg>
+                <span class="btn-label-full">KATEGORIE ANLEGEN</span>
+                <span class="btn-label-short">ANLEGEN</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Verwaiste Zuordnungen: Namen, die noch an Datensaetzen haengen,
+         zu denen es keine Kategorie mehr gibt (z. B. weil frueher
+         umbenannt wurde, bevor das automatisch nachgezogen wurde).
+         Wird nur eingeblendet, wenn wirklich etwas gefunden wurde. -->
+    <div id="orphan-categories-panel" class="orphan-panel" style="display:none;">
+        <div class="orphan-panel-head">
+            <strong>Alte Kategorie-Namen gefunden</strong>
+            <span>Diese Namen stehen noch an Datensätzen, es gibt aber keine Kategorie mehr dazu. Ziel wählen und übernehmen — der Name wird überall ersetzt.</span>
+        </div>
+        <div id="orphan-categories-list"></div>
+    </div>
+
+    <div class="user-list-container">
+        <!-- Alle elf Gruppen tragen `open`. Ohne das Attribut startet ein
+             <details> ZUGEKLAPPT - die Seite zeigte dann nur elf
+             Gruppentitel und darunter nichts, obwohl die Kategorien
+             korrekt geladen und eingehaengt waren. Wer hier eine
+             Gruppe ergaenzt: `open` nicht vergessen. -->
+        <div class="categories-grid">
+            <div class="category-group">
+                <details class="category-group-details" open>
+                    <summary class="category-group-title">
+                        <div class="group-title-content">
+                            <div class="group-icon-wrapper" id="icon-group-machine"
+                                onclick="event.stopPropagation(); document.getElementById('color-machine').click()" title="Farbe ändern">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M2 18a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2H2v4Z" />
+                                    <path d="M3 14V9a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v5" />
+                                    <path d="M13 11l5-4 5 4-2 4" />
+                                    <path d="M18 7v4" />
+                                    <circle cx="21" cy="15" r="1" />
+                                    <path d="M8 8V5a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v3" />
+                                </svg>
+                            </div>
+                            <input type="color" id="color-machine" class="hidden-color-input"
+                                onchange="updateGroupColor('machine', this.value)">
+                            <span>Maschinenkategorien</span>
+                        </div>
+                        <svg class="group-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </summary>
+                    <ul id="category-list-machine" class="user-list">
+                        <!-- Machine Categories rendered here -->
+                    </ul>
+                </details>
+            </div>
+
+            <div class="category-group">
+                <details class="category-group-details" open>
+                    <summary class="category-group-title">
+                        <div class="group-title-content">
+                            <div class="group-icon-wrapper" id="icon-group-service"
+                                onclick="event.stopPropagation(); document.getElementById('color-service').click()" title="Farbe ändern">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path
+                                        d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+                                </svg>
+                            </div>
+                            <input type="color" id="color-service" class="hidden-color-input"
+                                onchange="updateGroupColor('service', this.value)">
+                            <span>Servicekategorien</span>
+                        </div>
+                        <svg class="group-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </summary>
+                    <ul id="category-list-service" class="user-list">
+                        <!-- Service Categories rendered here -->
+                    </ul>
+                </details>
+            </div>
+
+            <div class="category-group">
+                <details class="category-group-details" open>
+                    <summary class="category-group-title">
+                        <div class="group-title-content">
+                            <div class="group-icon-wrapper" id="icon-group-contact"
+                                onclick="event.stopPropagation(); document.getElementById('color-contact').click()" title="Farbe ändern">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="9" cy="7" r="4"></circle>
+                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                                </svg>
+                            </div>
+                            <input type="color" id="color-contact" class="hidden-color-input"
+                                onchange="updateGroupColor('contact', this.value)">
+                            <span>Art des Kontaktes</span>
+                        </div>
+                        <svg class="group-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </summary>
+                    <ul id="category-list-contact" class="user-list">
+                        <!-- Contact Categories rendered here -->
+                    </ul>
+                </details>
+            </div>
+
+            <div class="category-group">
+                <details class="category-group-details" open>
+                    <summary class="category-group-title">
+                        <div class="group-title-content">
+                            <div class="group-icon-wrapper" id="icon-group-address_type"
+                                onclick="event.stopPropagation(); document.getElementById('color-address_type').click()" title="Farbe ändern">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                                    <circle cx="12" cy="10" r="3"></circle>
+                                </svg>
+                            </div>
+                            <input type="color" id="color-address_type" class="hidden-color-input"
+                                onchange="updateGroupColor('address_type', this.value)">
+                            <span>Adresstyp</span>
+                        </div>
+                        <svg class="group-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </summary>
+                    <ul id="category-list-address_type" class="user-list">
+                        <!-- Address Type Categories rendered here -->
+                    </ul>
+                </details>
+            </div>
+
+            <div class="category-group">
+                <details class="category-group-details" open>
+                    <summary class="category-group-title">
+                        <div class="group-title-content">
+                            <div class="group-icon-wrapper" id="icon-group-link"
+                                onclick="event.stopPropagation(); document.getElementById('color-link').click()" title="Farbe ändern">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+                                </svg>
+                            </div>
+                            <input type="color" id="color-link" class="hidden-color-input"
+                                onchange="updateGroupColor('link', this.value)">
+                            <span>Art der Verknüpfung</span>
+                        </div>
+                        <svg class="group-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </summary>
+                    <ul id="category-list-link" class="user-list">
+                        <!-- Link Categories rendered here -->
+                    </ul>
+                </details>
+            </div>
+
+            <div class="category-group">
+                <details class="category-group-details" open>
+                    <summary class="category-group-title">
+                        <div class="group-title-content">
+                            <div class="group-icon-wrapper" id="icon-group-document"
+                                onclick="event.stopPropagation(); document.getElementById('color-document').click()" title="Farbe ändern">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                    <polyline points="14 2 14 8 20 8"></polyline>
+                                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                                    <polyline points="10 9 9 9 8 9"></polyline>
+                                </svg>
+                            </div>
+                            <input type="color" id="color-document" class="hidden-color-input"
+                                onchange="updateGroupColor('document', this.value)">
+                            <span>Dokumententyp</span>
+                        </div>
+                        <svg class="group-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </summary>
+                    <ul id="category-list-document" class="user-list">
+                        <!-- Document Type Categories rendered here -->
+                    </ul>
+                </details>
+            </div>
+
+            <div class="category-group">
+                <details class="category-group-details" open>
+                    <summary class="category-group-title">
+                        <div class="group-title-content">
+                            <div class="group-icon-wrapper" id="icon-group-manufacturer"
+                                onclick="event.stopPropagation(); document.getElementById('color-manufacturer').click()" title="Farbe ändern">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M2 20h20"></path>
+                                    <path d="M4 20V9l6 4V9l6 4V6l4-2v16"></path>
+                                    <path d="M8 20v-4h4v4"></path>
+                                </svg>
+                            </div>
+                            <input type="color" id="color-manufacturer" class="hidden-color-input"
+                                onchange="updateGroupColor('manufacturer', this.value)">
+                            <span>Hersteller</span>
+                        </div>
+                        <svg class="group-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </summary>
+                    <ul id="category-list-manufacturer" class="user-list">
+                        <!-- Hersteller rendered here -->
+                    </ul>
+                </details>
+            </div>
+
+            <div class="category-group">
+                <details class="category-group-details" open>
+                    <summary class="category-group-title">
+                        <div class="group-title-content">
+                            <div class="group-icon-wrapper" id="icon-group-series"
+                                onclick="event.stopPropagation(); document.getElementById('color-series').click()" title="Farbe ändern">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                                    <polyline points="2 17 12 22 22 17"></polyline>
+                                    <polyline points="2 12 12 17 22 12"></polyline>
+                                </svg>
+                            </div>
+                            <input type="color" id="color-series" class="hidden-color-input"
+                                onchange="updateGroupColor('series', this.value)">
+                            <span>Maschinenserie</span>
+                        </div>
+                        <svg class="group-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </summary>
+                    <ul id="category-list-series" class="user-list">
+                        <!-- Machine Series Categories rendered here -->
+                    </ul>
+                </details>
+            </div>
+
+            <div class="category-group">
+                <details class="category-group-details" open>
+                    <summary class="category-group-title">
+                        <div class="group-title-content">
+                            <div class="group-icon-wrapper" id="icon-group-equipment"
+                                onclick="event.stopPropagation(); document.getElementById('color-equipment').click()" title="Farbe ändern">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
+                                </svg>
+                            </div>
+                            <input type="color" id="color-equipment" class="hidden-color-input"
+                                onchange="updateGroupColor('equipment', this.value)">
+                            <span>Zusatzausrüstung</span>
+                        </div>
+                        <svg class="group-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </summary>
+                    <ul id="category-list-equipment" class="user-list">
+                        <!-- Equipment Categories rendered here -->
+                    </ul>
+                </details>
+            </div>
+
+            <div class="category-group">
+                <details class="category-group-details" open>
+                    <summary class="category-group-title">
+                        <div class="group-title-content">
+                            <div class="group-icon-wrapper" id="icon-group-status"
+                                onclick="event.stopPropagation(); document.getElementById('color-status').click()" title="Farbe ändern">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
+                                    <line x1="4" y1="22" x2="4" y2="15"></line>
+                                </svg>
+                            </div>
+                            <input type="color" id="color-status" class="hidden-color-input"
+                                onchange="updateGroupColor('status', this.value)">
+                            <span>Angebots-Status</span>
+                        </div>
+                        <svg class="group-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </summary>
+                    <ul id="category-list-status" class="user-list">
+                        <!-- Angebots-Status Categories rendered here -->
+                    </ul>
+                </details>
+            </div>
+
+            <div class="category-group">
+                <details class="category-group-details" open>
+                    <summary class="category-group-title">
+                        <div class="group-title-content">
+                            <div class="group-icon-wrapper" id="icon-group-area"
+                                onclick="event.stopPropagation(); document.getElementById('color-area').click()" title="Farbe ändern">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                                    <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                                </svg>
+                            </div>
+                            <input type="color" id="color-area" class="hidden-color-input"
+                                onchange="updateGroupColor('area', this.value)">
+                            <span>Buchhaltungs-Bereiche</span>
+                        </div>
+                        <svg class="group-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </summary>
+                    <ul id="category-list-area" class="user-list">
+                        <!-- Buchhaltungs-Bereiche (Zuordnung "Andere") rendered here -->
+                    </ul>
+                </details>
+            </div>
+        </div>
+    </div>
+</section>

@@ -8,7 +8,7 @@
 // Cloudflare R2 — siehe window.deleteRentalAgreement).
 //
 // Gespeichert wird in "rental_agreements"
-// (Migration: supabase/supabase_add_rental_agreements.sql).
+// (Migration: supabase/migrationen/supabase_add_rental_agreements.sql).
 //
 // EIGENSTAENDIG: diese Datei gehört zum Mietvereinbarungs-Baustein
 // und kann mit ihm zusammen ersatzlos entfernt werden.
@@ -86,7 +86,7 @@
         const eintrag = liste.find(x => String(x.id) === String(id));
         if (!eintrag) return;
         if (typeof window.canDelete === 'function' && !window.canDelete('Mietvereinbarungen')) return;
-        if (!confirm('Diese Mietvereinbarung endgültig löschen?\n\nPDF und Fotos werden auch aus der Cloud entfernt.')) return;
+        if (!await window.appFrage('Diese Mietvereinbarung endgültig löschen?\n\nPDF und Fotos werden auch aus der Cloud entfernt.')) return;
 
         try {
             await window.deleteRentalAgreement(id);
@@ -250,7 +250,7 @@
             inhalt = `<p class="miet-liste-leer">Wird geladen …</p>`;
         } else if (zustand === 'migration') {
             inhalt = `<p class="miet-liste-leer">Die Tabelle „rental_agreements" fehlt noch.<br>
-                      Bitte <code>supabase/supabase_add_rental_agreements.sql</code> in Supabase ausführen.</p>`;
+                      Bitte <code>supabase/migrationen/supabase_add_rental_agreements.sql</code> in Supabase ausführen.</p>`;
         } else if (zustand === 'fehler') {
             inhalt = `<p class="miet-liste-leer">Die Übersicht konnte nicht geladen werden.</p>`;
         } else if (!liste.length) {

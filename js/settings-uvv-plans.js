@@ -661,7 +661,7 @@ window.initUvvWartungsplaene = function () {
 
             window.deletePlan = async function(planId) {
                 if (typeof window.canDelete === 'function' && !window.canDelete('Wartungsplänen')) return;
-                if (!confirm('Diesen Wartungsplan wirklich löschen?')) return;
+                if (!await window.appFrage('Diesen Wartungsplan wirklich löschen?')) return;
                 let custom = await loadCustomTemplates();
                 custom = custom.filter(t => t.id !== planId);
                 await saveCustomTemplates(custom);

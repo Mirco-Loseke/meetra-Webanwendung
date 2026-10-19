@@ -1,0 +1,79 @@
+<section id="listen" class="view hidden">
+    <div class="view-header-layout" style="margin-bottom: 0.5rem;">
+        <div class="view-header-row-top">
+            <div class="view-header-left">
+                <h1 style="margin: 0; font-size: 1.6rem; display:flex; align-items:center; gap:10px;"><svg width="22"
+                        height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="8" y1="6" x2="21" y2="6"></line>
+                        <line x1="8" y1="12" x2="21" y2="12"></line>
+                        <line x1="8" y1="18" x2="21" y2="18"></line>
+                        <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                        <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                        <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                    </svg>Listen</h1>
+            </div>
+            <div class="view-header-right">
+                <button id="angebote-reminder-bell" type="button" onclick="window.toggleAngeboteReminderPanel(event)" title="Angebots-Erinnerungen: fällige Nachfass-Termine dieser Liste. Eigene fälligen Erinnerungen stehen zusätzlich in „Meine Liste“." aria-label="Angebots-Erinnerungen"
+                    style="position:relative; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12); border-radius:12px; min-width:42px; height:42px; padding:0 12px; gap:8px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#fff; flex-shrink:0; transition: all 0.3s ease; font-weight:700; font-size:0.85rem;">
+                    <svg id="angebote-reminder-bell-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                    </svg>
+                    <span class="angebote-bell-text">Nachfassen</span>
+                    <span id="angebote-reminder-badge" class="hidden" style="position:absolute; top:-4px; right:-4px; background:#ef4444; color:#fff; font-size:0.65rem; font-weight:700; min-width:18px; height:18px; border-radius:9px; display:flex; align-items:center; justify-content:center; padding:0 4px; border:2px solid rgba(15,23,42,1);">0</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ansicht umschalten -->
+    <div class="listen-toolbar" style="display:flex; align-items:center; justify-content:space-between; gap:1rem; margin: 0.5rem 0; flex-wrap:nowrap; overflow-x:auto;">
+        <div class="calendar-view-tabs" style="margin: 0; flex-shrink:0;">
+            <button class="calendar-tab-btn active" id="listen-tab-btn-angebote" onclick="window.switchListenTab('angebote')">Angebote</button>
+            <button class="calendar-tab-btn" id="listen-tab-btn-maschinen" onclick="window.switchListenTab('maschinen')">Maschinen</button>
+        </div>
+        <div class="listen-filters" style="display:flex; align-items:center; gap:0.6rem; flex-wrap:nowrap; flex-shrink:0;">
+            <select id="angebote-filter-jahr" class="glass-form-input" onchange="window.renderAngeboteList()"
+                style="width:115px; height:38px; font-size:0.85rem; flex-shrink:0;">
+                <option value="">Alle Jahre</option>
+            </select>
+            <select id="angebote-filter-status" class="glass-form-input" onchange="window.renderAngeboteList()"
+                style="width:150px; height:38px; font-size:0.85rem; flex-shrink:0;">
+                <option value="">Alle Status</option>
+            </select>
+            <select id="angebote-filter-zustaendig" class="glass-form-input" onchange="window.renderAngeboteList()"
+                style="width:160px; height:38px; font-size:0.85rem; flex-shrink:0;">
+                <option value="">Alle Zuständigen</option>
+            </select>
+            <select id="angebote-filter-maschine" class="glass-form-input" onchange="window.renderAngeboteList()"
+                style="width:190px; height:38px; font-size:0.85rem; flex-shrink:0;">
+                <option value="">Alle Maschinen</option>
+            </select>
+            <input type="text" id="angebote-search-input" class="glass-form-input" placeholder="Suchen..." style="width: 180px; height: 38px; flex-shrink:0;" oninput="window.renderAngeboteList()">
+            <button type="button" class="knopf knopf--sekundaer" onclick="window.exportAngeboteXlsx()" title="Gefilterte Ansicht als formatierte Excel-Datei exportieren (inkl. Dashboard mit Diagrammen)"
+                style="flex-shrink:0;">
+                <svg width="16" height="16"viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                Excel
+            </button>
+        </div>
+    </div>
+
+    <!-- Tab: Angebote -->
+    <div id="listen-tab-content-angebote">
+        <!-- Angebote Liste -->
+        <div class="glass-card angebote-glass-card" style="padding: 0.75rem 1rem 1.5rem;">
+            <div id="angebote-list-container"></div>
+        </div>
+    </div>
+
+    <!-- Tab: Maschinen -->
+    <div id="listen-tab-content-maschinen" class="hidden">
+        <div class="glass-card" style="padding: 2rem;">
+            <h3 style="margin-bottom: 0.5rem; color: #fff;">Maschinen</h3>
+            <p style="font-size: 0.9rem; color:#fff; margin-bottom: 1.5rem;">
+                Hier entsteht die Maschinen-Liste. Folgt in Kürze.
+            </p>
+        </div>
+    </div>
+</section>

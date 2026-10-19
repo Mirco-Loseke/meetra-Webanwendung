@@ -1552,7 +1552,7 @@
 
     window.deleteTask = async function (taskId) {
         if (typeof window.canDelete === 'function' && !window.canDelete('Aufgaben')) return;
-        if (!confirm('Möchten Sie diese Aufgabe wirklich unwiderruflich löschen?')) return;
+        if (!await window.appFrage('Möchten Sie diese Aufgabe wirklich unwiderruflich löschen?')) return;
 
         try {
             await window.supabaseClient.from('subtasks').delete().eq('task_id', taskId);
@@ -1567,7 +1567,7 @@
 
     window.deleteSubtask = async function (id) {
         if (typeof window.canDelete === 'function' && !window.canDelete('Unteraufgaben')) return;
-        if (!confirm('Unteraufgabe löschen?')) return;
+        if (!await window.appFrage('Unteraufgabe löschen?')) return;
         try {
             await window.supabaseClient.from('subtasks').delete().eq('id', id);
             fetchTasks();
@@ -2505,13 +2505,13 @@
         const btn = document.getElementById(`star-${taskId}`) || document.getElementById(`star-card-${taskId}`);
         if (btn) btn.classList.add('active');
 
-        const confirmSave = confirm("Möchtest du diese Aufgabe als Schnellvorlage speichern?");
+        const confirmSave = await window.appFrage("Möchtest du diese Aufgabe als Schnellvorlage speichern?");
         if (!confirmSave) {
             if (btn) btn.classList.remove('active');
             return;
         }
 
-        const templateName = prompt("Name der Schnellvorlage:", task.title);
+        const templateName = await window.appEingabe("Name der Schnellvorlage:", task.title);
         if (!templateName) {
             if (btn) btn.classList.remove('active');
             return;

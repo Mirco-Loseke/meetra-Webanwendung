@@ -368,16 +368,32 @@
                 
                 rightY += 6;
                 doc.setFont('helvetica', 'bold');
-                doc.text(T('Betriebsstunden: '), 120, rightY);
-                const bhW = doc.getTextWidth('Betriebsstunden: ');
-                doc.setFont('helvetica', 'normal');
+                // Mehrere Stundenzähler (z. B. Maschine + Generator): je Zähler eine Zeile mit Namen — auch im leeren Ausdruck zum Ausfüllen
+                const zwWerte = (typeof window.zaehlerBerichtWerte === 'function') ? window.zaehlerBerichtWerte() : [];
+                const zwMehrere = zwWerte.length > 1 || (zwWerte.length === 1 && zwWerte[0].name && zwWerte[0].name !== 'Betriebsstunden');
                 let operatingHoursVal = document.getElementById('service-operating-hours')?.value.trim() || '';
-                if (operatingHoursVal) {
-                    operatingHoursVal = `${operatingHoursVal} (h)`;
+                if (zwMehrere) {
+                    zwWerte.forEach((z, zi) => {
+                        if (zi > 0) rightY += 6;
+                        const zl = `${T('Betriebsstunden')} ${z.name}: `;
+                        doc.setFont('helvetica', 'bold');
+                        const zw = doc.getTextWidth(zl);
+                        doc.text(zl, 120, rightY);
+                        doc.setFont('helvetica', 'normal');
+                        doc.text(z.wert ? `${z.wert} (h)` : '________________', 120 + zw, rightY);
+                    });
+                    operatingHoursVal = zwWerte.map(z => `${z.name} ${z.wert ? z.wert + ' (h)' : '________'}`).join(' / ');
                 } else {
-                    operatingHoursVal = '________________';
+                    doc.text(T('Betriebsstunden: '), 120, rightY);
+                    const bhW = doc.getTextWidth('Betriebsstunden: ');
+                    doc.setFont('helvetica', 'normal');
+                    if (operatingHoursVal) {
+                        operatingHoursVal = `${operatingHoursVal} (h)`;
+                    } else {
+                        operatingHoursVal = '________________';
+                    }
+                    doc.text(String(operatingHoursVal), 120 + bhW, rightY);
                 }
-                doc.text(String(operatingHoursVal), 120 + bhW, rightY);
 
                 if (machine && (machine.motor_type || machine.motor_serial || machine.power)) {
                     rightY += 6;
@@ -1548,7 +1564,7 @@
         };
 
         window.saveServiceberichtPDFToR2 = async function() {
-            const confirmed = confirm('Soll dieser Bericht abgeschlossen werden?\n\nAnschließend ist keine Bearbeitung mehr möglich.');
+            const confirmed = await window.appFrage('Soll dieser Bericht abgeschlossen werden?\n\nAnschließend ist keine Bearbeitung mehr möglich.');
             if (!confirmed) return;
 
             const btn = document.getElementById('btn-servicebericht-cloud-pdf');

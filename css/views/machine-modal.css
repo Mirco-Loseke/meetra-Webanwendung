@@ -163,11 +163,11 @@
 #add-machine-modal .glass-input,
 #add-machine-modal input:not([type="hidden"]):not([type="checkbox"]):not([type="file"]) {
     width: 100%;
-    padding: 11px 14px !important;
+    padding: var(--feld-pad) !important;
     font-size: var(--fs-md) !important;
-    border-radius: var(--radius-sm) !important;
-    background: rgba(255, 255, 255, 0.035) !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: var(--feld-radius) !important;
+    background: var(--feld-bg) !important;
+    border: 1px solid var(--feld-rand) !important;
     color: #fff !important;
     font-family: var(--font-body);
     transition: border-color 0.18s, background 0.18s, box-shadow 0.18s;
@@ -187,9 +187,9 @@
 #add-machine-modal .glass-input:focus,
 #add-machine-modal input:not([type="hidden"]):not([type="checkbox"]):not([type="file"]):focus {
     outline: none;
-    border-color: rgba(52, 211, 153, 0.65) !important;
-    background: rgba(52, 211, 153, 0.06) !important;
-    box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.14) !important;
+    border-color: var(--feld-fokus-rand) !important;
+    background: var(--feld-fokus-bg) !important;
+    box-shadow: var(--feld-fokus-ring) !important;
 }
 /* Sage-Suchfelder: vorher greller weißer 2px-Rahmen mit Glow — sticht
    aus dem Glas-Look heraus. Jetzt dezent grün als "hier startest du". */

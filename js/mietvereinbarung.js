@@ -2031,7 +2031,7 @@
                 || /does not exist|could not find .* column|schema cache/i.test(e.message || ''));
             if (fehlt) {
                 window.showToast('Datenbank-Spalte/Tabelle fehlt: ' + (e.message || e.code)
-                    + ' — supabase/supabase_mietvereinbarung_komplett.sql prüfen.');
+                    + ' — supabase/migrationen/supabase_mietvereinbarung_komplett.sql prüfen.');
             } else {
                 // Supabase liefert die eigentliche Ursache oft erst in
                 // details/hint/code — ohne die tappt man im Dunkeln.
@@ -2134,7 +2134,7 @@
         } catch (e) {
             console.warn('Historie zur Mietvereinbarung nicht geschrieben:', e && e.message);
             if (/rental_agreement_id|rental_phase|type_check/.test((e && e.message) || '')) {
-                window.showToast('Historie-Eintrag fehlt: supabase/supabase_add_rental_history.sql in Supabase ausführen.');
+                window.showToast('Historie-Eintrag fehlt: supabase/migrationen/supabase_add_rental_history.sql in Supabase ausführen.');
             }
         }
     }
@@ -2832,10 +2832,10 @@
         entwurfMerken();
     };
 
-    window.mietSchadenWeg = function (i) {
+    window.mietSchadenWeg = async function (i) {
         const z = daten.schaeden[i];
         const voll = z && (String(z.nr || '').trim() || String(z.position || '').trim() || String(z.beschreibung || '').trim());
-        if (voll && !confirm('Zeile ' + (z.nr || i + 1) + ' „' + (z.position || z.beschreibung || '') + '“ entfernen?')) return;
+        if (voll && !await window.appFrage('Zeile ' + (z.nr || i + 1) + ' „' + (z.position || z.beschreibung || '') + '“ entfernen?')) return;
         daten.schaeden.splice(i, 1);
         // Eine leere Zeile bleibt immer stehen — sonst gäbe es nichts zum Eintippen.
         if (!daten.schaeden.length) daten.schaeden.push({ nr: '', position: '', beschreibung: '' });

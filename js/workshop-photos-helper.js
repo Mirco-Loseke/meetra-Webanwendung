@@ -217,7 +217,7 @@ window.handleAppendPhotoSelect = async function (event) {
 };
 
 window.updateWorkshopPhotoTitle = async function (entryId, currentTitle) {
-    const newTitle = prompt("Neuen Titel eingeben:", currentTitle);
+    const newTitle = await window.appEingabe("Neuen Titel eingeben:", currentTitle);
     if (newTitle === null || newTitle.trim() === "" || newTitle === currentTitle) return;
 
     try {

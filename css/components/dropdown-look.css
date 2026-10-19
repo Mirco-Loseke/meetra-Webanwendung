@@ -46,8 +46,8 @@
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 10px 44px 10px 18px;
-    border-radius: var(--radius-pill);
+    padding: 10px 44px 10px 14px;
+    border-radius: var(--feld-radius);
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.1);
     font-family: var(--font-body);
@@ -269,8 +269,8 @@
 .ab-select,
 select.glass-input,
 select.glass-form-input {
-    padding: 10px 44px 10px 18px;
-    border-radius: var(--radius-pill);
+    padding: 10px 44px 10px 14px;
+    border-radius: var(--feld-radius);
     border: 1px solid rgba(255, 255, 255, 0.1);
     background-color: rgba(255, 255, 255, 0.05);
     color: #fff;
@@ -306,3 +306,8 @@ select.glass-form-input option {
     background: #0f172a;
     color: #fff;
 }
+
+/* UI-07: Auswahlfelder IN Formularen haben den Radius der Textfelder (--feld-radius).
+   Filter-Leisten (Listen, Adressbuch) bleiben bewusst Pillen. */
+.custom-filter-dropdown,
+.ab-select { border-radius: var(--radius-pill); padding-left: 18px; }

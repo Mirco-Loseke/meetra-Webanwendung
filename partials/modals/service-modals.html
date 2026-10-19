@@ -1,0 +1,685 @@
+<div id="report-type-modal" class="modal-backdrop hidden">
+    <div class="modal-content" style="max-width: 500px;">
+        <h2>Was möchten Sie anlegen?</h2>
+        <div class="report-type-options" style="display: grid; gap: 1rem; margin-top: 1.5rem;">
+            <button class="report-type-btn" onclick="startReportCreation('servicebericht')">
+                <div class="icon">📄</div>
+                <div class="text">
+                    <strong>Servicebericht</strong>
+                    <span>Standard Wartung oder Reparatur</span>
+                </div>
+            </button>
+            <button class="report-type-btn" onclick="startReportCreation('eingangsprotokoll')">
+                <div class="icon">📥</div>
+                <div class="text">
+                    <strong>Eingangsprotokoll</strong>
+                    <span>Checkliste bei Maschinenankunft</span>
+                </div>
+            </button>
+            <button class="report-type-btn" onclick="startReportCreation('abnahmeprotokoll')">
+                <div class="icon">✅</div>
+                <div class="text">
+                    <strong>Abnahmeprotokoll</strong>
+                    <span>Übergabe an den Kunden</span>
+                </div>
+            </button>
+            <!-- MIETVEREINBARUNG (3/3b) — diesen Knopf loeschen = weg -->
+            <button class="report-type-btn" onclick="startReportCreation('mietvereinbarung')">
+                <div class="icon">🔑</div>
+                <div class="text">
+                    <strong>Mietvereinbarung</strong>
+                    <span>Vermietung: Übergabe und Rücknahme</span>
+                </div>
+            </button>
+        </div>
+        <div class="modal-actions" style="margin-top: 2rem;">
+            <button class="btn-secondary" onclick="closeReportTypeModal()">Abbrechen</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal 2: Create Servicebericht Form -->
+<div id="servicebericht-modal" class="modal-backdrop hidden">
+    <div class="modal-content" style="max-width: 800px; width: 95%;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <h2 style="margin: 0;">Neuer Servicebericht</h2>
+            <button class="btn-close-modal" onclick="closeServiceberichtModal()">&times;</button>
+        </div>
+
+        <div class="modal-scroll-area">
+            <form id="servicebericht-form">
+                <input type="hidden" id="service-report-title" value="Servicebericht">
+
+                <!-- Verknüpfung mit einem bestehenden Bericht derselben Maschine.
+                     Inhalt kommt aus window.renderServiceLinkField
+                     (js/service-report-form.js); beim Anlegen ausgeblendet. -->
+                <div class="form-section" id="service-link-field" style="display:none;"></div>
+
+                <!-- Step 1: Machine Selection -->
+                <div class="form-section">
+                    <label>Maschine auswählen</label>
+                    <div class="machine-selector-wrapper">
+                        <div class="search-input-container">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                            </svg>
+                            <input type="text" id="service-machine-search" class="glass-form-input"
+                                placeholder="Maschine suchen..." oninput="filterServiceMachines()">
+                        </div>
+                        <div id="service-machine-list" class="selectable-list">
+                            <!-- Machines populated via JS -->
+                        </div>
+                        <input type="hidden" id="selected-machine-id" required>
+
+                        <!-- Machine Preview (Restored) -->
+                        <div id="selected-machine-preview" class="hidden"
+                            style="margin-top: 1.5rem; padding: 1.5rem; background: rgba(0, 150, 64, 0.1); border: 2px solid var(--color-primary-green); border-radius: 16px; position: relative;">
+                            <div id="selection-lock-hint" class="hidden"
+                                style="position: absolute; top: -12px; right: 20px; background: var(--color-primary-green); color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 800; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                                </svg>
+                                FIXIERT
+                            </div>
+                            <div style="display: flex; gap: 1.5rem; align-items: center;">
+                                <div id="preview-image"
+                                    style="width: 80px; height: 80px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); overflow: hidden; background: rgba(255,255,255,0.05);">
+                                </div>
+                                <div style="flex: 1; min-width: 0;">
+                                    <div id="preview-name"
+                                        style="font-weight: 800; font-size: 1.5rem; color: white; line-height: 1.2; word-break: break-word;">
+                                    </div>
+                                    <div id="preview-category"
+                                        style="font-size: 1.05rem; font-weight: 700; color: var(--color-primary-green); margin-top: 6px; letter-spacing: 0.3px;">
+                                    </div>
+                                    <div id="preview-serial"
+                                        style="color: rgba(255,255,255,0.4); font-size: 0.8rem; margin-top: 4px;">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Customer & Address Preview -->
+                        <div id="selected-machine-customer-preview" class="hidden"
+                            style="margin-top: 1rem; padding: 1.25rem; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px;">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+                                <div style="font-weight: 700; font-size: 0.95rem; color: white;" id="service-customer-name">Kunde</div>
+                                <button type="button" onclick="window.openMapsRouteForBetreiber()" title="Route in Google Maps öffnen" style="background: none; border: none; cursor: pointer; padding: 2px 4px; color: #be1e2d; flex-shrink: 0; display: flex; align-items: center; gap: 4px;">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                                    <span style="font-size: 0.82rem; color: #3b82f6; font-weight: 600; white-space: nowrap;">Google Route</span>
+                                </button>
+                            </div>
+                            <div style="font-size: 0.9rem; color: rgba(255,255,255,0.6); line-height: 1.4;" id="service-customer-address">Adresse</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Ansprechpartner -->
+                        <div style="margin-top: 1rem;">
+                            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.4rem;">
+                                <span style="font-size:0.72rem; font-weight:700; color:rgba(255,255,255,0.5); text-transform:uppercase; letter-spacing:0.5px;">Ansprechpartner</span>
+                                <button type="button" id="btn-show-cp-suggestions" class="btn-secondary knopf--klein" onclick="window.toggleServiceCpSuggestions()" style="display:none; white-space:nowrap;">Hinterlegte</button>
+                            </div>
+                            <div id="service-cp-suggestions" style="display:none; margin-bottom:0.5rem; padding:0.6rem; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px;">
+                                <div style="font-size:0.68rem; color:rgba(255,255,255,0.4); margin-bottom:5px; text-transform:uppercase; letter-spacing:0.5px;">Hinterlegte Ansprechpartner</div>
+                                <div id="service-cp-suggestion-chips" style="display:flex; flex-wrap:wrap; gap:5px;"></div>
+                            </div>
+                            <div id="service-contact-persons-list"></div>
+                        </div>
+
+                        <!-- Standort & Hotel Buttons in einer Reihe -->
+                        <div style="display:flex; gap:0.5rem; margin-top:1rem;">
+                            <button type="button" id="btn-toggle-location" class="btn-secondary" onclick="window.toggleLocationFields()" style="flex:1;">+ Abw. Maschinenstandort</button>
+                            <button type="button" id="btn-toggle-hotel" class="btn-secondary" onclick="window.toggleHotelFields()" style="flex:1;">+ Hotel hinzufügen</button>
+                        </div>
+
+                        <!-- Maschinenstandort Fields -->
+                        <div id="service-location-fields-wrapper" class="hidden" style="margin-top: 1rem; padding: 1.25rem; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                                <div style="font-weight: 700; font-size: 0.95rem; color: white;">Maschinenstandort</div>
+                                <button type="button" onclick="window.openMapsRouteForLocation()" title="Route in Google Maps öffnen" style="background: none; border: none; cursor: pointer; padding: 2px 4px; color: #be1e2d; flex-shrink: 0; display: flex; align-items: center; gap: 4px;">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                                    <span style="font-size: 0.82rem; color: #3b82f6; font-weight: 600; white-space: nowrap;">Google Route</span>
+                                </button>
+                            </div>
+                            <div style="margin-bottom: 0.75rem;">
+                                <label style="font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-bottom: 4px; display: block;">Firma / Name (Maschinenstandort)</label>
+                                <input type="text" id="service-location-company" class="glass-form-input" placeholder="Adresse suchen oder frei eingeben (z.B. Baustelle XY)" autocomplete="off" oninput="window.searchServiceLocation()">
+                                <div id="service-location-suggestions" class="suggestions-box" style="display:none; position: absolute; z-index: 99999; max-height: 240px; overflow-y: auto;"></div>
+                            </div>
+                            <div class="responsive-grid-location">
+                                <div>
+                                    <label style="font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-bottom: 4px; display: block;">Straße & Hausnr.</label>
+                                    <input type="text" id="service-location-street" class="glass-form-input" placeholder="Straße & Hausnr.">
+                                </div>
+                                <div>
+                                    <label style="font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-bottom: 4px; display: block;">PLZ</label>
+                                    <input type="text" id="service-location-zip" class="glass-form-input" placeholder="PLZ">
+                                </div>
+                                <div>
+                                    <label style="font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-bottom: 4px; display: block;">Ort</label>
+                                    <input type="text" id="service-location-city" class="glass-form-input" placeholder="Ort">
+                                </div>
+                            </div>
+                            <div style="margin-top: 0.75rem;">
+                                <label style="font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-bottom: 4px; display: block;">Land</label>
+                                <input type="text" id="service-location-country" class="glass-form-input" placeholder="Deutschland">
+                            </div>
+                        </div>
+
+                        <!-- Hotel / Unterkunft Fields -->
+                        <div id="service-hotel-fields-wrapper" class="hidden" style="margin-top: 1rem; padding: 1.25rem; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                                <div style="font-weight: 700; font-size: 0.95rem; color: white;">Hotel / Unterkunft</div>
+                                <button type="button" onclick="window.openMapsRouteForHotel()" title="Route in Google Maps öffnen" style="background: none; border: none; cursor: pointer; padding: 2px 4px; color: #be1e2d; flex-shrink: 0; display: flex; align-items: center; gap: 4px;">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                                    <span style="font-size: 0.82rem; color: #3b82f6; font-weight: 600; white-space: nowrap;">Google Route</span>
+                                </button>
+                            </div>
+                            <div style="margin-bottom: 0.75rem;">
+                                <label style="font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-bottom: 4px; display: block;">Firma / Name (Hotel)</label>
+                                <input type="text" id="service-hotel-company" class="glass-form-input" placeholder="z.B. Hotel Mustername">
+                            </div>
+                            <div class="responsive-grid-location">
+                                <div>
+                                    <label style="font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-bottom: 4px; display: block;">Straße & Hausnr.</label>
+                                    <input type="text" id="service-hotel-street" class="glass-form-input" placeholder="Straße & Hausnr.">
+                                </div>
+                                <div>
+                                    <label style="font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-bottom: 4px; display: block;">PLZ</label>
+                                    <input type="text" id="service-hotel-zip" class="glass-form-input" placeholder="PLZ">
+                                </div>
+                                <div>
+                                    <label style="font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-bottom: 4px; display: block;">Ort</label>
+                                    <input type="text" id="service-hotel-city" class="glass-form-input" placeholder="Ort">
+                                </div>
+                            </div>
+                            <div style="margin-top: 0.75rem;">
+                                <label style="font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-bottom: 4px; display: block;">Land</label>
+                                <input type="text" id="service-hotel-country" class="glass-form-input" placeholder="Deutschland">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gruppe 1: Betriebsstunden / Werkstattauftrag / Datum -->
+                <div class="collapsible-section" style="margin-top: 1.5rem;">
+                    <div id="service-group-1-header" class="section-header" onclick="toggleServiceReportSection(this)"
+                        style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 12px 16px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; margin-bottom: 1rem; transition: all 0.2s;"
+                        onmouseover="this.style.background='rgba(255,255,255,0.08)'; this.style.borderColor='rgba(255,255,255,0.15)'"
+                        onmouseout="this.style.background='rgba(255,255,255,0.04)'; this.style.borderColor='rgba(255,255,255,0.08)'">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <h3 class="section-title"
+                                style="margin: 0; font-size: 1.1rem; border-bottom: none; padding-bottom: 0;">1. Betriebsstunden / Werkstattauftrag / Datum</h3>
+                        </div>
+                        <svg class="toggle-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                            style="transition: transform 0.3s ease; opacity: 0.6;">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                    </div>
+                    <div class="section-content" style="display: none; transition: all 0.3s ease;">
+                        <!-- Einheitliches Raster (css/views/service-reports.css → .sb-raster):
+                             Beschriftung immer über dem Feld, alle Felder gleich hoch,
+                             PC zwei Spalten, Handy eine. -->
+                        <div class="sb-raster service-date-row">
+                            <div class="sb-feld">
+                                <label for="service-operating-hours">Betriebsstunden (h)</label>
+                                <input type="text" id="service-operating-hours" class="glass-form-input" inputmode="decimal" placeholder="z. B. 1450">
+                            </div>
+                            <div class="sb-feld">
+                                <label for="service-workshop-order-suffix">Werkstattauftrag (optional)</label>
+                                <div class="glass-form-input sb-wa">
+                                    <span>202</span>
+                                    <input type="text" id="service-workshop-year-digit" maxlength="1" inputmode="numeric" class="sb-wa-jahr" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+                                    <span>-40</span>
+                                    <input type="text" id="service-workshop-order-suffix" placeholder="000" maxlength="3" inputmode="numeric" class="sb-wa-nr" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+                                </div>
+                            </div>
+                            <div class="sb-feld">
+                                <label for="service-date-start">Datum von</label>
+                                <input type="date" id="service-date-start" class="glass-form-input" required>
+                            </div>
+                            <div class="sb-feld">
+                                <label for="service-date-end">Datum bis</label>
+                                <input type="date" id="service-date-end" class="glass-form-input">
+                            </div>
+                            <div class="sb-feld">
+                                <label for="service-next-maintenance-override">Nächste Wartung manuell (optional)</label>
+                                <input type="date" id="service-next-maintenance-override" class="glass-form-input">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gruppe 2: Fehlermeldung / Kategorie / Techniker -->
+                <div class="collapsible-section" style="margin-top: 1.5rem;">
+                    <div id="service-group-2-header" class="section-header" onclick="toggleServiceReportSection(this)"
+                        style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 12px 16px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; margin-bottom: 1rem; transition: all 0.2s;"
+                        onmouseover="this.style.background='rgba(255,255,255,0.08)'; this.style.borderColor='rgba(255,255,255,0.15)'"
+                        onmouseout="this.style.background='rgba(255,255,255,0.04)'; this.style.borderColor='rgba(255,255,255,0.08)'">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <h3 class="section-title"
+                                style="margin: 0; font-size: 1.1rem; border-bottom: none; padding-bottom: 0;">2. Fehlermeldung / Kategorie / Techniker</h3>
+                        </div>
+                        <svg class="toggle-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                            style="transition: transform 0.3s ease; opacity: 0.6;">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                    </div>
+                    <div class="section-content" style="display: none; transition: all 0.3s ease;">
+                        <div class="form-group" style="margin-top: 1rem; margin-bottom: 1.5rem; width: 100%;">
+                            <textarea id="service-description" rows="4" class="glass-form-input"
+                                style="width: 100%; box-sizing: border-box; display: block;"
+                                placeholder="z.B. Fehlerbeschreibung oder Tätigkeitsbericht eintragen..." required></textarea>
+                        </div>
+
+                        <div class="form-group" style="margin-top: 1.5rem; margin-bottom: 1.5rem;">
+                            <label>Kategorie</label>
+                            <div id="service-category-wrapper" style="position: relative;">
+                                <div id="service-category-trigger" class="glass-select"
+                                    style="cursor: pointer; display: flex; align-items: center; justify-content: space-between;"
+                                    onclick="toggleServiceCategoryDropdown(event)">
+                                    <span id="service-category-text">Bitte wählen...</span>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="6 9 12 15 18 9"></polyline>
+                                    </svg>
+                                </div>
+                                <input type="hidden" id="service-category-id">
+
+                                <div id="service-category-dropdown" class="user-dropdown-menu"
+                                    style="width: 100%; top: 105%; right: auto; left: 0; z-index: 100;">
+                                    <ul id="service-category-list">
+                                        <!-- Populated by JS -->
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section" style="margin-top: 1.5rem; margin-bottom: 1.5rem;">
+                            <label>Techniker auswählen</label>
+                            <div class="tech-dropdown-wrapper" id="tech-dropdown-wrapper" style="position: relative;">
+                                <!-- Trigger -->
+                                <div class="tech-dropdown-trigger" id="tech-dropdown-trigger" onclick="toggleTechDropdown()"
+                                    style="display: flex; align-items: center; flex-wrap: wrap; gap: 6px; min-height: 48px; padding: 8px 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; cursor: pointer; transition: border-color 0.2s; user-select: none;">
+                                    <div id="tech-selected-pills"
+                                        style="display: flex; flex-wrap: wrap; gap: 6px; flex: 1;"></div>
+                                    <div style="display: flex; align-items: center; gap: 6px; color: rgba(255,255,255,0.4); font-size: 0.88rem; margin-left: auto;"
+                                        id="tech-placeholder-text">Techniker wählen...</div>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                        stroke="rgba(255,255,255,0.4)" stroke-width="2.5" stroke-linecap="round"
+                                        stroke-linejoin="round" style="flex-shrink:0;">
+                                        <polyline points="6 9 12 15 18 9"></polyline>
+                                    </svg>
+                                </div>
+
+                                <!-- Dropdown Panel -->
+                                <div id="tech-dropdown-panel"
+                                    style="display: none; position: absolute; top: calc(100% + 6px); left: 0; right: 0; background: rgba(15,23,42,0.97); border: 1px solid rgba(255,255,255,0.12); border-radius: 14px; z-index: 200; backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); max-height: 240px; overflow-y: auto; box-shadow: 0 16px 48px rgba(0,0,0,0.5);">
+                                    <div id="tech-option-list" style="padding: 8px;"></div>
+                                </div>
+                            </div>
+                            <input type="hidden" id="selected-technician-ids">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gruppe 2.5: Zusatzprotokoll (Wartungsplan / UVV) -->
+                <div id="service-checklist-section" class="collapsible-section" style="margin-top: 1.5rem; display: none;">
+                    <div id="service-group-checklist-header" class="section-header" onclick="toggleServiceReportSection(this)"
+                        style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 12px 16px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; margin-bottom: 1rem; transition: all 0.2s;"
+                        onmouseover="this.style.background='rgba(255,255,255,0.08)'; this.style.borderColor='rgba(255,255,255,0.15)'"
+                        onmouseout="this.style.background='rgba(255,255,255,0.04)'; this.style.borderColor='rgba(255,255,255,0.08)'">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <h3 class="section-title"
+                                style="margin: 0; font-size: 1.1rem; border-bottom: none; padding-bottom: 0; color: var(--secondary-green);">Zusatzprotokoll (Wartung / UVV / Einweisung)</h3>
+                        </div>
+                        <svg class="toggle-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                            style="transition: transform 0.3s ease; opacity: 0.6;">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                    </div>
+                    <div class="section-content" style="display: none; transition: all 0.3s ease;">
+                         <div class="form-group" style="margin-top: 1rem; margin-bottom: 1rem;">
+                             <label style="color: rgba(255,255,255,0.7); font-weight: 600; font-size: 0.95rem; margin-bottom: 0.5rem; display: block;">Wartungspläne, UVV-Protokolle und Einweisungserklärungen aktivieren (Mehrfachauswahl möglich)</label>
+                             <div id="service-checklist-selector-container" style="display: flex; flex-direction: column; gap: 8px; margin-top: 0.5rem; margin-bottom: 1rem;">
+                                 <!-- Populated dynamically -->
+                             </div>
+                         </div>
+
+                        <div id="checklist-questions-container">
+                            <!-- Dynamically populated checklist items table -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gruppe 3: Arbeitszeit und Fahrzeit -->
+                <div class="collapsible-section" style="margin-top: 1.5rem;">
+                    <div id="service-group-3-header" class="section-header" onclick="toggleServiceReportSection(this)"
+                        style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 12px 16px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; margin-bottom: 1rem; transition: all 0.2s;"
+                        onmouseover="this.style.background='rgba(255,255,255,0.08)'; this.style.borderColor='rgba(255,255,255,0.15)'"
+                        onmouseout="this.style.background='rgba(255,255,255,0.04)'; this.style.borderColor='rgba(255,255,255,0.08)'">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <h3 class="section-title"
+                                style="margin: 0; font-size: 1.1rem; border-bottom: none; padding-bottom: 0;">3. Arbeitszeit und Fahrzeit</h3>
+                        </div>
+                        <svg class="toggle-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                            style="transition: transform 0.3s ease; opacity: 0.6;">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                    </div>
+                    <div class="section-content" style="display: none; transition: all 0.3s ease;">
+                        <div class="form-row responsive-grid-2"
+                            style="margin-top: 1rem; align-items: end; margin-bottom: 1rem;">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label for="service-driving-distance">Gefahrene Kilometer (km)</label>
+                                <input type="number" step="0.1" id="service-driving-distance" class="glass-form-input" placeholder="z.B. 45.5" oninput="if(window.syncDrivingDistanceToTable) window.syncDrivingDistanceToTable(this.value)">
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label for="service-driving-time">Fahrzeit (Minuten / Stunden)</label>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <input type="text" id="service-driving-time" class="glass-form-input" placeholder="z.B. 90" style="flex: 1;" oninput="if (typeof window.updateDrivingTimeHoursPreview === 'function') window.updateDrivingTimeHoursPreview()" onfocus="if (typeof window.unformatDrivingTimeInput === 'function') window.unformatDrivingTimeInput()" onblur="if (typeof window.formatDrivingTimeInput === 'function') window.formatDrivingTimeInput()">
+                                    <span style="font-size: 1.1rem; color: rgba(255,255,255,0.4);">/</span>
+                                    <span id="service-driving-time-hours-preview" style="font-size: 1rem; color: #fff; font-weight: 600; min-width: 70px;">- Std.</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="margin-top: 0.75rem; margin-bottom: 1.5rem;">
+                            <button type="button" class="btn-secondary knopf--klein" onclick="window.calculateServiceRoute()">
+                                🚗 Route & Fahrzeit automatisch schätzen
+                            </button>
+                        </div>
+
+                        <div class="form-section" style="margin-top: 1.5rem; margin-bottom: 1.5rem;">
+                            <label style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="display: flex; align-items: center; gap: 8px;">
+                                    Arbeitszeit- & Fahrzeit-Protokoll
+                                    <button type="button" onclick="window.showWorkLogSummary()" title="Stundenübersicht anzeigen" style="width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.3); background: transparent; color: rgba(255,255,255,0.7); font-size: 0.75rem; font-weight: 700; font-style: italic; font-family: Georgia, serif; line-height: 1; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;">i</button>
+                                </span>
+                                <div class="btn-row-responsive">
+                                    <button type="button" class="btn-secondary knopf--klein" onclick="window.addWorkLogTableRow(null, 'Anfahrt')">
+                                        ➕ Anfahrt
+                                    </button>
+                                    <button type="button" class="btn-secondary knopf--klein" onclick="window.addWorkLogTableRow(null, 'Arbeitszeit')">
+                                        ➕ Arbeitszeit
+                                    </button>
+                                    <button type="button" class="btn-secondary knopf--klein" onclick="window.addWorkLogTableRow(null, 'Abfahrt')">
+                                        ➕ Abfahrt
+                                    </button>
+                                </div>
+                            </label>
+                            <div class="work-log-scroll" style="overflow-x: auto; background: rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 8px; margin-top: 8px;">
+                                <table class="work-log-table" style="width: 100%; border-collapse: collapse; min-width: 650px;">
+                                    <thead>
+                                        <tr style="border-bottom: 1.5px solid rgba(255,255,255,0.15);">
+                                            <th style="padding: 10px; text-align: left; font-size: 0.85rem; color: rgba(255,255,255,0.6); font-weight: 700; width: 18%;">Datum</th>
+                                            <th style="padding: 10px; text-align: left; font-size: 0.85rem; color: rgba(255,255,255,0.6); font-weight: 700; width: 18%;">Typ</th>
+                                            <th style="padding: 10px; text-align: left; font-size: 0.85rem; color: rgba(255,255,255,0.6); font-weight: 700; width: 14%;">Pause</th>
+                                            <th style="padding: 10px; text-align: left; font-size: 0.85rem; color: rgba(255,255,255,0.6); font-weight: 700; width: 30%;">Fahr.- / Arbeitszeit</th>
+                                            <th style="padding: 10px; text-align: left; font-size: 0.85rem; color: rgba(255,255,255,0.6); font-weight: 700; width: 14%;">Kilometer</th>
+                                            <th style="padding: 10px; text-align: center; font-size: 0.85rem; color: rgba(255,255,255,0.6); width: 6%;">Aktion</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="service-work-log-table-body">
+                                        <!-- Dynamic rows loaded here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gruppe 4: Arbeiten und Material -->
+                <div class="collapsible-section" style="margin-top: 1.5rem;">
+                    <div id="service-group-4-header" class="section-header" onclick="toggleServiceReportSection(this)"
+                        style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 12px 16px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; margin-bottom: 1rem; transition: all 0.2s;"
+                        onmouseover="this.style.background='rgba(255,255,255,0.08)'; this.style.borderColor='rgba(255,255,255,0.15)'"
+                        onmouseout="this.style.background='rgba(255,255,255,0.04)'; this.style.borderColor='rgba(255,255,255,0.08)'">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <h3 class="section-title"
+                                style="margin: 0; font-size: 1.1rem; border-bottom: none; padding-bottom: 0;">4. Arbeiten und Material</h3>
+                        </div>
+                        <svg class="toggle-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                            style="transition: transform 0.3s ease; opacity: 0.6;">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                    </div>
+                    <div class="section-content" style="display: none; transition: all 0.3s ease;">
+                        <!-- Subsection: Arbeiten -->
+                        <div class="form-section" style="margin-top: 1rem; margin-bottom: 1.5rem;">
+                            <label style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <span style="font-weight: 600; font-size: 0.95rem; color: #fff;">Arbeiten</span>
+                                <button type="button" class="btn-secondary knopf--klein" onclick="window.addTasksTableRow()">
+                                    ➕ Arbeit hinzufügen
+                                </button>
+                            </label>
+                            <div style="overflow-x: auto; background: rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 8px;">
+                                <table style="width: 100%; border-collapse: collapse;">
+                                    <thead>
+                                        <tr style="border-bottom: 1.5px solid rgba(255,255,255,0.15);">
+                                            <th style="padding: 10px; text-align: left; font-size: 0.85rem; color: rgba(255,255,255,0.6); font-weight: 700; width: 75%;">Aufgabe</th>
+                                            <th style="padding: 10px; text-align: center; font-size: 0.85rem; color: rgba(255,255,255,0.6); font-weight: 700; width: 15%;">Erledigt</th>
+                                            <th style="padding: 10px; text-align: center; font-size: 0.85rem; color: rgba(255,255,255,0.6); width: 10%;">Aktion</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="service-tasks-table-body">
+                                        <!-- Dynamic rows loaded here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Subsection: Materialien -->
+                        <div class="form-section" style="margin-top: 1.5rem; margin-bottom: 1rem;">
+                            <label style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <span style="font-weight: 600; font-size: 0.95rem; color: #fff;">Materialien</span>
+                                <button type="button" class="btn-secondary knopf--klein" onclick="window.addMaterialsTableRow()">
+                                    ➕ Material hinzufügen
+                                </button>
+                            </label>
+                            <div style="overflow-x: auto; background: rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 8px;">
+                                <table style="width: 100%; border-collapse: collapse;">
+                                    <thead>
+                                        <tr style="border-bottom: 1.5px solid rgba(255,255,255,0.15);">
+                                            <th style="padding: 10px; text-align: left; font-size: 0.85rem; color: rgba(255,255,255,0.6); font-weight: 700; width: 25%;">Artikelnummer</th>
+                                            <th style="padding: 10px; text-align: left; font-size: 0.85rem; color: rgba(255,255,255,0.6); font-weight: 700; width: 50%;">Beschreibung</th>
+                                            <th style="padding: 10px; text-align: left; font-size: 0.85rem; color: rgba(255,255,255,0.6); font-weight: 700; width: 15%;">Menge</th>
+                                            <th style="padding: 10px; text-align: center; font-size: 0.85rem; color: rgba(255,255,255,0.6); width: 10%;">Aktion</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="service-materials-table-body">
+                                        <!-- Dynamic rows loaded here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gruppe 5: Dokumente und Unterschrift -->
+                <div class="collapsible-section" style="margin-top: 1.5rem;">
+                    <div id="service-group-5-header" class="section-header" onclick="toggleServiceReportSection(this)"
+                        style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 12px 16px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; margin-bottom: 1rem; transition: all 0.2s;"
+                        onmouseover="this.style.background='rgba(255,255,255,0.08)'; this.style.borderColor='rgba(255,255,255,0.15)'"
+                        onmouseout="this.style.background='rgba(255,255,255,0.04)'; this.style.borderColor='rgba(255,255,255,0.08)'">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <h3 class="section-title"
+                                style="margin: 0; font-size: 1.1rem; border-bottom: none; padding-bottom: 0;">5. Dokumente, Bemerkungen &amp; Unterschriften</h3>
+                        </div>
+                        <svg class="toggle-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                            style="transition: transform 0.3s ease; opacity: 0.6;">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                    </div>
+                    <div class="section-content" style="display: none; transition: all 0.3s ease;">
+                        <div class="form-section" style="margin-top: 1rem; margin-bottom: 1.5rem;">
+                            <label>Bilder & Dokumente</label>
+                            <div class="file-drop-zone" id="service-file-dropzone">
+                                <input type="file" id="service-file-input" multiple class="hidden-file-input">
+                                <div class="drop-zone-content">
+                                    <span class="icon">📁</span>
+                                    <p>Dateien hierher ziehen oder klicken</p>
+                                </div>
+                            </div>
+                            <div id="service-file-previews" class="file-preview-grid"></div>
+                        </div>
+
+                        <div class="form-section" style="margin-top: 1.5rem; margin-bottom: 1.5rem;">
+                            <label for="service-remarks">Bemerkungen</label>
+                            <textarea id="service-remarks" rows="4" class="glass-form-input"
+                                placeholder="Zusätzliche Bemerkungen..."></textarea>
+                        </div>
+
+                        <div class="form-section" style="margin-top: 1.5rem; padding-top: 1rem; margin-bottom: 1.5rem;">
+                            <!-- Status Checkboxes -->
+                            <div class="form-group" style="margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 12px;">
+                                <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; user-select: none;">
+                                    <input type="checkbox" id="service-status-repaired" style="margin-top: 4px; width: 18px; height: 18px; accent-color: var(--color-primary-green);">
+                                    <span style="font-size: 0.9rem; color: #fff; line-height: 1.4;">O. g. gemeldete Störung ist behoben und die Reparatur in vollem Umfang ausgeführt.</span>
+                                </label>
+                                <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; user-select: none;">
+                                    <input type="checkbox" id="service-status-repaired-en" style="margin-top: 4px; width: 18px; height: 18px; accent-color: var(--color-primary-green);">
+                                    <span style="font-size: 0.9rem; color: rgba(255,255,255,0.7); line-height: 1.4; font-style: italic;">The a. a. malfunction has been repaired and repair has fully completed.</span>
+                                </label>
+                            </div>
+
+                            <div class="responsive-grid-2">
+                                <!-- Techniker-Unterschrift (links) -->
+                                <div>
+                                    <label style="display: block; margin-bottom: 0.5rem;">Unterschrift Techniker</label>
+                                    <div id="tech-signature-preview-container" style="border: 2px dashed rgba(255,255,255,0.15); border-radius: 12px; height: 120px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.25); cursor: pointer; position: relative; margin-bottom: 0.75rem;" onclick="window.openTechSignaturePad()">
+                                        <span id="tech-signature-placeholder" style="color: rgba(255,255,255,0.45); font-size: 0.9rem;">👉 Klicken zum Unterschreiben</span>
+                                        <img id="tech-signature-preview-img" class="hidden" style="max-height: 100%; max-width: 100%; object-fit: contain; padding: 10px;">
+                                        <button type="button" id="btn-clear-tech-signature" class="hidden" onclick="event.stopPropagation(); window.clearTechSignature()" style="position: absolute; top: 8px; right: 8px; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.4); color: #f87171; border-radius: 6px; padding: 2px 8px; font-size: 0.75rem; cursor: pointer; transition: all 0.2s;">Löschen</button>
+                                    </div>
+                                    <input type="hidden" id="service-tech-signature">
+                                    <div style="margin-top: 0.5rem;">
+                                        <label style="display: block; font-size: 0.75rem; color: rgba(255,255,255,0.45); margin-bottom: 0.3rem;">Datum Techniker</label>
+                                        <input type="date" id="service-tech-sig-date" class="glass-form-input" style="font-size: 0.85rem; padding: 6px 10px;">
+                                    </div>
+                                </div>
+                                <!-- Kunden-Unterschrift (rechts) -->
+                                <div>
+                                    <label style="display: block; margin-bottom: 0.5rem;">Unterschrift Kunde</label>
+                                    <div id="signature-preview-container" style="border: 2px dashed rgba(255,255,255,0.15); border-radius: 12px; height: 120px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.25); cursor: pointer; position: relative; margin-bottom: 0.75rem;" onclick="window.openSignaturePad()">
+                                        <span id="signature-placeholder" style="color: rgba(255,255,255,0.45); font-size: 0.9rem;">👉 Klicken zum Unterschreiben</span>
+                                        <img id="signature-preview-img" class="hidden" style="max-height: 100%; max-width: 100%; object-fit: contain; padding: 10px;">
+                                        <button type="button" id="btn-clear-signature" class="hidden" onclick="event.stopPropagation(); window.clearSignature()" style="position: absolute; top: 8px; right: 8px; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.4); color: #f87171; border-radius: 6px; padding: 2px 8px; font-size: 0.75rem; cursor: pointer; transition: all 0.2s;">Löschen</button>
+                                    </div>
+                                    <input type="hidden" id="service-customer-signature">
+                                    <div style="margin-top: 0.5rem;">
+                                        <label style="display: block; font-size: 0.75rem; color: rgba(255,255,255,0.45); margin-bottom: 0.3rem;">Datum Kunde</label>
+                                        <input type="date" id="service-customer-sig-date" class="glass-form-input" style="font-size: 0.85rem; padding: 6px 10px;">
+                                    </div>
+                                    <div class="form-group" style="margin-top: 0.75rem;">
+                                        <input type="text" id="service-customer-signee-name" class="glass-form-input" placeholder="Name des Unterzeichners (optional)">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-actions"
+                    style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1.5rem; margin-top: 2rem; display: flex; gap: 10px; justify-content: flex-end; align-items: stretch; flex-wrap: wrap; width: 100%;">
+
+                    <button type="button" class="btn-modal-base btn-modal-cancel" onclick="closeServiceberichtModal()" style="flex: 1;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        Abbrechen
+                    </button>
+
+                    <button type="button" class="btn-modal-base hidden" id="btn-servicebericht-follow-up" onclick="window.createFolgebericht()" title="Neuen Servicebericht anlegen, der mit diesem verknüpft ist" style="gap: 8px; flex: 1;" onmouseover="this.style.background='rgba(16,185,129,0.28)'" onmouseout="this.style.background='rgba(16,185,129,0.15)'">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+                        Folgebericht
+                    </button>
+
+                    <button type="button" class="btn-modal-base" id="btn-servicebericht-preview" onclick="window.previewServiceberichtPDF()" style="gap: 8px; flex: 1;" onmouseover="this.style.background='rgba(139,92,246,0.28)'" onmouseout="this.style.background='rgba(139,92,246,0.15)'">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                        Vorschau
+                    </button>
+
+                    <!-- Vorschau in einer anderen Sprache (js/pdf-i18n.js).
+                         Nur die festen Beschriftungen werden übersetzt; das
+                         gespeicherte PDF bleibt immer deutsch. -->
+                    <button type="button" class="btn-modal-base" id="btn-servicebericht-sprache" onclick="window.previewServiceberichtSprache(event)" title="Vorschau in einer anderen Sprache — übersetzt werden die Beschriftungen des Formulars" style="gap: 8px; flex: 0 0 auto;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                        Sprache
+                    </button>
+
+                    <!-- Handbericht: gleiche Vorschau, aber in den Prüfprotokollen
+                         bleiben Bemerkungs-/Notizfelder leer (zum Ausfüllen vor Ort). -->
+                    <button type="button" class="btn-modal-base" id="btn-servicebericht-handbericht" onclick="window.handberichtServiceberichtPDF()" title="Ausdruck zum Ausfüllen von Hand — Bemerkungs- und Notizfelder der Prüfprotokolle bleiben leer" style="gap: 8px; flex: 1;" onmouseover="this.style.background='rgba(56,189,248,0.28)'" onmouseout="this.style.background='rgba(56,189,248,0.15)'">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                        Handbericht
+                    </button>
+
+                    <button type="button" class="btn-modal-base btn-modal-save" onclick="submitServicebericht()" style="flex: 1;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                        Speichern
+                    </button>
+
+                    <button type="button" class="btn-modal-base btn-modal-pdf" id="btn-servicebericht-cloud-pdf" onclick="window.saveServiceberichtPDFToR2()" style="flex: 1;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        PDF erstellen/speichern
+                    </button>
+                </div>
+                <div style="text-align: center; margin-top: 6px; width: 100%;">
+                    <span id="servicebericht-pdf-status" style="font-size: 0.72rem; color: rgba(255,255,255,0.45); font-weight: 500; display: block; min-height: 14px;">Noch kein PDF gespeichert</span>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Route Error Options -->
+<div id="service-route-error-modal" class="modal-backdrop hidden">
+    <div class="modal-content" style="max-width: 480px; padding: 2rem; border-radius: 24px;">
+        <h2 style="margin-bottom: 1rem; font-size: 1.4rem; color: #f87171;">Routenberechnung fehlgeschlagen</h2>
+        <p style="color: rgba(255,255,255,0.7); line-height: 1.5; margin-bottom: 1.75rem; font-size: 0.95rem;">
+            Die Adresse der Maschine bzw. des Standorts konnte nicht automatisch gefunden werden. 
+            Möchten Sie die Route auf Google Maps planen und die Werte manuell eintragen?
+        </p>
+        <div class="modal-actions" style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 0;">
+            <button type="button" class="btn-secondary" onclick="closeRouteErrorModal()">Schließen</button>
+            <button type="button" class="btn-primary" onclick="openGoogleMapsRouteFallback()">Auf Google Maps planen</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Manual Route Input Fallback -->
+<div id="service-manual-route-input-modal" class="modal-backdrop hidden">
+    <div class="modal-content" style="max-width: 500px; padding: 2rem; border-radius: 24px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h2 style="margin: 0; font-size: 1.4rem;">Werte aus Google Maps eintragen</h2>
+            <button type="button" class="btn-close-modal" onclick="closeManualRouteInputModal()">&times;</button>
+        </div>
+        <p style="color: rgba(255,255,255,0.5); font-size: 0.88rem; margin-bottom: 1.5rem;">
+            Die Route wurde in einem neuen Tab auf Google Maps geöffnet. Bitte tragen Sie die dort ermittelten Werte für Entfernung und Fahrzeit hier ein:
+        </p>
+        
+        <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 1.5rem;">
+            <div class="form-group" style="margin-bottom: 0;">
+                <label for="fallback-driving-distance">Kilometer (km)</label>
+                <input type="number" step="0.1" id="fallback-driving-distance" class="glass-form-input" placeholder="z.B. 45.5">
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+                <label for="fallback-driving-time">Fahrzeit (Minuten)</label>
+                <input type="number" id="fallback-driving-time" class="glass-form-input" placeholder="z.B. 40">
+            </div>
+        </div>
+        
+        <div class="modal-actions" style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 0;">
+            <button type="button" class="btn-secondary" onclick="closeManualRouteInputModal()">Abbrechen</button>
+            <button type="button" class="btn-primary" onclick="applyManualRouteInputs()">Werte übernehmen</button>
+        </div>
+    </div>
+</div>

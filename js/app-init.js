@@ -738,7 +738,7 @@
                 const newStatus = !isCurrentlyInWorkshop;
 
                 const actionMsg = newStatus ? 'Maschine in die Werkstatt verschieben?' : 'Maschine aus der Werkstatt entfernen?';
-                if (!confirm(actionMsg)) return;
+                if (!await window.appFrage(actionMsg)) return;
 
                 if (newStatus) {
                     window.openWorkshopOrderModal(id);
@@ -1229,7 +1229,7 @@
             window.deleteCategory = async function (id) {
                 if (typeof window.canDelete === 'function' && !window.canDelete('Kategorien')) return;
                 if (!supabaseClient) { window.showToast('Datenbank nicht verbunden'); return; }
-                if (confirm('Kategorie wirklich löschen?')) {
+                if (await window.appFrage('Kategorie wirklich löschen?')) {
                     const { error } = await supabaseClient
                         .from('categories')
                         .delete()
@@ -1749,7 +1749,7 @@
                 const sel = document.getElementById('orphan-target-' + index);
                 const ziel = sel ? sel.value : '';
                 if (!ziel) { window.showToast('Bitte erst eine Ziel-Kategorie wählen.'); return; }
-                if (!confirm(`"${altName}" überall durch "${ziel}" ersetzen?`)) return;
+                if (!await window.appFrage(`"${altName}" überall durch "${ziel}" ersetzen?`)) return;
                 try {
                     await cascadeCategoryRename(altName, ziel, typeValue);
                     window.showToast(`"${altName}" wurde durch "${ziel}" ersetzt.`);
@@ -2258,7 +2258,7 @@
             window.createMachine = async function () {
                 if (!supabaseClient) { window.showToast('Datenbank nicht verbunden'); return; }
 
-                const name = prompt('Name der Maschine:');
+                const name = await window.appEingabe('Name der Maschine:');
                 if (!name) return;
 
                 // Category Selection (simple prompt for now, could be improved)
@@ -2269,7 +2269,7 @@
                     // Better: just pick first or ask for name match?
                     // Let's iterate categories and build a prompt string
                     const catString = categoryList.map(c => `${c.id}: ${c.name}`).join('\n');
-                    const idInput = prompt(`Wähle eine Kategorie-ID:\n${catString}`);
+                    const idInput = await window.appEingabe(`Wähle eine Kategorie-ID:\n${catString}`);
                     catId = parseInt(idInput);
                     if (isNaN(catId)) catId = null;
                 }
@@ -2290,7 +2290,7 @@
             window.deleteMachine = async function (id) {
                 if (typeof window.canDelete === 'function' && !window.canDelete('Maschinen')) return;
                 if (!supabaseClient) { window.showToast('Datenbank nicht verbunden'); return; }
-                if (confirm('Maschine wirklich löschen?')) {
+                if (await window.appFrage('Maschine wirklich löschen?')) {
                     try {
                         // Fetch files associated with the machine first
                         const { data: machineData, error: fetchError } = await supabaseClient
@@ -2802,7 +2802,7 @@
 
             // Neuen Hersteller direkt aus dem Maschinen-Formular als Kategorie anlegen.
             window.createManufacturerFromMachineForm = async function () {
-                const name = (prompt('Name des neuen Herstellers:') || '').trim();
+                const name = (await window.appEingabe('Name des neuen Herstellers:') || '').trim();
                 if (!name) return;
                 const exists = (window.categoryList || [])
                     .some(c => c.type === 'manufacturer' && (c.name || '').trim().toLowerCase() === name.toLowerCase());
@@ -2984,6 +2984,7 @@
             }
 
             window.closeAddMachineModal = function () {
+                window._maschineGeaendert = false; // Merker aus js/machine-modal.js
                 const modal = document.getElementById('add-machine-modal');
                 if (modal) {
                     modal.classList.remove('show');
@@ -3615,6 +3616,20 @@
                 });
             }
 
+            // Gemeinsame Upload-Zone unter dem Foto-Feld (js/upload-feld.js): Ziehen, Auswählen und auf dem
+            // Handy der Knopf „Foto aufnehmen" — für weitere Fotos und Dateien. Vorschau/Speichern wie bisher.
+            if (machineImageSlot && typeof window.uploadFeld === 'function' && !document.getElementById('machine-upload-feld')) {
+                const feldBox = document.createElement('div');
+                feldBox.id = 'machine-upload-feld';
+                feldBox.style.margin = '0.75rem 0 1rem';
+                machineImageSlot.insertAdjacentElement('afterend', feldBox);
+                window.uploadFeld(feldBox, {
+                    multiple: true, kamera: true, nurZone: true, maxMB: 25,
+                    text: 'Weitere Fotos & Dateien hierher ziehen',
+                    onFiles: (dateien) => handleMachineFiles(dateien)
+                });
+            }
+
             if (machineImageSlot) {
                 machineImageSlot.addEventListener('dragover', (e) => {
                     e.preventDefault();
@@ -3630,28 +3645,44 @@
                 });
             }
 
+            // Servicebericht: Bilder & Dokumente über die gemeinsame Upload-Zone (js/upload-feld.js);
+            // Vorschau, Dubletten-Prüfung und Speichern bleiben in service-report-form.js.
             const dropzone = document.getElementById('service-file-dropzone');
             const serviceFileInput = document.getElementById('service-file-input');
 
-            if (dropzone) {
-                dropzone.onclick = () => serviceFileInput.click();
-                dropzone.ondragover = (e) => { e.preventDefault(); dropzone.classList.add('drag-over'); };
-                dropzone.ondragleave = () => dropzone.classList.remove('drag-over');
-                dropzone.ondrop = (e) => {
-                    e.preventDefault();
-                    dropzone.classList.remove('drag-over');
-                    handleServiceFiles(e.dataTransfer.files);
-                };
-            }
+            if (dropzone && typeof window.uploadFeld === 'function') {
+                const feldBox = document.createElement('div');
+                feldBox.id = 'service-upload-feld';
+                dropzone.replaceWith(feldBox);
+                window.uploadFeld(feldBox, {
+                    multiple: true, kamera: true, nurZone: true, maxMB: 25,
+                    text: 'Bilder & Dokumente hierher ziehen',
+                    onFiles: (dateien) => handleServiceFiles(dateien)
+                });
+            } else {
+                const dropzone = document.getElementById('service-file-dropzone');
+                const serviceFileInput = document.getElementById('service-file-input');
 
-            if (serviceFileInput) {
-                // Danach leeren — sonst meldet Android beim erneuten Wählen
-                // desselben Bildes keine Änderung.
-                serviceFileInput.onchange = async (e) => {
-                    const dateien = Array.from(e.target.files || []);
-                    e.target.value = '';
-                    await handleServiceFiles(dateien);
-                };
+                if (dropzone) {
+                    dropzone.onclick = () => serviceFileInput.click();
+                    dropzone.ondragover = (e) => { e.preventDefault(); dropzone.classList.add('drag-over'); };
+                    dropzone.ondragleave = () => dropzone.classList.remove('drag-over');
+                    dropzone.ondrop = (e) => {
+                        e.preventDefault();
+                        dropzone.classList.remove('drag-over');
+                        handleServiceFiles(e.dataTransfer.files);
+                    };
+                }
+
+                if (serviceFileInput) {
+                    // Danach leeren — sonst meldet Android beim erneuten Wählen
+                    // desselben Bildes keine Änderung.
+                    serviceFileInput.onchange = async (e) => {
+                        const dateien = Array.from(e.target.files || []);
+                        e.target.value = '';
+                        await handleServiceFiles(dateien);
+                    };
+                }
             }
 
             // --- Initial View Activation ---

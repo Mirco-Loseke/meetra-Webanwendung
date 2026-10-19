@@ -875,3 +875,53 @@
             }
             return uploadedFiles;
         }
+
+// ---------------------------------------------------------------------------
+// Rückfrage beim Schließen von „Maschine anlegen/bearbeiten"
+// ---------------------------------------------------------------------------
+// Vorgang und Aufgabe fragten bei ungespeicherten Änderungen nach, dieses
+// Fenster schloss ohne Rückfrage — eingegebene Stammdaten und gewählte Fotos
+// waren weg. Merker: jede echte Eingabe im Fenster (isTrusted, damit das
+// Befüllen beim Öffnen nicht zählt). closeAddMachineModal (js/app-init.js)
+// setzt ihn zurück — auch nach dem Speichern.
+(function () {
+    window._maschineGeaendert = false;
+
+    // „change" von Textfeldern kommt erst beim Verlassen des Felds — auch dann,
+    // wenn das Fenster schon geschlossen wird. Für Text zählt deshalb nur
+    // „input"; „change" nur für Auswahl, Datei, Haken.
+    const TEXTARTEN = /^(text|search|email|tel|url|number|password)$/;
+    function merken(e) {
+        if (!e.isTrusted) return;
+        const m = document.getElementById('add-machine-modal');
+        if (!m || !m.contains(e.target)) return;
+        const t = e.target;
+        const istText = t.tagName === 'TEXTAREA' || (t.tagName === 'INPUT' && TEXTARTEN.test(t.type || 'text'));
+        if (e.type === 'change' && istText) return;
+        window._maschineGeaendert = true;
+    }
+    document.addEventListener('input', merken, true);
+    document.addEventListener('change', merken, true);
+
+    function fensterOffen() {
+        const m = document.getElementById('add-machine-modal');
+        return !!m && !m.classList.contains('hidden') && m.style.display !== 'none';
+    }
+
+    // X und „Abbrechen"
+    window.maschineFensterSchliessen = function () {
+        if (!window._maschineGeaendert || typeof window.showUnsavedDialog !== 'function') {
+            window.closeAddMachineModal();
+            return;
+        }
+        window.showUnsavedDialog({
+            overlayId: 'maschine-ungespeichert',
+            onDiscard: () => window.closeAddMachineModal(),
+            onSave: () => window.submitNewMachine()
+        });
+    };
+
+    if (typeof window.registerUnsavedCheck === 'function') {
+        window.registerUnsavedCheck(() => window._maschineGeaendert && fensterOffen());
+    }
+})();

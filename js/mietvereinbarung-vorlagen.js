@@ -7,7 +7,7 @@
 // Vorlage hinterlegt werden — genau wie bei den Protokollvorlagen.
 //
 // Gespeichert wird in der Supabase-Tabelle "rental_templates"
-// (Migration: supabase/supabase_add_rental_templates.sql).
+// (Migration: supabase/migrationen/supabase_add_rental_templates.sql).
 // Fehlt die Tabelle, arbeitet die App mit dem Standard weiter und
 // die Einstellungsseite sagt, was zu tun ist.
 //
@@ -436,7 +436,7 @@
         const hinweis = tabelleFehlt ? `
             <div style="grid-column:1/-1; background:rgba(251,191,36,0.1); border:1px solid rgba(251,191,36,0.4); border-radius:14px; padding:16px 18px; color:#fbbf24; font-size:0.9rem;">
                 <strong>Tabelle „rental_templates" fehlt.</strong><br>
-                Bis die Migration <code>supabase/supabase_add_rental_templates.sql</code> in Supabase
+                Bis die Migration <code>supabase/migrationen/supabase_add_rental_templates.sql</code> in Supabase
                 ausgeführt wurde, benutzt jede Mietvereinbarung die eingebaute Standardvorlage.
                 Bearbeiten und Anlegen ist erst danach möglich.
             </div>` : '';
@@ -545,7 +545,7 @@
     window.mietVorlageLoeschen = async function (id) {
         const v = vorlagen.find(x => String(x.id) === String(id));
         if (!v) return;
-        if (!confirm(`Vorlage „${v.name}" wirklich löschen?`)) return;
+        if (!await window.appFrage(`Vorlage „${v.name}" wirklich löschen?`)) return;
         try {
             const { error } = await window.supabaseClient.from('rental_templates').delete().eq('id', id);
             if (error) throw error;
@@ -1074,16 +1074,16 @@
         } catch (e) {
             console.error('Vorlage speichern fehlgeschlagen:', e);
             if (/category_ids/.test((e && e.message) || '')) {
-                window.showToast('Spalte „category_ids" fehlt — Migration supabase/supabase_add_rental_template_categories.sql in Supabase ausführen.');
+                window.showToast('Spalte „category_ids" fehlt — Migration supabase/migrationen/supabase_add_rental_template_categories.sql in Supabase ausführen.');
                 return;
             }
             window.showToast('Speichern fehlgeschlagen: ' + (e.message || 'unbekannter Fehler'));
         }
     };
 
-    window.mietVorlageZuruecksetzen = function () {
+    window.mietVorlageZuruecksetzen = async function () {
         if (!bearbeitet) return;
-        if (!confirm('Alle Anpassungen dieser Vorlage verwerfen und den Standard laden?')) return;
+        if (!await window.appFrage('Alle Anpassungen dieser Vorlage verwerfen und den Standard laden?')) return;
         bearbeitet.config = mitStandard(null);
         renderEditor();
         window.showToast('Standard geladen — noch nicht gespeichert.');

@@ -9,7 +9,7 @@
 //                            Danach geht dasselbe Fenster wieder auf.
 //
 // Getragen wird das von der Tabelle `assignment_responses`
-// (supabase/supabase_add_assignment_responses.sql). Fehlt sie, tut dieses
+// (supabase/migrationen/supabase_add_assignment_responses.sql). Fehlt sie, tut dieses
 // Modul nichts — die App läuft unverändert weiter.
 //
 // WARUM DIE ZEILEN DER EMPFÄNGER SELBST ANLEGT:
@@ -65,7 +65,7 @@
         if ((err && err.code === '42P01') || /assignment_responses/i.test(msg)) {
             tabelleFehlt = true;
             console.warn('Vorgangs-Quittung: Tabelle assignment_responses fehlt. ' +
-                'Migration: supabase/supabase_add_assignment_responses.sql');
+                'Migration: supabase/migrationen/supabase_add_assignment_responses.sql');
         } else {
             console.warn('Vorgangs-Quittung:', err);
         }

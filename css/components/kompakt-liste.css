@@ -1,0 +1,29 @@
+/* Kompakte Listen (js/kompakt-liste.js) — body.liste-kompakt */
+#kompakt-btn.an { background: rgba(16, 185, 129, 0.18); border-color: rgba(16, 185, 129, 0.6); color: #6ee7b7; }
+
+/* Kartenraster → eine Spalte, enger */
+body.liste-kompakt .card-grid { grid-template-columns: 1fr !important; gap: 8px !important; }
+body.liste-kompakt .card-grid > .card { padding: 0 !important; min-height: 0 !important; height: auto !important; }
+
+/* Maschinen- und Serviceberichte-Karten: Foto, Trennlinie, Kennzahlen-Block und Aktionen weg */
+body.liste-kompakt .card-grid > .card > div[style*="overflow: hidden"][style*="width: 100%"],
+body.liste-kompakt .card-grid > .card > div[style*="--mac"],
+body.liste-kompakt .card-grid > .card > div[style*="height: 1px"],
+body.liste-kompakt .card-grid > .card .machine-info-grid,
+body.liste-kompakt .card-grid > .card .service-card-actions { display: none !important; }
+body.liste-kompakt .card-grid > .card .card-content { padding: 10px 14px !important; }
+body.liste-kompakt .card-grid > .card .card-content > div:first-child { margin-bottom: 4px !important; }
+body.liste-kompakt .card-grid > .card .card-title { font-size: var(--fs-md) !important; }
+body.liste-kompakt .card-grid > .card .service-card-badge-row { position: static !important; padding: 8px 14px 0 !important; height: auto !important; }
+
+/* Vorgangs-Karten: nur Kopf + Maschine */
+body.liste-kompakt .proc-cards-grid { grid-template-columns: 1fr !important; gap: 6px !important; }
+body.liste-kompakt .proc-card-stand,
+body.liste-kompakt .proc-card-steps { display: none !important; }
+body.liste-kompakt .proc-card { padding-top: 8px !important; padding-bottom: 8px !important; }
+
+/* Desktop: zwei Zeilen nebeneinander, damit die Liste nicht zu breit wird */
+@media (min-width: 1000px) {
+    body.liste-kompakt .card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+}
+#kompakt-btn[hidden] { display: none !important; }

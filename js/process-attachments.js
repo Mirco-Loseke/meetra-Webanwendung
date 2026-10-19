@@ -24,12 +24,12 @@
 // leicht verloren. So ist ein Schritt löschbar, ohne dass die Datei-Liste
 // angefasst werden muss.
 //
-// Voraussetzung: supabase/supabase_add_process_attachments.sql
+// Voraussetzung: supabase/migrationen/supabase_add_process_attachments.sql
 // ==========================================
 (function () {
     'use strict';
 
-    const MAX_MB = 8;   // PDFs mit Bildern werden gern groesser als 5 MB
+    const MAX_MB = 10;  // einheitliches Limit je Datei (überall 10 MB)
     const MAX_BYTES = MAX_MB * 1024 * 1024;
 
     let aktuelleId = null;     // Vorgang, dessen Fenster gerade offen ist
@@ -97,12 +97,7 @@
                     '</div>' +
                     '<button type="button" class="proc-att-close" onclick="window.closeProcessAttachments()" title="Schliessen">&times;</button>' +
                 '</div>' +
-                '<label class="proc-att-drop" id="proc-att-drop">' +
-                    '<input type="file" id="proc-att-input" multiple style="display:none;">' +
-                    '<span class="proc-att-drop-ic">📎</span>' +
-                    '<span class="proc-att-drop-txt">Datei wählen oder hierher ziehen</span>' +
-                    '<span class="proc-att-drop-hint">höchstens ' + MAX_MB + ' MB je Datei</span>' +
-                '</label>' +
+                '<div id="proc-att-feld"></div>' +
                 '<div id="proc-att-status" class="proc-att-status"></div>' +
                 '<div id="proc-att-list" class="proc-att-list"></div>' +
             '</div>';
@@ -110,22 +105,10 @@
 
         el.addEventListener('click', (e) => { if (e.target === el) window.closeProcessAttachments(); });
 
-        const input = el.querySelector('#proc-att-input');
-        input.addEventListener('change', () => {
-            if (input.files && input.files.length) hochladen(Array.from(input.files));
-            input.value = '';
-        });
-
-        const drop = el.querySelector('#proc-att-drop');
-        ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, (e) => {
-            e.preventDefault(); e.stopPropagation(); drop.classList.add('is-over');
-        }));
-        ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, (e) => {
-            e.preventDefault(); e.stopPropagation(); drop.classList.remove('is-over');
-        }));
-        drop.addEventListener('drop', (e) => {
-            const f = e.dataTransfer && e.dataTransfer.files;
-            if (f && f.length) hochladen(Array.from(f));
+        window.uploadFeld(el.querySelector('#proc-att-feld'), {
+            multiple: true, kamera: true, nurZone: true, maxMB: MAX_MB,
+            text: 'Datei wählen oder hierher ziehen',
+            onFiles: (dateien) => hochladen(Array.from(dateien))
         });
     }
 
@@ -215,7 +198,14 @@
     // Dokumente-Fenster (aktuelleId/aktuellerStep) als auch von Stellen genutzt,
     // die noch keine offene Fenster-UI haben (Vorgang anlegen, KI-Erfassung) —
     // dort ist processId bereits die frisch gespeicherte ID.
-    async function uploadDateien(processId, stepId, dateien, onProgress) {
+    const warteschlange = {};
+    function uploadDateien(processId, stepId, dateien, onProgress) {
+        const k = String(processId);
+        const lauf = (warteschlange[k] || Promise.resolve()).then(() => uploadDateienKern(processId, stepId, dateien, onProgress));
+        warteschlange[k] = lauf.catch(() => { });
+        return lauf;
+    }
+    async function uploadDateienKern(processId, stepId, dateien, onProgress) {
         if (!window.FileUploadService) throw new Error('Der Datei-Dienst ist nicht geladen.');
 
         const zuGross = dateien.filter(f => f.size > MAX_BYTES);
@@ -223,12 +213,16 @@
 
         const p = proc(processId);
         let neu = liste(p).slice();
+        let doppelt = 0;
 
-        // Nichts doppelt: was am Vorgang schon haengt, wird uebersprungen
+        // Nichts doppelt: was am Vorgang schon haengt, wird uebersprungen (die Warteschlange oben sorgt dafuer,
+        // dass auch gleichzeitig ausgeloeste Uploads die bereits gespeicherten Dateien sehen)
         // (Inhaltsvergleich bzw. Dateiname + Groesse, js/photo-dedupe.js).
         if (window.PhotoDedupe && dateien.length) {
             const geprueft = await window.PhotoDedupe.pruefeAuswahl(dateien, neu);
             dateien = geprueft.neu.map(e => e.file);
+            doppelt = geprueft.doppelt.length;
+            if (geprueft.doppelt.length && window.PhotoDedupe.meldeDoppelte) window.PhotoDedupe.meldeDoppelte(geprueft.doppelt);
         }
 
         // Bis zu vier Dateien gleichzeitig hochladen statt eine nach der
@@ -279,7 +273,7 @@
         if (error) throw error;
         if (p) p.attachments = neu;
 
-        return { fehler, zuGross: zuGross.length };
+        return { fehler, zuGross: zuGross.length, doppelt };
     }
 
     // Für Stellen ohne eigenes Dokumente-Fenster: Vorgang anlegen (process-add-modal),
@@ -323,16 +317,18 @@
     async function hochladen(dateien) {
         if (!aktuelleId) return;
         try {
-            const { fehler, zuGross } = await uploadDateien(aktuelleId, aktuellerStep, dateien,
+            const { fehler, zuGross, doppelt } = await uploadDateien(aktuelleId, aktuellerStep, dateien,
                 (i, n, name) => status('Lade hoch … ' + i + ' von ' + n + ' (' + name + ')'));
             const teile = [];
             if (zuGross) teile.push(zuGross + ' Datei(en) waren größer als ' + MAX_MB + ' MB und wurden übersprungen.');
+            if (doppelt) teile.push(doppelt + ' Datei(en) waren schon vorhanden und wurden nicht noch einmal hochgeladen.');
             if (fehler) teile.push(fehler + ' Datei(en) konnten nicht hochgeladen werden.');
             status(teile.join(' '), !!(zuGross || fehler));
+            if (window.renderEditProcessDocs) window.renderEditProcessDocs();
         } catch (e) {
             console.error('Dokumentliste nicht speicherbar:', e);
             status(/attachments|column|schema cache|42703|PGRST204/i.test(e.message || '')
-                ? 'In der Datenbank fehlt die Spalte attachments. Bitte supabase/supabase_add_process_attachments.sql ausführen.'
+                ? 'In der Datenbank fehlt die Spalte attachments. Bitte supabase/migrationen/supabase_add_process_attachments.sql ausführen.'
                 : 'Konnte nicht gespeichert werden: ' + (e.message || e), true);
             return;
         }
@@ -346,7 +342,7 @@
         const p = proc(aktuelleId);
         const eintrag = liste(p).find(f => String(f.id) === String(attId));
         if (!eintrag) return;
-        if (!confirm('„' + eintrag.name + '" wirklich löschen?')) return;
+        if (!await window.appFrage('„' + eintrag.name + '" wirklich löschen?')) return;
 
         // Erst die Datenbank, dann der Speicher: bleibt die Datei im Bucket
         // liegen, ist das nur Ballast — ein Verweis auf eine geloeschte Datei
@@ -450,7 +446,23 @@
         if (!btn) return;
         const id = (document.getElementById('edit-process-id') || {}).value;
         const n = id ? window.processAttachCount(id, null) : 0;
-        btn.textContent = n ? '📎 Dokumente (' + n + ')' : '📎 Dokument hinzufügen';
+        btn.textContent = n ? '📎 Dokumente (' + n + ') ansehen / verwalten' : '📎 Dokumente';
+        btn.style.display = n ? '' : 'none';
+        window.renderEditProcessDocs();
+    };
+
+    // Vorhandene Dokumente des Vorgangs direkt unter dem Ablagefeld anzeigen (frisch hochgeladene mit „neu“).
+    window.renderEditProcessDocs = function (neueIds) {
+        const box = document.getElementById('edit-process-doc-liste');
+        if (!box) return;
+        if (neueIds) window._editDocNeu = new Set(neueIds);
+        const id = (document.getElementById('edit-process-id') || {}).value;
+        const dateien = id ? window.processAttachmentsFor(proc(id), null) : [];
+        const neu = window._editDocNeu || new Set();
+        box.innerHTML = dateien.length ? '<ul class="upload-liste">' + dateien.map(f =>
+            '<li class="upload-eintrag upload-fertig"><span>' + symbol(f.type, f.name) + '</span>' +
+            '<a class="upload-name" href="' + esc(f.url) + '" target="_blank" rel="noopener" title="Öffnen">' + esc(f.name) + '</a>' +
+            '<em>' + esc(groesse(f.size)) + '</em>' + (neu.has(f.id) ? '<span class="upload-ok">✓ neu</span>' : '') + '</li>').join('') + '</ul>' : '';
     };
 
     // ---------------------------------------------------------------
@@ -507,4 +519,63 @@
         }
         window.clearProcessPendingFiles(bucket);
     };
+})();
+
+
+// Vorgang anlegen: „📎 Dokument hinzufügen" → gemeinsame Upload-Zone (js/upload-feld.js).
+// Die Dateien werden wie bisher in window.processPendingFiles gestapelt.
+(function () {
+    function umbauen() {
+        const btn = document.getElementById('process-add-att-btn');
+        if (!btn || document.getElementById('process-add-upload-feld') || typeof window.uploadFeld !== 'function') return;
+        const box = document.createElement('div');
+        box.id = 'process-add-upload-feld';
+        btn.parentElement.insertBefore(box, btn);
+        btn.style.display = 'none';
+        window.uploadFeld(box, {
+            multiple: true, kamera: true, nurZone: true, maxMB: 10,
+            text: 'Dokumente hierher ziehen',
+            onFiles: (dateien) => window.addProcessPendingFiles('process-add', dateien)
+        });
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', umbauen); else umbauen();
+    setTimeout(umbauen, 2000);
+})();
+
+
+// Vorgang bearbeiten: Ablagefeld (gestrichelt) ganz oben bei den Angaben — Dateien ziehen oder auswählen
+// lädt sofort an den Vorgang hoch (window.uploadFilesToProcess).
+(function () {
+    function umbauen() {
+        const box = document.getElementById('edit-process-upload-feld');
+        if (!box || box.dataset.fertig || typeof window.uploadFeld !== 'function') return;
+        box.dataset.fertig = '1';
+        window.uploadFeld(box, {
+            multiple: true, kamera: true, nurZone: true, maxMB: 10,
+            text: 'Dokumente hierher ziehen',
+            onFiles: async (dateien) => {
+                const id = (document.getElementById('edit-process-id') || {}).value;
+                if (!id) { if (window.showToast) window.showToast('Vorgang erst speichern, dann Dokumente hinzufügen.'); return; }
+                if (window.showToast) window.showToast(dateien.length + (dateien.length === 1 ? ' Dokument wird' : ' Dokumente werden') + ' hochgeladen …');
+                try {
+                    const vorher = new Set(window.processAttachmentsFor((window.eventsState && window.eventsState.processes || []).find(p => String(p.id) === String(id)), null).map(f => f.id));
+                    const r = await window.uploadFilesToProcess(id, Array.from(dateien));
+                    const neuIds = window.processAttachmentsFor((window.eventsState && window.eventsState.processes || []).find(p => String(p.id) === String(id)), null).map(f => f.id).filter(x => !vorher.has(x));
+                    if (window.updateProcessAttachButton) window.updateProcessAttachButton();
+                    window.renderEditProcessDocs(neuIds);
+                    const teile = [];
+                    if (neuIds.length) teile.push(neuIds.length + (neuIds.length === 1 ? ' Dokument' : ' Dokumente') + ' hinzugefügt');
+                    if (r && r.doppelt) teile.push(r.doppelt + ' schon vorhanden — nicht doppelt hochgeladen');
+                    if (r && r.zuGross) teile.push(r.zuGross + ' zu groß (max. 10 MB)');
+                    if (r && r.fehler) teile.push(r.fehler + ' fehlgeschlagen');
+                    if (window.showToast && teile.length) window.showToast(teile.join(' · '), (r && (r.fehler || r.zuGross)) ? 'error' : 'success');
+                } catch (e) {
+                    console.error('Dokumente hochladen:', e);
+                    if (window.showToast) window.showToast('Hochladen fehlgeschlagen: ' + (e.message || e), 'error');
+                }
+            }
+        });
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', umbauen); else umbauen();
+    setTimeout(umbauen, 2000);
 })();

@@ -245,7 +245,7 @@
                 window.showToast('Keine Berechtigung zum Löschen von Serviceberichten.');
                 return;
             }
-            if (confirm('Möchten Sie diesen Servicebericht wirklich löschen?')) {
+            if (await window.appFrage('Möchten Sie diesen Servicebericht wirklich löschen?')) {
                 try {
                     console.log('Deleting service entry:', id);
                     

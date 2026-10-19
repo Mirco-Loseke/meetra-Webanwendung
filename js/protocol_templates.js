@@ -444,8 +444,8 @@ function addTemplateGroup() {
     renderEditor();
 }
 
-function removeGroup(index) {
-    if (confirm('Gruppe wirklich löschen?')) {
+async function removeGroup(index) {
+    if (await window.appFrage('Gruppe wirklich löschen?')) {
         currentEditingTemplate.structure.splice(index, 1);
         renderEditor();
     }

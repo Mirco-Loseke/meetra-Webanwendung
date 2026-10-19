@@ -114,3 +114,62 @@
     .ck-gruss { font-size: var(--fs-xl); }
     .ck-karte { padding: var(--space-2) var(--space-3); }
 }
+
+/* Social-Icons aus der Kopfleiste genommen (UX-14, 2026-10-17); Markup bleibt in index.html, rückgängig = diese Regel löschen. */
+.header-social-links { display: none !important; }
+/* Ohne Social-Icons wäre die rechte Gruppe das einzige Kind der Kopfleiste und rutschte nach links (space-between). */
+#topbar .topbar-right { margin-left: auto; }
+
+/* ---- Aufwertung 2026-10-18: Kopf als Karte, Kennzahlen-Kacheln, Titel-Symbole ---- */
+.ck-kopf {
+    position: relative; overflow: hidden; align-items: center;
+    padding: var(--space-5) var(--space-6); border-radius: var(--radius-xl);
+    background: linear-gradient(120deg, rgba(16, 185, 129, 0.22), rgba(59, 130, 246, 0.16) 60%, rgba(139, 92, 246, 0.14));
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.ck-kopf > * { position: relative; }
+.ck-kopf-deko {
+    position: absolute !important; right: -40px; top: -60px; width: 220px; height: 220px; border-radius: var(--radius-circle);
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.14), transparent 70%); pointer-events: none;
+}
+.ck-gruss { font-size: var(--fs-3xl); }
+
+.ck-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--space-3); }
+.ck-kachel {
+    --ton: 16, 185, 129;
+    display: grid; grid-template-columns: auto 1fr; grid-template-areas: "ic zahl" "text text";
+    align-items: center; column-gap: var(--space-3); row-gap: var(--space-2);
+    padding: var(--space-4); text-align: left; cursor: pointer; color: var(--text-1);
+    border-radius: var(--radius-lg); border: 1px solid rgba(var(--ton), 0.3);
+    background: linear-gradient(145deg, rgba(var(--ton), 0.16), rgba(var(--ton), 0.03));
+    transition: transform var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+}
+.ck-kachel:hover { transform: translateY(-2px); border-color: rgba(var(--ton), 0.7); }
+.ck-t-blau { --ton: 96, 165, 250; } .ck-t-rot { --ton: 239, 68, 68; }
+.ck-t-gelb { --ton: 245, 158, 11; } .ck-t-lila { --ton: 167, 139, 250; }
+.ck-kachel-ic {
+    grid-area: ic; width: 40px; height: 40px; border-radius: var(--radius-md); display: grid; place-items: center;
+    background: rgba(var(--ton), 0.2); color: rgb(var(--ton));
+}
+.ck-kachel-ic svg { width: 22px; height: 22px; }
+.ck-kachel-zahl { grid-area: zahl; font-family: var(--font-heading); font-size: var(--fs-3xl); font-weight: var(--fw-bold); line-height: 1; }
+.ck-kachel-text { grid-area: text; font-size: var(--fs-xs); color: var(--text-2); display: flex; flex-direction: column; }
+.ck-kachel-text small { font-size: var(--fs-sm); color: rgb(var(--ton)); font-weight: var(--fw-semibold); }
+
+.ck-titel { font-size: var(--fs-lg); margin-bottom: var(--space-2); }
+.ck-titel-ic { width: 26px; height: 26px; border-radius: var(--radius-md); display: grid; place-items: center; font-weight: var(--fw-bold); font-size: var(--fs-sm); }
+.ck-titel-ic.ck-rot { background: rgba(239, 68, 68, 0.2); color: var(--danger-soft); }
+.ck-titel-ic.ck-blau { background: rgba(96, 165, 250, 0.2); color: var(--info); }
+.ck-titel-n { margin-left: auto; font-size: var(--fs-xs); color: var(--text-3); background: rgba(255, 255, 255, 0.08); padding: 1px var(--space-2); border-radius: var(--radius-pill); }
+.ck-zeile { border-left: 3px solid transparent; padding-left: var(--space-2); border-radius: var(--radius-sm); }
+.ck-zeile-rot { border-left-color: var(--danger); }
+.ck-zeile-gelb { border-left-color: var(--warning); }
+.ck-zeile-blau { border-left-color: var(--info); }
+.ck-zeile-gruen { border-left-color: var(--success); }
+
+@media (max-width: 768px) {
+    .ck-kopf { padding: var(--space-4); }
+    .ck-gruss { font-size: 18px; }
+    .ck-kpis { grid-template-columns: repeat(2, 1fr); }
+    .ck-kachel { padding: var(--space-3); min-height: 44px; }
+}

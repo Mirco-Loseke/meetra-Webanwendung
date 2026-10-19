@@ -105,7 +105,10 @@
             const files = Array.isArray(e.files) ? e.files : [];
             let quelle = '';
             if (e.machine_id && typeof window.getMachineName === 'function') quelle = window.getMachineName(e.machine_id) || '';
-            files.forEach(f => rein(f, e.entry_date || e.created_at, e.title || (e._sourceTable === 'service_entries' ? 'Servicebericht' : 'Eintrag'), quelle));
+            const titel = e.title || (e._sourceTable === 'service_entries' ? 'Servicebericht' : 'Eintrag');
+            files.forEach(f => rein(f, e.entry_date || e.created_at, titel, quelle));
+            // Servicebericht: das PDF zählt auch dann, wenn zusätzlich Fotos/Dateien dranhängen
+            if (e.rawService && e.rawService.pdf_url) rein({ url: e.rawService.pdf_url, name: titel + '.pdf', type: 'application/pdf' }, e.entry_date || e.created_at, titel, quelle);
         });
         (detail.processes || []).forEach(p => {
             (Array.isArray(p.attachments) ? p.attachments : []).forEach(f => rein(f, f.at || p.process_date || p.created_at, p.title ? 'Vorgang: ' + p.title : 'Vorgang', ''));
@@ -122,11 +125,12 @@
         return new Date(k + 'T12:00:00').toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: 'long', year: 'numeric' });
     }
 
-    function postenHtml(p, alleBilder) {
+    function postenHtml(p, alleBilder, gi) {
         if (p.art === 'video') return '<div class="ab-ablage-item">' + videoKachelHtml(p.url) + '<span class="ab-ablage-name">' + esc(p.name) + '</span></div>';
         if (p.art === 'bild') {
-            const idx = alleBilder.indexOf(p.url);
-            return '<div class="ab-ablage-item"><img class="ab-ablage-bild" src="' + esc(p.url) + '" loading="lazy" alt="" data-ablage-bild="' + idx + '" title="Bild vergrößern"></div>';
+            const grp = gi != null && window.__ablageGruppen && window.__ablageGruppen[gi];
+            const idx = grp ? grp.urls.indexOf(p.url) : alleBilder.indexOf(p.url);
+            return '<div class="ab-ablage-item"><img class="ab-ablage-bild" src="' + esc(p.url) + '" loading="lazy" alt="" data-ablage-bild="' + idx + '"' + (grp ? ' data-ablage-gruppe="' + gi + '"' : '') + ' title="Bild vergrößern"></div>';
         }
         const typ = /\.pdf$/i.test(p.url.split('?')[0]) ? 'application/pdf' : p.typ;
         return '<button type="button" class="ab-ablage-dok" data-dok-url="' + esc(p.url) + '" data-dok-name="' + esc(p.name) + '" data-dok-typ="' + esc(typ) + '">📄 <span>' + esc(p.name) + '</span></button>';
@@ -138,6 +142,7 @@
         const liste = alle.filter(p => p.art === S.art);
         const alleBilder = liste.filter(p => p.art === 'bild').map(p => p.url);
         window.__ablageBilder = alleBilder;
+        window.__ablageGruppen = [];
 
         // Tag → Überschrift (Eintragstitel) → Dateien
         const tage = new Map();
@@ -154,12 +159,14 @@
             a.icon + ' ' + a.label + ' <span class="ab-tab-count">' + zahl(a.key) + '</span></button>').join('');
 
         let inhalt = '';
-        if (!liste.length) inhalt = '<div class="ab-empty"><div class="ab-empty-title">Noch keine ' + esc(ARTEN.find(a => a.key === S.art).label) + '</div></div>';
+        if (!liste.length) inhalt = '<div class="ab-ablage-leer"><b>Hierhin ziehen zum Hochladen</b><span>Fotos, Videos und Dokumente werden automatisch richtig einsortiert</span></div>';
         tage.forEach((gruppen, tag) => {
             inhalt += '<section class="ab-ablage-tag"><h4 class="ab-ablage-datum">' + esc(tagText(tag)) + '</h4>';
             gruppen.forEach((posten, kopf) => {
+                // Jede Gruppe (Tag + Überschrift) öffnet nur ihre eigenen Bilder, mit Titel und Datum
+                const gi = window.__ablageGruppen.push({ urls: posten.filter(p => p.art === 'bild').map(p => p.url), titel: [kopf, tagText(tag)].filter(Boolean).join(' · ') }) - 1;
                 inhalt += '<div class="ab-ablage-gruppe">' + (kopf ? '<div class="ab-ablage-kopf">' + esc(kopf) + '</div>' : '') +
-                    '<div class="ab-ablage-raster' + (S.art === 'dok' ? ' ab-ablage-raster-dok' : '') + '">' + posten.map(p => postenHtml(p, alleBilder)).join('') + '</div></div>';
+                    '<div class="ab-ablage-raster' + (S.art === 'dok' ? ' ab-ablage-raster-dok' : '') + '">' + posten.map(p => postenHtml(p, alleBilder, gi)).join('') + '</div></div>';
             });
             inhalt += '</section>';
         });
@@ -168,15 +175,19 @@
             '<div class="ab-ablage-leiste"><div class="ab-ablage-reiterleiste">' + reiter + '</div>' +
             '<button type="button" class="ab-btn ab-btn-primary" data-ablage-hoch>＋ Hochladen</button>' +
             '<input type="file" multiple hidden data-ablage-datei accept="image/*,video/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,.zip,.msg,.eml"></div>' +
-            '<div class="ab-ablage-inhalt">' + inhalt + '</div></div>';
+            '<div class="ab-ablage-drop"><div class="ab-ablage-inhalt">' + inhalt + '</div></div></div>';
     };
     window.adressAblageAnzahl = detail => sammeln(detail || {}).length;
 
     function sicherName(n) { return String(n || 'datei').replace(/[^\w.\-]+/g, '_').slice(-80); }
 
     async function hochladen(kundeId, dateien, knopf) {
+        // Fotos, Videos und Dokumente: höchstens 25 MB je Datei
+        const zuGross = dateien.filter(f => f.size > 25 * 1048576);
+        if (zuGross.length && window.showToast) window.showToast(zuGross.map(f => f.name).join(', ') + (zuGross.length === 1 ? ' ist' : ' sind') + ' größer als 25 MB und wurde(n) übersprungen.', 'error');
+        dateien = dateien.filter(f => f.size <= 25 * 1048576);
         if (!dateien.length) return;
-        const titel = window.prompt('Überschrift für diese Ablage:', dateien.length === 1 ? dateien[0].name.replace(/\.\w+$/, '') : 'Ablage');
+        const titel = await window.appEingabe('Überschrift für diese Ablage:', dateien.length === 1 ? dateien[0].name.replace(/\.\w+$/, '') : 'Ablage');
         if (titel === null) return;
         const alt = knopf.textContent;
         knopf.disabled = true;
@@ -190,17 +201,25 @@
                     provider: 'cloudflare-r2',
                     compress: false
                 });
-                files.push({ url: res.url, name: f.name, type: res.type || f.type || '' });
+                files.push({ url: res.url, name: f.name, type: res.type || f.type || (RE_VIDEO.test(f.name) ? 'video/mp4' : RE_BILD.test(f.name) ? 'image/jpeg' : '') });
             }
-            const nurMedien = files.every(f => medienArt(f) !== 'dok');
-            const { error } = await window.supabaseClient.from('manual_history_entries').insert([{
-                type: nurMedien ? 'photo' : 'note',
-                title: titel.trim() || 'Ablage',
-                files,
-                customer_id: kundeId,
-                created_by: (window.activeUser && window.activeUser.id) || null
-            }]);
+            // Je Art ein eigener Eintrag — so landet alles im richtigen Reiter,
+            // egal in welchem man gerade steht (Foto/Video → type photo, Rest → note).
+            const jeArt = { bild: [], video: [], dok: [] };
+            files.forEach(f => jeArt[medienArt(f) || 'dok'].push(f));
+            const zeilen = [];
+            Object.keys(jeArt).forEach(art => {
+                if (!jeArt[art].length) return;
+                const zusatz = Object.values(jeArt).filter(l => l.length).length > 1 ? ' (' + ARTEN.find(x => x.key === art).label + ')' : '';
+                zeilen.push({ type: art === 'dok' ? 'note' : 'photo', title: (titel.trim() || 'Ablage') + zusatz, files: jeArt[art],
+                    customer_id: kundeId, created_by: (window.activeUser && window.activeUser.id) || null });
+            });
+            const { error } = await window.supabaseClient.from('manual_history_entries').insert(zeilen);
             if (error) throw error;
+            // Reiter mit den meisten neuen Dateien öffnen
+            const haupt = Object.keys(jeArt).sort((x, y) => jeArt[y].length - jeArt[x].length)[0];
+            S.art = haupt;
+            try { localStorage.setItem('meetra_ablage_art', S.art); } catch (er) { /* egal */ }
             if (window.showToast) window.showToast(files.length + (files.length === 1 ? ' Datei' : ' Dateien') + ' abgelegt', 'success');
             if (window.refreshAddressDetail) await window.refreshAddressDetail();
         } catch (e) {
@@ -223,12 +242,36 @@
         }
         if (e.target.closest('[data-ablage-hoch]')) { box.querySelector('[data-ablage-datei]').click(); return; }
         const b = e.target.closest('[data-ablage-bild]');
-        if (b && window.openPhotosLightbox) { window.openPhotosLightbox(window.__ablageBilder || [], Number(b.getAttribute('data-ablage-bild')) || 0); return; }
+        if (b && window.openPhotosLightbox) {
+            const grp = (window.__ablageGruppen || [])[Number(b.getAttribute('data-ablage-gruppe'))];
+            if (grp) window.openPhotosLightbox(grp.urls, Math.max(0, Number(b.getAttribute('data-ablage-bild')) || 0), { titel: grp.titel, namen: [] });
+            else window.openPhotosLightbox(window.__ablageBilder || [], Number(b.getAttribute('data-ablage-bild')) || 0);
+            return;
+        }
         const d = e.target.closest('[data-dok-url]');
         if (d) {
             if (window.previewDocument) window.previewDocument(d.dataset.dokUrl, d.dataset.dokName, d.dataset.dokTyp);
             else window.open(d.dataset.dokUrl, '_blank');
         }
+    });
+    // Drag & Drop auf die ganze Ablage — egal in welchem Reiter
+    const dateienDrag = ev => ev.dataTransfer && [...(ev.dataTransfer.types || [])].includes('Files');
+    document.addEventListener('dragover', e => {
+        const box = e.target.closest && e.target.closest('.ab-ablage');
+        if (!box || !dateienDrag(e)) return;
+        e.preventDefault();
+        box.classList.add('ab-ablage-ueber');
+    });
+    document.addEventListener('dragleave', e => {
+        const box = e.target.closest && e.target.closest('.ab-ablage');
+        if (box && !box.contains(e.relatedTarget)) box.classList.remove('ab-ablage-ueber');
+    });
+    document.addEventListener('drop', e => {
+        const box = e.target.closest && e.target.closest('.ab-ablage');
+        if (!box || !dateienDrag(e)) return;
+        e.preventDefault();
+        box.classList.remove('ab-ablage-ueber');
+        hochladen(box.getAttribute('data-ablage-kunde'), Array.from(e.dataTransfer.files || []), box.querySelector('[data-ablage-hoch]'));
     });
     document.addEventListener('change', e => {
         const inp = e.target.closest && e.target.closest('[data-ablage-datei]');

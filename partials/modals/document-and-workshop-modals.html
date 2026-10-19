@@ -32,9 +32,9 @@
 
             <div style="display: flex; gap: 15px;">
                 <button onclick="window.closeWorkshopOrderModal()" class="btn-secondary"
-                    style="flex: 1; padding: 14px; border-radius: 12px; font-weight: 600;">Abbrechen</button>
+                    style="flex: 1;">Abbrechen</button>
                 <button onclick="window.confirmWorkshopOrder()" class="btn-primary"
-                    style="flex: 1; padding: 14px; border-radius: 12px; font-weight: 700;">Best&auml;tigen</button>
+                    style="flex: 1;">Best&auml;tigen</button>
             </div>
         </div>
     </div>
@@ -112,22 +112,14 @@
                 </div>
 
                 <div class="form-group" style="margin-bottom: 2rem;">
-                    <div id="doc-dropzone" class="file-drop-zone"
-                        onclick="document.getElementById('doc-file-input').click()">
-                        <input type="file" id="doc-file-input" accept=".pdf,image/*" multiple class="hidden-file-input"
-                            onchange="window.handleDocFileSelection(event)">
-                        <div class="drop-zone-content">
-                            <span class="icon">📄</span>
-                            <p id="doc-file-name">Klicken oder Datei hierher ziehen</p>
-                        </div>
-                    </div>
+                    <div id="doc-upload-feld"></div>
                 </div>
 
                 <div style="display: flex; gap: 15px; justify-content: flex-end;">
                     <button type="button" class="btn-secondary"
                         onclick="window.closeDocumentUploadModal()">Abbrechen</button>
                     <button type="submit" id="btn-save-doc" class="btn-primary btn-red-animated"
-                        style="padding: 12px 24px;">Speichern</button>
+                       >Speichern</button>
                 </div>
             </form>
         </div>
@@ -155,7 +147,7 @@
                         <span>↗️ Extern öffnen</span>
                     </a>
                 </div>
-                <button class="btn-close-modal" onclick="window.closeDocumentPreviewModal()" style="font-size: 1.5rem; padding: 0; line-height: 1; margin-top: -2px; flex-shrink: 0;">&times;</button>
+                <button class="btn-close-modal" onclick="window.closeDocumentPreviewModal()" style="margin-top: -2px; flex-shrink: 0;">&times;</button>
             </div>
             <div id="doc-preview-container"
                 style="flex: 1; background: rgba(0,0,0,0.2); border-radius: 12px; position: relative; overflow: auto; touch-action: pan-x pan-y;">

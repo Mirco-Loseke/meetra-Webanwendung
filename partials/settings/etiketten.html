@@ -4,7 +4,7 @@
                 <h1 style="margin: 0;">Etikettendrucker</h1>
                 <div class="users-header-actions" style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
                     <div id="label-etiketten-actions" style="display:flex; gap:10px; flex-wrap:wrap;">
-                        <button class="btn-add-bg" style="background: rgba(255,255,255,0.06); color: #fff;" onclick="window.openLabelImportModal()">
+                        <button class="btn-add-bg" onclick="window.openLabelImportModal()">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                             IMPORTIEREN
                         </button>
@@ -44,7 +44,7 @@
                         Alle auswählen
                     </label>
                     <span id="label-selected-count" style="color: rgba(255,255,255,0.4); font-size: 0.85rem; white-space: nowrap;">0 ausgewählt</span>
-                    <button class="btn-primary" style="padding: 10px 20px; font-weight: 700; white-space: nowrap;" onclick="window.printSelectedLabels()">
+                    <button class="btn-primary" style="white-space: nowrap;" onclick="window.printSelectedLabels()">
                         Etiketten drucken
                     </button>
                 </div>
@@ -130,7 +130,7 @@
                             </button>
                         </div>
 
-                        <button class="btn-primary" style="padding: 12px 24px; font-weight: 700; align-self:flex-start;" onclick="window.printBeschriftung()">
+                        <button class="btn-primary" style="align-self:flex-start;" onclick="window.printBeschriftung()">
                             Beschriftung drucken
                         </button>
                     </div>

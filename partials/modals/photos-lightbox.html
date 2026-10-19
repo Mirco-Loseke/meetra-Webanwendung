@@ -1,0 +1,30 @@
+<div id="photos-lightbox"
+    style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 99999; backdrop-filter: blur(15px); overflow: hidden; user-select: none; touch-action: none;">
+
+    <!-- Close Button -->
+    <button onclick="closePhotosLightbox()" id="lbx-close"
+        style="position: absolute; top: 16px; right: 16px; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2); color: white; width: 38px; height: 38px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity 0.2s, background 0.2s; z-index: 200;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+    </button>
+
+    <!-- Counter + zoom reset -->
+    <div style="position: absolute; top: 16px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; z-index: 200;">
+        <div id="lightbox-counter" style="color: rgba(255,255,255,0.8); font-size: 0.85rem; font-weight: 700; background: rgba(255,255,255,0.1); padding: 5px 14px; border-radius: 20px; font-family: 'Inter', sans-serif; white-space: nowrap;">1 / 1</div>
+        <button id="lbx-reset" onclick="lbxResetZoom()" style="display:none; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25); color: white; border-radius: 20px; padding: 5px 12px; font-size: 0.75rem; font-weight: 700; cursor: pointer; font-family: 'Inter', sans-serif;">Zoom zurücksetzen</button>
+    </div>
+
+    <!-- Nav Prev -->
+    <button id="lightbox-prev" onclick="navigateLightbox(-1)" id="lbx-prev"
+        style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); color: white; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity 0.2s, background 0.2s; z-index: 200;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+    </button>
+
+    <!-- Nav Next -->
+    <button id="lightbox-next" onclick="navigateLightbox(1)" id="lbx-next"
+        style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); color: white; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity 0.2s, background 0.2s; z-index: 200;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+    </button>
+
+    <!-- Image -->
+    <img id="lightbox-img" src="" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); max-width: 92vw; max-height: 92vh; object-fit: contain; border-radius: 8px; will-change: transform; cursor: grab;">
+</div>

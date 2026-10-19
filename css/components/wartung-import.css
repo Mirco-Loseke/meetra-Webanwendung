@@ -1,0 +1,20 @@
+/* Wartungshistorie nachtragen (js/wartung-import.js) */
+#wartung-import-modal .wi-fenster { max-width: 720px; padding: var(--space-6); }
+#wartung-import-modal .fenster-kopf { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-4); }
+#wartung-import-modal .fenster-kopf h2 { margin: 0; font-size: var(--fs-xl); }
+#wartung-import-modal .fenster-fuss { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-4); flex-wrap: wrap; }
+#wartung-import-modal .wi-fuss-platz { flex: 1; }
+#wartung-import-modal .wi-drop { margin: var(--space-4) 0; padding: var(--space-4); text-align: center; border: 2px dashed var(--glass-border); border-radius: var(--radius-lg); color: var(--text-2); font-size: var(--fs-sm); transition: border-color var(--dur-fast), background var(--dur-fast); }
+#wartung-import-modal .wi-drop.aktiv { border-color: var(--color-primary-green); background: var(--success-soft); }
+#wartung-import-modal .wi-drop label { cursor: pointer; display: block; }
+#wartung-import-modal .wi-zeilen { display: flex; flex-direction: column; gap: var(--space-3); max-height: 50vh; overflow-y: auto; }
+#wartung-import-modal .wi-zeile { padding: var(--space-3); border: 1px solid var(--glass-border); border-radius: var(--radius-md); }
+#wartung-import-modal .wi-zeile-kopf { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); margin-bottom: var(--space-2); }
+#wartung-import-modal .wi-datei { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-sm); font-weight: var(--fw-semibold, 600); }
+#wartung-import-modal .wi-felder { display: grid; grid-template-columns: 11rem 1fr; gap: var(--space-2); margin-bottom: var(--space-2); }
+#wartung-import-modal .wi-arten { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+#wartung-import-modal .wi-art { display: inline-flex; align-items: center; gap: var(--space-1); font-size: var(--fs-sm); cursor: pointer; padding: var(--space-1) var(--space-2); border-radius: var(--radius-pill); background: rgba(255, 255, 255, 0.05); }
+@media (max-width: 768px) {
+    #wartung-import-modal .wi-felder { grid-template-columns: 1fr; }
+    #wartung-import-modal .wi-fenster { padding: var(--space-4); }
+}

@@ -1,0 +1,154 @@
+<div id="category-modal" class="modal-backdrop hidden">
+    <div class="modal-content" style="max-width: 600px;">
+        <input type="hidden" id="cat-modal-id">
+        <h2 id="cat-modal-title">Neue Kategorie</h2>
+
+        <div class="modal-form-area">
+            <div class="form-group">
+                <label for="cat-name-input">Name der Kategorie</label>
+                <input type="text" id="cat-name-input" class="glass-input" placeholder="z.B. Häcksler oder Wartung">
+            </div>
+
+            <!-- Color Picker -->
+            <div class="form-group" id="cat-color-group">
+                <label>Farbe der Kategorie</label>
+                <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                    <!-- Preset Swatches -->
+                    <div id="cat-color-swatches" style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <div onclick="selectCatColor('#f59e0b')" title="Amber"
+                            style="width:32px;height:32px;border-radius:50%;background:#f59e0b;cursor:pointer;border:2px solid transparent;transition:all 0.2s;"
+                            onmouseover="this.style.transform='scale(1.15)'"
+                            onmouseout="this.style.transform='scale(1)'"></div>
+                        <div onclick="selectCatColor('#3b82f6')" title="Blau"
+                            style="width:32px;height:32px;border-radius:50%;background:#3b82f6;cursor:pointer;border:2px solid transparent;transition:all 0.2s;"
+                            onmouseover="this.style.transform='scale(1.15)'"
+                            onmouseout="this.style.transform='scale(1)'"></div>
+                        <div onclick="selectCatColor('#10b981')" title="Grün"
+                            style="width:32px;height:32px;border-radius:50%;background:#10b981;cursor:pointer;border:2px solid transparent;transition:all 0.2s;"
+                            onmouseover="this.style.transform='scale(1.15)'"
+                            onmouseout="this.style.transform='scale(1)'"></div>
+                        <div onclick="selectCatColor('#8b5cf6')" title="Lila"
+                            style="width:32px;height:32px;border-radius:50%;background:#8b5cf6;cursor:pointer;border:2px solid transparent;transition:all 0.2s;"
+                            onmouseover="this.style.transform='scale(1.15)'"
+                            onmouseout="this.style.transform='scale(1)'"></div>
+                        <div onclick="selectCatColor('#ec4899')" title="Pink"
+                            style="width:32px;height:32px;border-radius:50%;background:#ec4899;cursor:pointer;border:2px solid transparent;transition:all 0.2s;"
+                            onmouseover="this.style.transform='scale(1.15)'"
+                            onmouseout="this.style.transform='scale(1)'"></div>
+                        <div onclick="selectCatColor('#ef4444')" title="Rot"
+                            style="width:32px;height:32px;border-radius:50%;background:#ef4444;cursor:pointer;border:2px solid transparent;transition:all 0.2s;"
+                            onmouseover="this.style.transform='scale(1.15)'"
+                            onmouseout="this.style.transform='scale(1)'"></div>
+                        <div onclick="selectCatColor('#06b6d4')" title="Cyan"
+                            style="width:32px;height:32px;border-radius:50%;background:#06b6d4;cursor:pointer;border:2px solid transparent;transition:all 0.2s;"
+                            onmouseover="this.style.transform='scale(1.15)'"
+                            onmouseout="this.style.transform='scale(1)'"></div>
+                        <div onclick="selectCatColor('#84cc16')" title="Lime"
+                            style="width:32px;height:32px;border-radius:50%;background:#84cc16;cursor:pointer;border:2px solid transparent;transition:all 0.2s;"
+                            onmouseover="this.style.transform='scale(1.15)'"
+                            onmouseout="this.style.transform='scale(1)'"></div>
+                        <div onclick="selectCatColor('#f97316')" title="Orange"
+                            style="width:32px;height:32px;border-radius:50%;background:#f97316;cursor:pointer;border:2px solid transparent;transition:all 0.2s;"
+                            onmouseover="this.style.transform='scale(1.15)'"
+                            onmouseout="this.style.transform='scale(1)'"></div>
+                        <div onclick="selectCatColor('#94a3b8')" title="Grau"
+                            style="width:32px;height:32px;border-radius:50%;background:#94a3b8;cursor:pointer;border:2px solid transparent;transition:all 0.2s;"
+                            onmouseover="this.style.transform='scale(1.15)'"
+                            onmouseout="this.style.transform='scale(1)'"></div>
+                    </div>
+                    <!-- Custom color input -->
+                    <span
+                        style="font-size: 0.8rem; color: rgba(255,255,255,0.5); font-weight: 700; font-family: 'Inter', sans-serif; white-space: nowrap;">Aktuelle
+                        Farbe:</span>
+                    <input type="color" id="cat-color-custom" value="#10b981"
+                        style="width:40px;height:40px;border:none;border-radius:50%;cursor:pointer;background:transparent;padding:0;"
+                        title="Eigene Farbe wählen" oninput="selectCatColor(this.value)">
+                    <!-- Preview -->
+                    <div id="cat-color-preview"
+                        style="width:32px;height:32px;border-radius:50%;background:#10b981;border:2px solid rgba(255,255,255,0.2);box-shadow:0 0 12px currentColor;">
+                    </div>
+                </div>
+                <input type="hidden" id="cat-color-value" value="#10b981">
+            </div>
+
+            <div class="form-group" style="margin-bottom: 0;">
+                <label style="margin-bottom: 15px; display: block;">Kategorie-Typ</label>
+                <div class="segmented-control">
+                    <label class="segmented-option">
+                        <input type="radio" name="cat-type" value="machine" checked>
+                        <span class="option-text">Maschine</span>
+                    </label>
+                    <label class="segmented-option">
+                        <input type="radio" name="cat-type" value="service">
+                        <span class="option-text">Service</span>
+                    </label>
+                    <label class="segmented-option">
+                        <input type="radio" name="cat-type" value="contact">
+                        <span class="option-text">Kontaktart</span>
+                    </label>
+                    <label class="segmented-option">
+                        <input type="radio" name="cat-type" value="document">
+                        <span class="option-text">Dokument</span>
+                    </label>
+                    <label class="segmented-option">
+                        <input type="radio" name="cat-type" value="series">
+                        <span class="option-text">Maschinenserie</span>
+                    </label>
+                    <label class="segmented-option">
+                        <input type="radio" name="cat-type" value="equipment">
+                        <span class="option-text">Zusatzausrüstung</span>
+                    </label>
+                    <label class="segmented-option">
+                        <input type="radio" name="cat-type" value="status">
+                        <span class="option-text">Angebots-Status</span>
+                    </label>
+                    <label class="segmented-option">
+                        <input type="radio" name="cat-type" value="area">
+                        <span class="option-text">Buchhaltungs-Bereich</span>
+                    </label>
+                </div>
+            </div>
+
+            <div id="cat-interval-group" class="form-group" style="margin-top: 1.5rem;">
+                <label for="cat-interval-input">Standard-Wartungsintervall (Monate)</label>
+                <input type="number" id="cat-interval-input" class="glass-input" placeholder="z.B. 12" min="1"
+                    value="12">
+            </div>
+
+            <div id="cat-equipment-group" class="form-group" style="display: none; margin-top: 1.5rem;">
+                <label for="cat-equipment-remark">Bemerkung</label>
+                <textarea id="cat-equipment-remark" class="glass-input" rows="3" placeholder="z.B. Hinweise zu dieser Zusatzausrüstung"></textarea>
+            </div>
+
+            <div id="cat-series-group" style="display: none; margin-top: 1.5rem;">
+                <div class="form-group">
+                    <label for="cat-series-manufacturer">Hersteller</label>
+                    <input type="text" id="cat-series-manufacturer" class="glass-input" placeholder="z.B. meetra" list="cat-series-manufacturer-options">
+                    <datalist id="cat-series-manufacturer-options"></datalist>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label style="color: rgba(255,255,255,0.6); font-size: 0.9rem; margin-bottom: 0.5rem; display: block;">Maschinenkategorie (Mehrfachauswahl)</label>
+                    <div class="custom-filter-dropdown" id="cat-series-machine-cat-dropdown"
+                        onclick="window.toggleCatSeriesMachineCatDropdown(event)" style="width: 100%;">
+                        <span class="filter-label" id="cat-series-machine-cat-label">Maschinenkategorie wählen...</span>
+                        <svg class="filter-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                        <div class="custom-filter-menu">
+                            <ul class="dropdown-options" id="cat-series-machine-cat-options">
+                                <!-- dynamically populated -->
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-actions" style="display: flex; justify-content: flex-end; gap: 1rem;">
+            <button id="cancel-cat-btn" class="btn-secondary">Abbrechen</button>
+            <button id="save-cat-btn" class="btn-primary">Speichern</button>
+        </div>
+    </div>
+</div>

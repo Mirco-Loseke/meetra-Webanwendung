@@ -20,7 +20,7 @@
                     <button class="settings-tab" data-tab="subtasks" onclick="switchTextSnippetTab('subtasks')">Unteraufgaben</button>
                     <button class="settings-tab" data-tab="quicktemplates" onclick="switchTextSnippetTab('quicktemplates')">Schnellvorlagen</button>
                 </div>
-                <button id="btn-create-qt" class="btn-primary" onclick="window.resetQTBuilder(); window.openQTModal();" style="display: none; align-items: center; gap: 8px; padding: 10px 20px; font-weight: 500; font-size: 0.9rem; border-radius: 12px; text-transform: none;">
+                <button id="btn-create-qt" class="btn-primary" onclick="window.resetQTBuilder(); window.openQTModal();" style="display: none; align-items: center; gap: 8px;">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                     Schnellvorlage erstellen
                 </button>
@@ -34,7 +34,7 @@
                     </div>
                     <div style="display: flex; gap: 10px; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.05);">
                         <input type="text" id="new-supergroup-name" class="glass-input" placeholder="Neue Übergruppe (z.B. Wartung)" style="height: 50px;">
-                        <button class="btn-primary compact" style="height: 50px; padding: 0 25px;" onclick="addSupergroupTemplate()">Hinzufügen</button>
+                        <button class="btn-primary compact knopf--klein" onclick="addSupergroupTemplate()">Hinzufügen</button>
                     </div>
                 </div>
             </div>
@@ -47,7 +47,7 @@
                     </div>
                     <div style="display: flex; gap: 10px; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.05);">
                         <input type="text" id="new-subtask-template-title" class="glass-input" placeholder="Neue Unteraufgabe (z.B. Ölstand prüfen)" style="height: 50px;">
-                        <button class="btn-primary compact" style="height: 50px; padding: 0 25px;" onclick="addSubtaskTemplate()">Hinzufügen</button>
+                        <button class="btn-primary compact knopf--klein" onclick="addSubtaskTemplate()">Hinzufügen</button>
                     </div>
                 </div>
             </div>

@@ -76,17 +76,18 @@
         // Schmal und serverseitig gefiltert (Egress-Regel). Vorgänge mit select('*'),
         // weil openEditProcessModal den vollständigen Datensatz braucht.
         const anzahl = p => p.then(r => (r.error ? 0 : r.count || 0)).catch(() => 0);
-        const [berichteOffen, aufgabenOffen, fotosNeu] = await Promise.all([
-            anzahl(c.from('service_entries').select('id', { count: 'exact', head: true }).eq('is_finalized', false)),
-            q(c.from('tasks').select('id, assigned_to, status').neq('status', 'completed').limit(1000)),
+        const [berichteRoh, fotosNeu] = await Promise.all([
+            q(c.from('service_entries').select('id, date, datum_von').eq('is_finalized', false).limit(200)),
             anzahl(c.from('foto_eingang').select('id', { count: 'exact', head: true }).is('zugeordnet_am', null))
         ]);
-        const meineAufgaben = aufgabenOffen.filter(t => (Array.isArray(t.assigned_to) ? t.assigned_to : [t.assigned_to]).some(istMeins)).length;
+        // „Berichte in Arbeit“: nicht abgeschlossen UND Datum höchstens 30 Tage her (oder in der Zukunft) — ältere nie abgeschlossene sind Altlasten.
+        const grenze = isoTag(new Date(Date.now() - 30 * 864e5));
+        const berichteOffen = berichteRoh.filter(b => tagVon(b.datum_von || b.date) >= grenze).length;
         const wartungUeber = (window.machineList || []).filter(m => m.next_maintenance && tagVon(m.next_maintenance) < heute).length;
         const [faelligeV, mitSchritten, termine, einsaetze, mieten, angebote, wartung] = await Promise.all([
             q(c.from('internal_processes').select('*').neq('status', 'erledigt').not('remind_at', 'is', null).lte('remind_at', heute + 'T23:59:59').limit(150)),
             q(c.from('internal_processes').select('*').neq('status', 'erledigt').contains('steps', JSON.stringify([{ done: false }])).limit(200)),
-            q(c.from('maintenance_events').select('id, title, event_date, start_date, customer_id, machine_id, manual_machine, maintenance_types, location').or(`and(event_date.gte.${heute},event_date.lte.${bis7}T23:59:59),and(start_date.gte.${heute},start_date.lte.${bis7}T23:59:59)`).limit(80)),
+            q(c.from('maintenance_events').select('id, title, event_date, start_date, customer_id, machine_id, manual_machine, maintenance_types, location_label').or(`and(event_date.gte.${heute},event_date.lte.${bis7}T23:59:59),and(start_date.gte.${heute},start_date.lte.${bis7}T23:59:59)`).limit(80)),
             q(c.from('service_entries').select('id, title, date, datum_von, machine_id').or(`and(date.gte.${heute},date.lte.${bis7}),and(datum_von.gte.${heute},datum_von.lte.${bis7})`).limit(60)),
             q(c.from('rental_agreements').select('id, title, machine_id, data').order('created_at', { ascending: false }).limit(150)),
             q(c.from('angebote').select('id, belegnummer, status, nettobetrag, erinnerung, erinnerung_by, kundenmatchcode, customers(name)').limit(1000)),
@@ -127,7 +128,7 @@
             const wann = e.event_date || e.start_date;
             const wartungTyp = !!(e.machine_id || e.manual_machine || e.maintenance_types);
             bald.push({ wann, titel: e.title || (wartungTyp ? 'Wartung' : 'Termin'),
-                sub: sauber([maschine(e.machine_id) || e.manual_machine, e.location, uhrzeit(wann)]).join(' · '),
+                sub: sauber([maschine(e.machine_id) || e.manual_machine, e.location_label, uhrzeit(wann)]).join(' · '),
                 art: wartungTyp ? 'Wartung' : 'Termin', k: wartungTyp ? 'gelb' : 'blau', typ: 'event', id: e.id });
         });
         einsaetze.forEach(s => bald.push({ wann: s.datum_von || s.date, titel: s.title || 'Serviceeinsatz', sub: maschine(s.machine_id), art: 'Service', k: 'blau', typ: 'service', id: s.id }));
@@ -147,7 +148,7 @@
         const summe = offen.reduce((s, a) => { const n = parseFloat(String(a.nettobetrag || '').replace(',', '.')); return s + (isNaN(n) ? 0 : n); }, 0);
         const werkstatt = (window.machineList || []).filter(m => m.is_in_workshop === true).length;
 
-        return { heute, jetzt: jetztFertig, bald: bald.slice(0, 14), procs, kpi: { inMiete, angebote: offen.length, summe, werkstatt, berichteOffen, meineAufgaben, fotosNeu, wartungUeber } };
+        return { heute, jetzt: jetztFertig, bald: bald.slice(0, 14), procs, kpi: { inMiete, angebote: offen.length, summe, werkstatt, berichteOffen, maschinen: (window.machineList || []).length, fotosNeu, wartungUeber } };
     }
 
     function holen(erzwingen) {
@@ -214,7 +215,7 @@
 
     // ---------------------------------------------------------- Zeichnen
     function zeile(x, links) {
-        return '<button type="button" class="ck-zeile" data-ck-typ="' + esc(x.typ) + '" data-ck-id="' + esc(x.id) + '">'
+        return '<button type="button" class="ck-zeile ck-zeile-' + (x.k || (x.tag ? tageText(x.tag, isoTag(new Date())).k : "")) + '" data-ck-typ="' + esc(x.typ) + '" data-ck-id="' + esc(x.id) + '">'
             + links
             + '<span class="ck-text"><b>' + esc(x.titel) + '</b>' + (x.sub ? '<span>' + esc(x.sub) + '</span>' : '') + '</span>'
             + (x.art ? '<span class="ck-pill ck-' + x.k + '">' + esc(x.art) + '</span>' : '')
@@ -232,14 +233,14 @@
         const favs = favoriten();
         const favHtml = '<div class="ck-fav"><span class="ck-fav-titel">★ Favoriten</span>'
             + favs.map(f => '<button type="button" class="ck-fav-knopf" data-ck-nav="' + esc(f.id) + '">' + f.icon + '<span>' + esc(f.label) + '</span>'
-                + (f.id === 'processes' && jetzt && jetzt.length ? '<span class="ck-zahl">' + jetzt.length + '</span>' : '') + '</button>').join('')
+                + (f.id === 'processes' && jetzt && jetzt.length ? '<span class="ck-zahl" title="' + jetzt.length + ' Punkte unter „Jetzt zuerst“ (nicht die Anzahl aller Vorgänge)">' + jetzt.length + '</span>' : '') + '</button>').join('')
             + '<button type="button" class="ck-fav-knopf ck-fav-plus" data-ck-favwahl title="Favoriten anpassen">＋</button>'
             + '<span class="ck-fav-luecke"></span>'
             + '<button type="button" class="ck-fav-knopf ck-fav-suche" data-ck-suche title="Suche über alles (Strg+K)">⌕ <span>Suchen</span> <kbd>Strg+K</kbd></button></div>';
 
         const zahl = jetzt ? jetzt.length : null;
-        const kopf = '<div class="ck-kopf"><div><div class="ck-gruss">' + esc(gruss + (name ? ', ' + name : '')) + '</div>'
-            + '<div class="ck-unter">' + esc(datum) + (zahl == null ? ' · wird geladen …' : zahl ? ' · ' + zahl + (zahl === 1 ? ' Sache braucht' : ' Dinge brauchen') + ' dich' : ' · nichts Dringendes') + '</div></div>'
+        const kopf = '<div class="ck-kopf"><div class="ck-kopf-deko" aria-hidden="true"></div><div><div class="ck-gruss">' + esc(gruss + (name ? ', ' + name : '')) + '</div>'
+            + '<div class="ck-unter">' + esc(datum) + (zahl == null ? ' · wird geladen …' : zahl ? ' · ' + zahl + (zahl === 1 ? ' Punkt' : ' Punkte') + ' unter „Jetzt zuerst“' : ' · nichts Dringendes') + '</div></div>'
             + '<button type="button" class="ck-klassisch" data-ck-aus title="Zur bisherigen Startseite zurück">Klassische Startseite</button></div>';
 
         let bloecke = '';
@@ -247,11 +248,11 @@
             bloecke = '<div class="ck-karte ck-leer">Wird geladen …</div>';
         } else {
             if (jetzt.length) {
-                bloecke += '<div class="ck-karte"><div class="ck-titel"><span class="ck-punkt ck-rot"></span>Jetzt zuerst</div>'
+                bloecke += '<div class="ck-karte"><div class="ck-titel"><span class="ck-titel-ic ck-rot">!</span>Jetzt zuerst<span class="ck-titel-n">' + jetzt.length + '</span></div>'
                     + jetzt.map(x => { const t = tageText(x.tag, d.heute); return zeile(x, '<span class="ck-pill ck-' + t.k + '">' + esc(t.t) + '</span>'); }).join('') + '</div>';
             }
             if (bald.length) {
-                bloecke += '<div class="ck-karte"><div class="ck-titel"><span class="ck-punkt ck-blau"></span>Demnächst · 7 Tage</div>'
+                bloecke += '<div class="ck-karte"><div class="ck-titel"><span class="ck-titel-ic ck-blau">◷</span>Demnächst · 7 Tage<span class="ck-titel-n">' + bald.length + '</span></div>'
                     + bald.map(x => {
                         const dt = new Date(x.wann);
                         const tag = isNaN(dt) ? '' : '<span class="ck-datum"><b>' + dt.getDate() + '</b>' + esc(dt.toLocaleDateString('de-DE', { weekday: 'short' })) + '</span>';
@@ -262,17 +263,29 @@
         }
 
         const k = d && d.kpi;
+        const IC = {
+            miete: '<path d="M3 7h11v9H3zM14 10h4l3 3v3h-7M7 19a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM17 19a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"/>',
+            angebot: '<path d="M7 3h7l5 5v13H7zM14 3v5h5M10 13h6M10 17h6"/>',
+            werkstatt: '<path d="M14.7 6.3a4 4 0 005 5L20 12l-8 8a2.1 2.1 0 01-3-3l8-8zM5 5l3 3"/>',
+            maschine: '<path d="M3 18h14M5 18V9h7l3 3v6M12 9V5h4M7 21a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM15 21a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"/>',
+            wartung: '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 3h6"/>',
+            berichte: '<path d="M6 3h9l4 4v14H6zM9 12h7M9 16h5"/>',
+            fotos: '<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>'
+        };
+        const kachel = (attr, ton, ic, zahl, text) => '<button type="button" class="ck-kachel ck-t-' + ton + '" ' + attr + '>'
+            + '<span class="ck-kachel-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + IC[ic] + '</svg></span>'
+            + '<span class="ck-kachel-zahl">' + zahl + '</span><span class="ck-kachel-text">' + text + '</span></button>';
         const kpi = k ? '<div class="ck-kpis">'
-            + (k.inMiete ? '<button type="button" class="ck-fav-knopf" data-ck-vermiet>🚚 ' + k.inMiete + ' in Vermietung</button>' : '')
-            + (k.angebote ? '<button type="button" class="ck-fav-knopf" data-ck-nav="listen">📄 ' + k.angebote + ' offene Angebote · ' + Math.round(k.summe).toLocaleString('de-DE') + ' €</button>' : '')
-            + (k.werkstatt ? '<button type="button" class="ck-fav-knopf" data-ck-werkstatt>🔧 ' + k.werkstatt + ' in der Werkstatt</button>' : '')
-            + (k.meineAufgaben ? '<button type="button" class="ck-fav-knopf" data-ck-ziel="aufgaben">✅ ' + k.meineAufgaben + ' meine Aufgaben</button>' : '')
-            + (k.wartungUeber ? '<button type="button" class="ck-fav-knopf ck-kpi-warn" data-ck-ziel="wartung">⏰ ' + k.wartungUeber + ' Wartungen überfällig</button>' : '')
-            + (k.berichteOffen ? '<button type="button" class="ck-fav-knopf" data-ck-ziel="berichte">📝 ' + k.berichteOffen + ' Berichte nicht abgeschlossen</button>' : '')
-            + (k.fotosNeu ? '<button type="button" class="ck-fav-knopf" data-ck-ziel="fotos">📷 ' + k.fotosNeu + ' Fotos zuordnen</button>' : '')
+            + (k.inMiete ? kachel('data-ck-vermiet', 'gruen', 'miete', k.inMiete, 'in Vermietung') : '')
+            + (k.angebote ? kachel('data-ck-nav="listen"', 'blau', 'angebot', k.angebote, 'offene Angebote<small>' + Math.round(k.summe).toLocaleString('de-DE') + ' €</small>') : '')
+            + (k.werkstatt ? kachel('data-ck-werkstatt', 'lila', 'werkstatt', k.werkstatt, 'in der Werkstatt') : '')
+            + (k.maschinen ? kachel('data-ck-nav="machines"', 'gruen', 'maschine', k.maschinen, k.maschinen === 1 ? 'Maschine' : 'Maschinen') : '')
+            + (k.wartungUeber ? kachel('data-ck-ziel="wartung"', 'rot', 'wartung', k.wartungUeber, 'Wartungen überfällig') : '')
+            + (k.berichteOffen ? kachel('data-ck-ziel="berichte"', 'gelb', 'berichte', k.berichteOffen, 'Berichte in Arbeit<small>nicht abgeschlossen, letzte 30 Tage</small>') : '')
+            + (k.fotosNeu ? kachel('data-ck-ziel="fotos"', 'blau', 'fotos', k.fotosNeu, 'Fotos zuordnen') : '')
             + '</div>' : '';
 
-        return favHtml + kopf + '<div class="ck-raster">' + bloecke + '</div>' + kpi;
+        return favHtml + kopf + kpi + '<div class="ck-raster">' + bloecke + '</div>';
     }
 
     function zeichnen() {
@@ -351,6 +364,7 @@
         if (window.showToast) window.showToast('Kann diesen Eintrag hier nicht öffnen.');
     }
     function zielSprung(z) {
+        if (z === 'kalender') return window.switchView ? window.switchView('calendar') : navigieren('calendar');
         if (z === 'aufgaben') { navigieren('tasks'); setTimeout(() => window.filterTasksByUser && window.filterTasksByUser('me'), 80); return; }
         if (z === 'wartung') {
             if (window.eventsState) window.eventsState.statusFilter = 'overdue';

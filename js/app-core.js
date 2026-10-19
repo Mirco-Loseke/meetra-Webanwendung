@@ -41,7 +41,7 @@
 
         // Einfügen mit Ersteller-Angabe.
         // created_by_user (bigint, FK auf public.users) kommt aus
-        // supabase/supabase_fix_process_user.sql. Ist die Datei im Projekt des
+        // supabase/migrationen/supabase_fix_process_user.sql. Ist die Datei im Projekt des
         // Nutzers noch nicht ausgeführt, fehlt die Spalte — dann wird ohne sie
         // gespeichert, damit der Vorgang nicht verloren geht.
         window.insertMitErsteller = async function (table, payload) {
@@ -149,20 +149,22 @@
             document.getElementById(overlayId)?.remove();
             const el = document.createElement('div');
             el.id = overlayId;
-            el.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:999999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px);';
-            el.innerHTML = `
-                <div style="background:linear-gradient(135deg,rgba(30,41,59,0.98),rgba(15,23,42,0.99));border:1px solid rgba(255,255,255,0.12);border-radius:20px;padding:1.75rem 2rem;max-width:380px;width:90%;box-shadow:0 30px 80px rgba(0,0,0,0.6);font-family:'Inter',sans-serif;text-align:center;">
-                    <h3 style="color:#fff;font-size:1.05rem;font-weight:800;margin:0 0 0.6rem 0;">Ungespeicherte Änderungen</h3>
-                    <p style="color:rgba(255,255,255,0.55);font-size:0.88rem;margin:0 0 1.5rem 0;line-height:1.5;">Möchtest du ohne Speichern verlassen?</p>
-                    <div style="display:flex;gap:0.75rem;justify-content:center;">
-                        <button id="${overlayId}-discard" style="flex:1;padding:0.7rem 1rem;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:12px;color:rgba(255,255,255,0.75);font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;font-size:0.88rem;transition:background 0.2s;">Trotzdem Schließen</button>
-                        <button id="${overlayId}-save" style="flex:1;padding:0.7rem 1rem;background:rgba(16,185,129,0.2);border:1px solid rgba(16,185,129,0.4);border-radius:12px;color:#34d399;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;font-size:0.88rem;transition:background 0.2s;">Speichern</button>
-                    </div>
-                </div>
-            `;
+            el.className = 'app-dialog-hg';
+            el.innerHTML = '<div class="app-dialog app-dialog--ungespeichert" role="alertdialog" aria-modal="true" aria-labelledby="' + overlayId + '-t">'
+                + '<h3 id="' + overlayId + '-t">Änderungen speichern?</h3>'
+                + '<p>Sonst bleibt nur dein Entwurf auf diesem Gerät.</p>'
+                + '<div class="app-dialog-fuss app-dialog-fuss--drei">'
+                + '<button type="button" class="knopf knopf--text knopf--gefahr-text" data-u="verwerfen">Verwerfen</button>'
+                + '<span class="app-dialog-fuss-rechts">'
+                + '<button type="button" class="knopf knopf--sekundaer" data-u="entwurf">Entwurf</button>'
+                + '<button type="button" class="knopf knopf--primaer" data-u="speichern">Speichern</button>'
+                + '</span></div></div>';
             document.body.appendChild(el);
-            document.getElementById(overlayId + '-discard').onclick = () => { el.remove(); onDiscard(); };
-            document.getElementById(overlayId + '-save').onclick = () => { el.remove(); onSave(); };
+            const zu = fn => () => { el.remove(); fn(); };
+            el.querySelector('[data-u="verwerfen"]').onclick = zu(() => { try { window.entwurfSichtbareVerwerfen && window.entwurfSichtbareVerwerfen(); } catch (e) { /* egal */ } onDiscard(); });
+            el.querySelector('[data-u="entwurf"]').onclick = zu(onDiscard);
+            el.querySelector('[data-u="speichern"]').onclick = zu(onSave);
+            el.querySelector('[data-u="speichern"]').focus();
         };
 
         // ==========================================

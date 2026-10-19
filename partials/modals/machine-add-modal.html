@@ -1,0 +1,452 @@
+<div id="add-machine-modal" class="modal-backdrop hidden">
+    <div class="modal-content"
+        style="max-width: 900px; width: 90%; max-height: 85vh; display: flex; flex-direction: column; position: relative; margin: auto;">
+        <h2 style="margin-bottom: 2rem;">Maschine anlegen</h2>
+        <button type="button" class="btn-close-modal" style="position: absolute; top: 12px; right: 16px;"
+            onclick="maschineFensterSchliessen()">&times;</button>
+
+        <div class="modal-form-area" style="overflow-y: auto; padding-right: 10px; flex: 1;">
+            <!-- Interactive Image Slot at the Top -->
+            <div id="machine-image-slot" class="machine-modal-image-slot"
+                onclick="document.getElementById('machine-image-upload').click()">
+                <div class="placeholder-content-inner"
+                    style="display: flex; flex-direction: column; align-items: center; gap: 12px; pointer-events: none;">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.5;">
+                        <path
+                            d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
+                        <circle cx="12" cy="13" r="3" />
+                    </svg>
+                    <span class="placeholder-text"
+                        style="font-size: 0.9rem; color: rgba(255,255,255,0.4); font-weight: 500;">Foto
+                        hinzufügen</span>
+                </div>
+            </div>
+
+            <!-- File Previews Grid (Moved here) -->
+            <div id="machine-file-previews" class="file-preview-grid" style="margin-bottom: 2rem;"></div>
+
+            <h3 class="section-title">Stammdaten</h3>
+
+            <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div class="form-group">
+                    <label>Maschinentyp / Kategorie</label>
+                    <div id="category-wrapper" style="position: relative;">
+                        <div id="machine-category-trigger" class="glass-select"
+                            style="cursor: pointer; display: flex; align-items: center; justify-content: space-between;"
+                            onclick="toggleCategoryDropdown(event)">
+                            <span id="machine-category-text">Bitte wählen...</span>
+                        </div>
+                        <input type="hidden" id="machine-category">
+
+                        <div id="machine-category-dropdown" class="user-dropdown-menu"
+                            style="width: 100%; top: 105%; right: auto; left: 0;">
+                            <ul id="machine-category-list">
+                                <!-- Populated by JS -->
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Hersteller: Auswahl aus den Kategorien vom Typ "Hersteller"
+                     (Einstellungen > Kategorien). Neue Hersteller lassen sich direkt
+                     hier anlegen; der gespeicherte Wert bleibt der Klartext-Name. -->
+                <div class="form-group">
+                    <label>Hersteller</label>
+                    <div id="machine-manufacturer-wrapper" style="position: relative;">
+                        <div id="machine-manufacturer-trigger" class="glass-select"
+                            style="cursor: pointer; display: flex; align-items: center; justify-content: space-between;"
+                            onclick="toggleMachineManufacturerDropdown(event)">
+                            <span id="machine-manufacturer-text">Bitte wählen...</span>
+                        </div>
+                        <input type="hidden" id="machine-manufacturer">
+
+                        <div id="machine-manufacturer-dropdown" class="user-dropdown-menu"
+                            style="width: 100%; top: 105%; right: auto; left: 0;">
+                            <ul id="machine-manufacturer-list">
+                                <!-- Populated by JS -->
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Typbezeichnung</label>
+                    <input type="text" id="machine-name" placeholder="z.B. 17.50">
+                </div>
+
+                <div class="form-group">
+                    <label>Maschinenserie</label>
+                    <div id="machine-series-wrapper" style="position: relative;">
+                        <div id="machine-series-trigger" class="glass-select"
+                            style="cursor: pointer; display: flex; align-items: center; justify-content: space-between;"
+                            onclick="toggleMachineSeriesDropdown(event)">
+                            <span id="machine-series-text">Bitte wählen...</span>
+                        </div>
+                        <input type="hidden" id="machine-series">
+
+                        <div id="machine-series-dropdown" class="user-dropdown-menu"
+                            style="width: 100%; top: 105%; right: auto; left: 0;">
+                            <ul id="machine-series-list">
+                                <!-- Populated by JS -->
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Seriennummer / Fahrgestellnummer</label>
+                    <input type="text" id="machine-serial" placeholder="SN-12345678">
+                </div>
+
+                <div class="form-group">
+                    <label>Baujahr</label>
+                    <input type="number" id="machine-year" placeholder="2024"
+                        style="width: 100%; padding: 14px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.03); color: white; font-family: 'Inter'; backdrop-filter: blur(16px);">
+                </div>
+
+                <div class="form-group">
+                    <label>Motortyp</label>
+                    <input type="text" id="machine-motor-type" class="glass-input" placeholder="z.B. Deutz TCD 3.6">
+                </div>
+
+                <div class="form-group">
+                    <label>Motorseriennummer</label>
+                    <input type="text" id="machine-motor-serial" class="glass-input" placeholder="z.B. 12345678">
+                </div>
+
+                <div class="form-group">
+                    <label>Leistung</label>
+                    <input type="text" id="machine-power" class="glass-input" placeholder="z.B. 240 PS / 280 kW oder 50 Hz">
+                </div>
+
+                <div class="form-group">
+                    <label>Art des Kontaktes</label>
+                    <div id="contact-wrapper" style="position: relative;">
+                        <div id="contact-trigger" class="glass-select"
+                            style="cursor: pointer; display: flex; align-items: center; justify-content: space-between;"
+                            onclick="toggleContactDropdown(event)">
+                            <span id="contact-text"
+                                style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 90%;">Bitte
+                                wählen...</span>
+                        </div>
+                        <input type="hidden" id="machine-contact-type">
+
+                        <div id="contact-dropdown" class="user-dropdown-menu"
+                            style="width: 100%; top: 105%; right: auto; left: 0;">
+                            <ul id="contact-list">
+                                <!-- Populated via JS -->
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 2: Wartung -->
+            <div class="collapsible-section" style="margin-top: 2rem;">
+                <div class="section-header" onclick="toggleAddMachineSection(this)"
+                    style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 12px 16px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; margin-bottom: 1rem; transition: all 0.2s;"
+                    onmouseover="this.style.background='rgba(255,255,255,0.08)'; this.style.borderColor='rgba(255,255,255,0.15)'"
+                    onmouseout="this.style.background='rgba(255,255,255,0.04)'; this.style.borderColor='rgba(255,255,255,0.08)'">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <h3 class="section-title"
+                            style="margin: 0; font-size: 1.1rem; border-bottom: none; padding-bottom: 0;">Wartung</h3>
+                    </div>
+                    <svg class="toggle-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                        style="transition: transform 0.3s ease; opacity: 0.6;">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </div>
+                <div class="section-content" style="display: none; transition: all 0.3s ease;">
+                    <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: end;">
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label style="display:flex; align-items:center; min-height:20px;">Letzte Wartung</label>
+                            <input type="date" id="machine-last-maintenance" class="glass-input">
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label style="display: flex; justify-content: space-between; align-items: center; min-height:20px;">
+                                Nächste Wartung
+                                <span id="maint-auto-badge" class="badge hidden"
+                                    style="background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); font-size: 0.7rem; padding: 2px 6px; border-radius: 6px; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase;">Auto</span>
+                            </label>
+                            <input type="date" id="machine-next-maintenance" class="glass-input">
+                        </div>
+                        <div class="form-group" style="margin-bottom:0; grid-column: 1 / -1;">
+                            <label>Manueller Wartungsintervall (Monate)</label>
+                            <input type="number" id="machine-maintenance-interval" class="glass-input" placeholder="leer = Standard der Kategorie verwenden" min="1" step="1" oninput="if (typeof window.calculateNextMaintenanceDate === 'function') window.calculateNextMaintenanceDate()">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 3: Standort & Besitzer -->
+            <div class="collapsible-section" style="margin-top: 2rem;">
+                <div class="section-header" onclick="toggleAddMachineSection(this)"
+                    style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 12px 16px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; margin-bottom: 1rem; transition: all 0.2s;"
+                    onmouseover="this.style.background='rgba(255,255,255,0.08)'; this.style.borderColor='rgba(255,255,255,0.15)'"
+                    onmouseout="this.style.background='rgba(255,255,255,0.04)'; this.style.borderColor='rgba(255,255,255,0.08)'">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <h3 class="section-title"
+                            style="margin: 0; font-size: 1.1rem; border-bottom: none; padding-bottom: 0;">Betreiber &amp; Standort / Ansprechpartner</h3>
+                    </div>
+                    <svg class="toggle-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                        style="transition: transform 0.3s ease; opacity: 0.6;">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </div>
+                <div class="section-content" style="display: none; transition: all 0.3s ease;">
+                    <!-- Hidden fields -->
+                    <input type="hidden" id="machine-customer-id">
+                    <input type="hidden" id="machine-location-customer-id">
+                    <input type="hidden" id="machine-address-input">
+                    <input type="hidden" id="machine-location-input">
+
+                    <!-- Bei Meetra in der Werkstatt Checkbox -->
+                    <div class="form-group" style="margin-bottom: 1.5rem; display: flex; align-items: center;">
+                        <label for="machine-in-workshop" style="display: flex; align-items: center; gap: 12px; cursor: pointer; color: #fff; font-weight: 600; font-size: 1rem; user-select: none;">
+                            <input type="checkbox" id="machine-in-workshop" onchange="toggleMachineWorkshopUI(this.checked)">
+                            Bei Meetra in der Werkstatt
+                        </label>
+                    </div>
+
+                    <!-- Meetra Address Display (Visible when checked) -->
+                    <div id="machine-meetra-address-display" class="hidden" style="
+                        display: none;
+                        padding: 1.5rem;
+                        background: rgba(255, 255, 255, 0.03);
+                        border: 1px solid rgba(255, 255, 255, 0.1);
+                        border-radius: 12px;
+                        margin-bottom: 1.5rem;
+                        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+                    ">
+                        <h4 style="color: #10b981; margin: 0 0 0.5rem 0; font-size: 1rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Werkstatt-Standort (Meetra HQ)</h4>
+                        <div id="machine-meetra-address-text" style="color: rgba(255,255,255,0.85); font-size: 0.95rem; line-height: 1.5; font-family: 'Inter', sans-serif;">
+                            Lade Adresse...
+                        </div>
+                    </div>
+
+                    <!-- Customer search kept hidden for JS compat (customer_id still tracked) -->
+                    <div id="machine-customer-search-group" style="display:none;">
+                        <input type="text" id="machine-customer-search">
+                        <button type="button" id="btn-clear-customer" style="display:none;"></button>
+                        <div id="machine-customer-suggestions"></div>
+                    </div>
+
+                    <div id="machine-operator-address-group">
+                        <!-- Split Betreiber Fields -->
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-top: 1.5rem; margin-bottom: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 5px;">
+                            <h4 style="color: #fff; margin: 0; font-size: 1rem;">Betreiber / Rechnungsadresse</h4>
+                            <button type="button" class="btn-secondary knopf--klein" onclick="window.openAddressEditById(document.getElementById('machine-customer-id').value)" style="display:flex; align-items:center; gap:5px;" title="Adresse im Adressbuch bearbeiten">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                Adresse bearbeiten
+                            </button>
+                        </div>
+                        
+                        <!-- Operator Search Field -->
+                        <div class="form-group" style="position: relative; margin-bottom: 1.5rem;">
+                            <label>Betreiber aus Sage suchen (Matchcode / Name)</label>
+                            <input type="text" id="machine-operator-search" class="glass-input" placeholder="z.B. Müller, 10034..." oninput="searchOperatorsForMachine()">
+                            <div id="machine-operator-suggestions" class="suggestions-box" style="display:none; position: absolute; width: 100%; z-index: 99999; max-height: 200px; overflow-y: auto;"></div>
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1rem; margin-bottom: 1rem;">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label>Kundennummer</label>
+                                <input type="text" id="machine-customer-number" placeholder="z.B. 10423">
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label>Firma / Name *</label>
+                                <input type="text" id="machine-owner" placeholder="Name des Besitzers">
+                            </div>
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 1rem;">
+                            <label>Straße &amp; Hausnummer</label>
+                            <input type="text" id="machine-operator-street" placeholder="Musterstraße 1" oninput="updateCombinedAddresses()">
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 0.75rem; margin-bottom: 0;">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label>PLZ</label>
+                                <input type="text" id="machine-operator-zip" placeholder="12345" oninput="updateCombinedAddresses()">
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label>Ort</label>
+                                <input type="text" id="machine-operator-city" placeholder="Musterstadt" oninput="updateCombinedAddresses()">
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label>Land</label>
+                                <input type="text" id="machine-operator-country" value="Deutschland" oninput="updateCombinedAddresses()">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Toggle button for abweichender Maschinenstandort -->
+                    <button type="button" id="btn-toggle-machine-location" class="btn-secondary" onclick="window.toggleMachineLocationGroup()" style="width:100%; margin-top:0.75rem;">+ Abweichenden Maschinenstandort hinzufügen</button>
+
+                    <div id="machine-location-address-group" style="display:none; margin-top:0.75rem;">
+                        <!-- Split Standort Fields -->
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 5px;">
+                            <h4 style="color: #fff; margin: 0; font-size: 0.9rem;">Abweichender Maschinenstandort</h4>
+                            <div style="display:flex; gap:6px;">
+                                <button type="button" class="btn-secondary knopf--klein" onclick="window.openAddressEditById(document.getElementById('machine-location-customer-id').value)" style="display:flex; align-items:center; gap:5px;" title="Adresse im Adressbuch bearbeiten">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                    Adresse bearbeiten
+                                </button>
+                                <button type="button" class="btn-secondary knopf--klein" onclick="copyOperatorAddressToLocation()">Von Betreiber kopieren</button>
+                                <button type="button" class="btn-secondary knopf--klein" onclick="window.appFrage('Maschinenstandort entfernen?').then(ja=>{if(ja)window.toggleMachineLocationGroup(true)})">Entfernen</button>
+                            </div>
+                        </div>
+
+                        <!-- Location Search Field -->
+                        <div class="form-group" style="position: relative; margin-bottom: 0.75rem;">
+                            <label>Standort aus Sage suchen (Matchcode / Name)</label>
+                            <input type="text" id="machine-location-search" class="glass-input" placeholder="z.B. Baustelle X, 10034..." oninput="searchLocationsForMachine()">
+                            <div id="machine-location-suggestions" class="suggestions-box" style="display:none; position: absolute; width: 100%; z-index: 99999; max-height: 200px; overflow-y: auto;"></div>
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 1rem;">
+                            <label>Firma / Name (Maschinenstandort)</label>
+                            <input type="text" id="machine-location-company" placeholder="z.B. Baustelle XY / Zweigstelle">
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 1rem;">
+                            <label>Straße &amp; Hausnummer</label>
+                            <input type="text" id="machine-location-street" placeholder="Musterstraße 1" oninput="updateCombinedAddresses()">
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label>PLZ</label>
+                                <input type="text" id="machine-location-zip" placeholder="12345" oninput="updateCombinedAddresses()">
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label>Ort</label>
+                                <input type="text" id="machine-location-city" placeholder="Musterstadt" oninput="updateCombinedAddresses()">
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label>Land</label>
+                                <input type="text" id="machine-location-country" value="" oninput="updateCombinedAddresses()">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Ansprechpartner inside section 3 -->
+                    <div style="margin-top: 1rem; padding: 0.75rem 1rem; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.07); border-radius: 10px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 6px;">
+                            <div style="font-size: 0.76rem; font-weight: 700; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.5px;">Ansprechpartner</div>
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <button type="button" class="btn-secondary knopf--klein" onclick="window.openAddressContactsById()" style="display: flex; align-items: center; gap: 5px;" title="Ansprechpartner in der Adresse im Adressbuch öffnen/verwalten">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                                    Zur Adresse &amp; Ansprechpartner
+                                </button>
+                                <button type="button" class="btn-secondary knopf--klein" onclick="window.addMachineContactPerson()">+ Hinzufügen</button>
+                            </div>
+                        </div>
+                        <div id="machine-contact-persons-list"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 4: Weitere Maschinen & Zusatzausrüstung -->
+            <div id="machine-extras-section" class="collapsible-section machine-extras-section" style="margin-top: 2rem;">
+                <div class="section-header" onclick="toggleAddMachineSection(this)"
+                    style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 12px 16px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; margin-bottom: 1rem; transition: all 0.2s;"
+                    onmouseover="this.style.background='rgba(255,255,255,0.08)'; this.style.borderColor='rgba(255,255,255,0.15)'"
+                    onmouseout="this.style.background='rgba(255,255,255,0.04)'; this.style.borderColor='rgba(255,255,255,0.08)'">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <h3 class="section-title"
+                            style="margin: 0; font-size: 1.1rem; border-bottom: none; padding-bottom: 0;">Weitere Maschinen &amp; Zusatzausrüstung</h3>
+                    </div>
+                    <svg class="toggle-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                        style="transition: transform 0.3s ease; opacity: 0.6;">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </div>
+                <div class="section-content" style="display: none; transition: all 0.3s ease;">
+                    <div class="form-group machine-related-search-group" style="position: relative; margin-bottom: 1.75rem;">
+                        <label style="font-size:0.92rem; font-weight:700; color:rgba(255,255,255,0.8);">Maschinen verknüpfen</label>
+                        <input type="text" id="machine-related-search" class="glass-input"
+                            placeholder="Hersteller, Typ oder Seriennummer suchen..."
+                            oninput="window.searchRelatedMachinesForModal()"
+                            onfocus="window.searchRelatedMachinesForModal()">
+                        <div id="machine-related-suggestions" class="suggestions-box machine-related-suggestions-dropdown" style="display:none;"></div>
+                        <div id="machine-related-selected" class="machine-related-chips"></div>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.5rem;">
+                            <label style="font-size:0.92rem; font-weight:700; color:rgba(255,255,255,0.8); margin:0;">Zusatzausrüstung</label>
+                            <button type="button" id="btn-add-equipment" onclick="window.showEquipmentAddForm()"
+                                style="display:flex; align-items:center; gap:5px; padding:5px 12px; font-size:0.78rem; font-weight:700; border-radius:20px; background:rgba(52,211,153,0.12); border:1px solid rgba(52,211,153,0.4); color:var(--color-primary-green); cursor:pointer; transition:all 0.2s;"
+                                onmouseover="this.style.background='rgba(52,211,153,0.22)'; this.style.borderColor='rgba(52,211,153,0.6)';"
+                                onmouseout="this.style.background='rgba(52,211,153,0.12)'; this.style.borderColor='rgba(52,211,153,0.4)';">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                Hinzufügen
+                            </button>
+                        </div>
+                        <div id="machine-equipment-list" class="machine-equipment-list"></div>
+                        <div id="machine-equipment-add-form" style="display:none; margin-top:8px; padding:10px 12px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:10px;">
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
+                                <div class="form-group" style="margin-bottom:0;">
+                                    <label>Bezeichnung</label>
+                                    <input type="text" id="equip-add-designation" class="glass-input" placeholder="z.B. Überbandmagnet">
+                                </div>
+                                <div class="form-group" style="margin-bottom:0;">
+                                    <label>Typ</label>
+                                    <input type="text" id="equip-add-type" class="glass-input" placeholder="z.B. Magnet, Sieb">
+                                </div>
+                            </div>
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px;">
+                                <div class="form-group" style="margin-bottom:0;">
+                                    <label>Seriennummer</label>
+                                    <input type="text" id="equip-add-serial" class="glass-input" placeholder="z.B. SN-98765">
+                                </div>
+                                <div class="form-group" style="margin-bottom:0;">
+                                    <label>Baujahr</label>
+                                    <input type="number" id="equip-add-year" class="glass-input" placeholder="z.B. 2020">
+                                </div>
+                            </div>
+                            <div style="display:flex; gap:8px;">
+                                <button type="button" class="btn-primary knopf--klein" onclick="window.confirmAddEquipmentRow()" style="flex:1;">✓ Hinzufügen</button>
+                                <button type="button" class="btn-secondary knopf--klein" onclick="window.cancelAddEquipmentRow()">Abbrechen</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-top: 1.25rem; margin-bottom: 0;">
+                        <label style="font-size:0.92rem; font-weight:700; color:rgba(255,255,255,0.8); display:block; margin-bottom:0.5rem;">Zusatzausrüstung (aus Katalog)</label>
+                        <div class="custom-filter-dropdown" id="machine-equipment-catalog-dropdown" onclick="window.toggleMachineEquipmentCatalogDropdown(event)" style="width: 100%;">
+                            <span class="filter-label" id="machine-equipment-catalog-label">Zusatzausrüstung wählen...</span>
+                            <svg class="filter-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                            <div class="custom-filter-menu">
+                                <ul class="dropdown-options" id="machine-equipment-catalog-options">
+                                    <!-- Populated by JS -->
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <script src="js/modal-sections.js?v=1"></script>
+
+            <div id="machine-map" style="display:none;"></div> <!-- Map hidden/removed -->
+            <!-- Hidden Lat/Lng fields kept for potential future use or address geocoding if needed -->
+            <input type="hidden" id="machine-lat">
+            <input type="hidden" id="machine-lng">
+            <input type="hidden" id="machine-full-address">
+
+            <input type="file" id="machine-image-upload" multiple class="hidden-file-input">
+            <input type="hidden" id="machine-image-url">
+        </div>
+
+        <div class="modal-actions">
+            <button type="button" class="btn-secondary" onclick="maschineFensterSchliessen()">Abbrechen</button>
+            <button type="button" class="btn-primary" onclick="submitNewMachine()">Maschine anlegen</button>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,56 @@
+<div id="work-log-summary-modal" class="modal-backdrop hidden" style="z-index: 10001;">
+    <div class="modal-content" style="max-width: 700px; width: 90%; padding: 1.5rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h2 style="margin: 0; font-size: 1.3rem;">Stundenübersicht</h2>
+            <button class="btn-close-modal" onclick="window.closeWorkLogSummary()">&times;</button>
+        </div>
+        <div id="work-log-summary-content" style="display: flex; flex-direction: column; gap: 12px; max-height: 75vh; overflow-y: auto;">
+            <!-- Dynamisch befüllt -->
+        </div>
+    </div>
+</div>
+
+<div id="service-action-modal" class="modal-backdrop hidden">
+    <div class="modal-content" style="max-width: 450px; padding: 1.5rem;">
+        <h2 style="margin-bottom: 1.25rem; font-size: 1.4rem;">Aktionen für Maschine</h2>
+
+        <!-- modal-scroll-area: auf dem Handy wird das Fenster Vollbild und
+             der Inhalt passte nicht mehr aufs Display — ohne diesen
+             Scrollbereich waren die unteren Knöpfe nicht erreichbar. -->
+        <div class="modal-scroll-area">
+
+        <!-- Eine Liste je Beleg-Art: Klick öffnet die Übersicht der Maschine
+             (js/protokoll-liste.js bzw. js/mietvereinbarung-liste.js) mit
+             „Neu anlegen“ oben und den vorhandenen Belegen darunter. -->
+        <div style="display: grid; gap: 0.6rem;">
+            <button class="report-type-btn compact" onclick="showMachineDocuments('servicebericht')">
+                <div class="icon-small">📄</div>
+                <div class="text"><strong>Servicebericht</strong></div>
+            </button>
+            <button id="action-btn-intake" class="report-type-btn compact" onclick="showMachineDocuments('eingangsprotokoll')">
+                <div class="icon-small">📥</div>
+                <div class="text"><strong>Eingangsprotokoll</strong></div>
+            </button>
+            <button id="action-btn-acceptance" class="report-type-btn compact" onclick="showMachineDocuments('abnahmeprotokoll')">
+                <div class="icon-small">✅</div>
+                <div class="text"><strong>Abnahmeprotokoll</strong></div>
+            </button>
+            <!-- MIETVEREINBARUNG (3/3a) — diesen Knopf loeschen = weg -->
+            <button id="action-btn-rental" class="report-type-btn compact" onclick="showMachineDocuments('mietvereinbarung')">
+                <div class="icon-small">🔑</div>
+                <div class="text"><strong>Mietvereinbarung</strong></div>
+            </button>
+            <button id="action-btn-uvv" class="report-type-btn compact" onclick="showMachineDocuments('intern')">
+                <div class="icon-small">🛡️</div>
+                <div class="text"><strong>Internes UVV &amp; Wartungsprotokoll</strong></div>
+            </button>
+        </div>
+
+        </div><!-- /modal-scroll-area -->
+
+        <div class="modal-actions" style="margin-top: 1.5rem; justify-content: center;">
+            <button class="btn-secondary" style="width: 100%;"
+                onclick="closeServiceActionModal()">Abbrechen</button>
+        </div>
+    </div>
+</div>

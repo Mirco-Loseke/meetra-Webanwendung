@@ -1,6 +1,6 @@
 # Supabase-Migrationen — Übersicht
 
-Alle `.sql`-Dateien dieses Ordners werden **von Hand im Supabase SQL-Editor**
+Alle `.sql`-Dateien in `migrationen/` (einmalige Reparaturen: `einmalig/`) werden **von Hand im Supabase SQL-Editor**
 ausgeführt (Dashboard → SQL Editor → Datei-Inhalt einfügen → *Run*). Es gibt
 keine automatische Migrationsverwaltung; deshalb diese Liste.
 
@@ -155,7 +155,7 @@ Ein fest gesetztes `customer_id bigint` scheitert entweder am Fremdschlüssel
 
 | Datei | Wofür |
 |---|---|
-| `reparatur_2026-09-28_bericht_eys_backhus.sql` | **Einmalig, ZUERST.** Trennt den abgeschlossenen EYS-Bericht 2026-40109 wieder vom darübergeschriebenen Backhus-21.50-Bericht (23.09.): Backhus wird neuer offener Bericht, EYS zurück auf PDF-Stand. Bricht ab, wenn der Datensatz nicht eindeutig ist |
+| `einmalig/reparatur_2026-09-28_bericht_eys_backhus.sql` | **Einmalig, ZUERST.** Trennt den abgeschlossenen EYS-Bericht 2026-40109 wieder vom darübergeschriebenen Backhus-21.50-Bericht (23.09.): Backhus wird neuer offener Bericht, EYS zurück auf PDF-Stand. Bricht ab, wenn der Datensatz nicht eindeutig ist |
 | `supabase_protect_finalized_reports.sql` | **Danach.** Datenbank-Sperre: abgeschlossene Berichte lassen sich nur noch bei Anhängen, Auftragsnummer und PDF-Feldern ändern — unabhängig vom App-Code |
 
 ## Dokumente an Vermietungen (2026-10-14)

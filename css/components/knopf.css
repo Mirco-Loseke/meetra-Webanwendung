@@ -1,0 +1,461 @@
+/* =========================================================
+   KNÖPFE — eine Definition für die ganze App
+   ---------------------------------------------------------
+   Verbindlich seit 2026-10-16. Wird als LETZTES Stylesheet im
+   <head> geladen. Vorschau aller Arten: tools/knopf-vorschau.html
+
+   Grundklasse .knopf + genau EINE Art:
+     .knopf--primaer    Speichern, Anlegen, Senden — höchstens 1 je Bereich
+     .knopf--sekundaer  Abbrechen, Zurück, Vorschau, Drucken, Export
+     .knopf--gefahr     Löschen, Entfernen, Verwerfen
+     .knopf--text       leise Nebenaktion: „Mehr anzeigen", „Adresse öffnen"
+     .knopf--ki         alles, was die KI auslöst (✨)
+   Dazu optional:
+     .knopf--klein      32 px — Filter, Karten-Aktionen, Chips
+     .knopf--icon       quadratisch, nur Symbol — braucht aria-label/title
+   Schließen-X:         .knopf-x (immer oben rechts im Fensterkopf)
+   Fensterfuß:          .fenster-fuss  (Löschen links, Abbrechen + Primär rechts)
+
+   Symbol immer LINKS vom Text, als SVG (16 px), nie als Emoji.
+   ========================================================= */
+
+.knopf {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    height: var(--knopf-h);
+    padding: 0 var(--space-4);
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-body);
+    font-size: var(--fs-md);
+    font-weight: var(--fw-semibold);
+    line-height: 1;
+    letter-spacing: var(--ls-normal);
+    text-transform: none;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    transition: background var(--dur-fast) var(--ease-out),
+                border-color var(--dur-fast) var(--ease-out),
+                color var(--dur-fast) var(--ease-out),
+                transform var(--dur-fast) var(--ease-out);
+}
+
+.knopf svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+
+.knopf:active:not(:disabled) {
+    transform: scale(0.97);
+}
+
+.knopf:focus-visible {
+    outline: 2px solid var(--info);
+    outline-offset: 2px;
+}
+
+.knopf:disabled,
+.knopf[aria-disabled="true"] {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+/* ---------- Arten ---------- */
+
+.knopf--primaer {
+    background: var(--knopf-primaer);
+    color: #fff;
+    font-weight: var(--fw-bold);
+    box-shadow: var(--shadow-1);
+}
+.knopf--primaer:hover:not(:disabled) {
+    background: var(--knopf-primaer-hover);
+}
+
+.knopf--sekundaer {
+    background: var(--knopf-flaeche);
+    border-color: var(--knopf-rand);
+    color: var(--text-1);
+}
+.knopf--sekundaer:hover:not(:disabled) {
+    background: var(--knopf-flaeche-hover);
+}
+
+.knopf--gefahr {
+    background: transparent;
+    border-color: rgba(239, 68, 68, 0.45);
+    color: var(--danger-soft);
+}
+.knopf--gefahr:hover:not(:disabled) {
+    background: var(--danger);
+    border-color: var(--danger);
+    color: #fff;
+}
+
+.knopf--text {
+    background: transparent;
+    color: var(--text-2);
+    padding: 0 var(--space-2);
+}
+.knopf--text:hover:not(:disabled) {
+    background: var(--knopf-flaeche);
+    color: var(--text-1);
+}
+
+.knopf--ki {
+    background: rgba(139, 92, 246, 0.16);
+    border-color: rgba(139, 92, 246, 0.45);
+    color: #c4b5fd;
+}
+.knopf--ki:hover:not(:disabled) {
+    background: var(--knopf-ki);
+    border-color: var(--knopf-ki);
+    color: #fff;
+}
+
+/* ---------- Größen ---------- */
+
+.knopf--klein {
+    height: var(--knopf-h-klein);
+    padding: 0 var(--space-3);
+    font-size: var(--fs-sm);
+}
+
+.knopf--icon {
+    width: var(--knopf-h);
+    padding: 0;
+}
+.knopf--icon.knopf--klein {
+    width: var(--knopf-h-klein);
+}
+
+/* ---------- Schließen-X ---------- */
+
+.knopf-x {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--text-3);
+    cursor: pointer;
+    transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+.knopf-x svg {
+    width: 20px;
+    height: 20px;
+}
+.knopf-x:hover {
+    background: var(--knopf-flaeche-hover);
+    color: var(--text-1);
+}
+.knopf-x:focus-visible {
+    outline: 2px solid var(--info);
+    outline-offset: 2px;
+}
+
+/* Fensterkopf: Titel links, X rechts — kein position:absolute mehr */
+.fenster-kopf {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    margin-bottom: var(--space-5);
+}
+
+/* ---------- Fensterfuß ---------- */
+
+.fenster-fuss {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--space-3);
+    padding-top: var(--space-4);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+.fenster-fuss .knopf--gefahr {
+    margin-right: auto; /* Löschen weit weg von Speichern */
+}
+
+/* ---------- Handy ---------- */
+
+@media (max-width: 768px) {
+    .knopf,
+    .knopf--klein {
+        min-height: var(--tippflaeche);
+    }
+    .knopf--icon,
+    .knopf--icon.knopf--klein,
+    .knopf-x {
+        width: var(--tippflaeche);
+        height: var(--tippflaeche);
+        min-height: var(--tippflaeche);
+    }
+
+    /* Fuß klebt unten, Abbrechen + Speichern je halbe Breite,
+       Löschen als eigene Zeile darunter. */
+    .fenster-fuss {
+        position: sticky;
+        bottom: 0;
+        flex-wrap: wrap;
+        padding-bottom: calc(env(safe-area-inset-bottom, 0px) + var(--space-3));
+    }
+    .fenster-fuss .knopf--sekundaer,
+    .fenster-fuss .knopf--primaer {
+        flex: 1 1 0;
+    }
+    .fenster-fuss .knopf--gefahr {
+        order: 3;
+        flex-basis: 100%;
+        margin-right: 0;
+    }
+}
+
+
+/* =========================================================
+   ANGLEICHUNG DER ALTEN KLASSEN (seit 2026-10-16)
+   ---------------------------------------------------------
+   Die App hat ~2.000 Knöpfe mit alten Klassen (.btn-primary,
+   .btn-modal-save, .btn-close-modal …), deren Aussehen über
+   100 verstreute Regeln — viele mit !important — und Inline-
+   Stile bestimmen. Statt jede Stelle anzufassen, bekommen die
+   alten Klassen hier das Aussehen der neuen Arten.
+
+   Technik: `:not(#mail *):not(#_)` hebt die Spezifität auf
+   (2,1,0) — schlägt damit auch Regeln wie
+   `#process-add-modal .btn-primary { … !important }`.
+   Die Mail-Ansicht bleibt bewusst ausgenommen (eigene Optik).
+
+   Erzwungen (!important) wird nur das AUSSEHEN: Farbe, Rand,
+   Radius, Schrift, Versalien, Schatten. Größe und Abstände
+   bleiben, wie das jeweilige Layout sie setzt — sonst würden
+   bewusst kleine Knöpfe (Chips, Schnellwahl) aufgebläht.
+
+   NEUER CODE BENUTZT DIESE KLASSEN NICHT MEHR, sondern .knopf …
+   Wird eine Stelle umgestellt, verschwindet sie hier von selbst.
+   ========================================================= */
+
+/* ---------- gemeinsame Grundlage ---------- */
+:is(.btn-primary, .btn-modal-base, .btn-add-bg, .btn-red-animated, .btn-secondary, .btn-icon-soft, .btn-edit-card, .btn-delete-card, .btn-doc-delete,
+     .ab-btn, .rp2-btn, .tlv-tool, .ab-history-btn, .ab-select-toggle, .btn-reports, .btn-history):not(#mail *):not(#_) {
+    font-family: var(--font-body) !important;
+    text-transform: none !important;
+    letter-spacing: var(--ls-normal) !important;
+    border-radius: var(--radius-sm) !important;
+    animation: none !important;
+    background-image: none !important;
+    transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out),
+                color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out) !important;
+}
+/* Größe ohne !important: Layout-Regeln (Breite, flex) bleiben wirksam.
+   Die optischen Inline-Angaben im Markup wurden am 2026-10-16 entfernt;
+   bewusst kleine Knöpfe tragen dort jetzt zusätzlich .knopf--klein. */
+:is(.btn-primary, .btn-modal-base, .btn-add-bg, .btn-red-animated, .btn-secondary):not(#mail *):not(#_) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    min-height: var(--knopf-h);
+    padding: 0 var(--space-4);
+    font-size: var(--fs-md);
+    line-height: 1.2;
+}
+:is(.btn-primary, .btn-modal-base, .btn-add-bg, .btn-red-animated, .btn-secondary).knopf--klein:not(#mail *):not(#_) {
+    min-height: var(--knopf-h-klein);
+    padding: 0 var(--space-3);
+    font-size: var(--fs-sm);
+}
+:is(.btn-primary, .btn-modal-base, .btn-add-bg, .btn-red-animated, .btn-secondary):not(#mail *):not(#_):hover {
+    transform: none !important;
+}
+
+/* ---------- Primär ---------- */
+:is(.btn-primary, .btn-modal-save, .btn-add-bg, .btn-red-animated, .ab-btn-primary, .rp2-btn-primary):not(#mail *):not(#_) {
+    background: var(--knopf-primaer) !important;
+    border: 1px solid transparent !important;
+    color: #fff !important;
+    font-weight: var(--fw-bold) !important;
+    box-shadow: var(--shadow-1) !important;
+}
+:is(.btn-primary, .btn-modal-save, .btn-add-bg, .btn-red-animated, .ab-btn-primary, .rp2-btn-primary):not(#mail *):not(#_):hover:not(:disabled) {
+    background: var(--knopf-primaer-hover) !important;
+}
+
+/* ---------- Sekundär ---------- */
+:is(.btn-secondary, .btn-modal-cancel, .btn-modal-base:not(.btn-modal-save), .ab-btn:not(.ab-btn-primary, .ab-btn-ki, .ab-btn-ai, .ab-btn-danger, .ab-btn-ghost), .rp2-btn:not(.rp2-btn-primary), .tlv-tool, .ab-history-btn, .ab-select-toggle, .btn-reports, .btn-history):not(#mail *):not(#_),
+/* Drucken ist nie die Hauptaktion */
+:is(.btn-add-bg, .btn-primary):is([onclick*="rint"], [onclick*="ruck"]):not(#mail *):not(#_),
+/* „Bearbeiten" auf Karten ist keine Hauptaktion */
+:is(#service-entries-list, .card-actions) .btn-primary:not(#mail *):not(#_) {
+    background: var(--knopf-flaeche) !important;
+    border: 1px solid var(--knopf-rand) !important;
+    color: var(--text-1) !important;
+    font-weight: var(--fw-semibold) !important;
+    box-shadow: none !important;
+}
+:is(.btn-secondary, .btn-modal-cancel, .btn-modal-base:not(.btn-modal-save), .ab-btn:not(.ab-btn-primary, .ab-btn-ki, .ab-btn-ai, .ab-btn-danger, .ab-btn-ghost), .rp2-btn:not(.rp2-btn-primary), .tlv-tool, .ab-history-btn, .ab-select-toggle, .btn-reports, .btn-history):not(#mail *):not(#_):hover:not(:disabled),
+/* Drucken ist nie die Hauptaktion */
+:is(.btn-add-bg, .btn-primary):is([onclick*="rint"], [onclick*="ruck"]):not(#mail *):not(#_):hover:not(:disabled),
+:is(#service-entries-list, .card-actions) .btn-primary:not(#mail *):not(#_):hover:not(:disabled) {
+    background: var(--knopf-flaeche-hover) !important;
+}
+
+/* ---------- KI (lila) — vor Gefahr, nach Primär/Sekundär ---------- */
+:is(.btn-primary, .btn-add-bg, .btn-secondary, .btn-modal-base):is([onclick*="openAi"], [onclick*="openKi"], [onclick*="KiAnaly"]):not(#mail *):not(#_),
+:is(.ki-briefing-btn, .ab-btn-ki, .ab-btn-ai):not(#mail *):not(#_) {
+    background: rgba(139, 92, 246, 0.16) !important;
+    border: 1px solid rgba(139, 92, 246, 0.45) !important;
+    color: #c4b5fd !important;
+    box-shadow: none !important;
+}
+:is(.btn-primary, .btn-add-bg, .btn-secondary, .btn-modal-base):is([onclick*="openAi"], [onclick*="openKi"], [onclick*="KiAnaly"]):not(#mail *):not(#_):hover,
+:is(.ki-briefing-btn, .ab-btn-ki, .ab-btn-ai):not(#mail *):not(#_):hover {
+    background: var(--knopf-ki) !important;
+    border-color: var(--knopf-ki) !important;
+    color: #fff !important;
+}
+
+/* ---------- Gefahr (Löschen) ---------- */
+:is(.btn-primary, .btn-secondary, .btn-modal-base):is([onclick*="elete"], [onclick*="oesch"], [onclick*="öschen"]):not(#mail *):not(#_),
+:is(.btn-icon-soft.delete, .btn-delete-card, .btn-doc-delete, .ab-btn-danger):not(#mail *):not(#_) {
+    background: transparent !important;
+    border: 1px solid rgba(239, 68, 68, 0.45) !important;
+    color: var(--danger-soft) !important;
+    box-shadow: none !important;
+}
+:is(.btn-primary, .btn-secondary, .btn-modal-base):is([onclick*="elete"], [onclick*="oesch"], [onclick*="öschen"]):not(#mail *):not(#_):hover,
+:is(.btn-icon-soft.delete, .btn-delete-card, .btn-doc-delete, .ab-btn-danger):not(#mail *):not(#_):hover {
+    background: var(--danger) !important;
+    border-color: var(--danger) !important;
+    color: #fff !important;
+}
+
+/* ---------- Symbol-Knöpfe (Bearbeiten usw.) ---------- */
+:is(.btn-icon-soft:not(.delete), .btn-edit-card):not(#mail *):not(#_) {
+    background: var(--knopf-flaeche) !important;
+    border: 1px solid var(--knopf-rand) !important;
+    color: var(--text-1) !important;
+    box-shadow: none !important;
+}
+:is(.btn-icon-soft:not(.delete), .btn-edit-card):not(#mail *):not(#_):hover {
+    background: var(--knopf-flaeche-hover) !important;
+    transform: none !important;
+}
+
+/* ---------- Schließen-X: alle 9 alten Varianten ---------- */
+:is(.btn-close, .btn-close-modal, .modal-close-btn, .procurement-close-btn, .task-modal-close, .ue-x, .todo-x, .notif-close, .rechnungen-close):not(#mail *):not(#_) {
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 0 !important;
+    padding: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: transparent !important;
+    border: 0 !important;
+    border-radius: var(--radius-sm) !important;
+    box-shadow: none !important;
+    color: var(--text-3) !important;
+    font-family: var(--font-body) !important;
+    font-size: 24px !important;
+    font-weight: var(--fw-normal) !important;
+    line-height: 1 !important;
+    transform: none !important;
+    transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out) !important;
+}
+:is(.btn-close, .btn-close-modal, .modal-close-btn, .procurement-close-btn, .task-modal-close, .ue-x, .todo-x, .notif-close, .rechnungen-close):not(#mail *):not(#_):hover {
+    background: var(--knopf-flaeche-hover) !important;
+    color: var(--text-1) !important;
+    transform: none !important;
+    box-shadow: none !important;
+}
+:is(.btn-close, .btn-close-modal, .modal-close-btn, .procurement-close-btn, .task-modal-close, .ue-x, .todo-x, .notif-close, .rechnungen-close):not(#mail *):not(#_) svg {
+    width: 20px !important;
+    height: 20px !important;
+}
+
+/* ---------- Handy: Tippflächen ---------- */
+@media (max-width: 768px) {
+    :is(.btn-primary, .btn-modal-base, .btn-add-bg, .btn-red-animated, .btn-secondary):not(#mail *):not(#_) {
+        min-height: var(--tippflaeche) !important;
+    }
+    :is(.btn-close, .btn-close-modal, .modal-close-btn, .procurement-close-btn, .task-modal-close, .ue-x, .todo-x, .notif-close, .rechnungen-close):not(#mail *):not(#_) {
+        width: var(--tippflaeche) !important;
+        height: var(--tippflaeche) !important;
+    }
+}
+
+
+/* =========================================================
+   BEARBEITEN BLAU, LÖSCHEN ROT (2026-10-17, auf Wunsch)
+   ---------------------------------------------------------
+   Gilt überall: .knopf--bearbeiten / .knopf--gefahr bei neuen
+   Knöpfen; alte und klassenlose Knöpfe markiert js/knopf-farben.js
+   (.knopf-farbe-bearbeiten / .knopf-farbe-loeschen) anhand von
+   Text, Titel oder onclick. Drei :not(#_) heben die Spezifität über
+   die Angleichungsschicht oben und über Inline-Farben.
+   ========================================================= */
+:is(.knopf--bearbeiten, .knopf-farbe-bearbeiten, .btn-icon-soft.edit, .btn-edit-card):not(#mail *):not(#_):not(#_):not(#_) {
+    background: rgba(59, 130, 246, 0.16) !important;
+    border: 1px solid rgba(59, 130, 246, 0.55) !important;
+    color: #93c5fd !important;
+    box-shadow: none !important;
+}
+:is(.knopf--bearbeiten, .knopf-farbe-bearbeiten, .btn-icon-soft.edit, .btn-edit-card):not(#mail *):not(#_):not(#_):not(#_):hover {
+    background: #3b82f6 !important;
+    border-color: #3b82f6 !important;
+    color: #fff !important;
+}
+:is(.knopf--gefahr, .knopf-farbe-loeschen, .btn-icon-soft.delete, .btn-delete-card, .btn-doc-delete, .ab-btn-danger):not(#mail *):not(#_):not(#_):not(#_) {
+    background: rgba(239, 68, 68, 0.14) !important;
+    border: 1px solid rgba(239, 68, 68, 0.55) !important;
+    color: #fca5a5 !important;
+    box-shadow: none !important;
+}
+:is(.knopf--gefahr, .knopf-farbe-loeschen, .btn-icon-soft.delete, .btn-delete-card, .btn-doc-delete, .ab-btn-danger):not(#mail *):not(#_):not(#_):not(#_):hover {
+    background: var(--danger) !important;
+    border-color: var(--danger) !important;
+    color: #fff !important;
+}
+/* Symbole in diesen Knöpfen folgen der Schriftfarbe */
+:is(.knopf--bearbeiten, .knopf-farbe-bearbeiten, .knopf--gefahr, .knopf-farbe-loeschen) svg { stroke: currentColor; }
+
+/* PDF = rot GEFÜLLT (wie üblich bei PDF), Löschen bleibt rot UMRANDET —
+   so bleiben beide unterscheidbar (2026-10-17, auf Wunsch). */
+:is(.knopf--pdf, .knopf-farbe-pdf):not(#mail *):not(#_):not(#_):not(#_) {
+    background: #c62828 !important;
+    border: 1px solid #9f1f1f !important;
+    color: #fff !important;
+    font-weight: var(--fw-bold) !important;
+    box-shadow: 0 2px 8px rgba(198, 40, 40, 0.3) !important;
+}
+:is(.knopf--pdf, .knopf-farbe-pdf):not(#mail *):not(#_):not(#_):not(#_):hover {
+    background: #a82020 !important;
+    border-color: #7f1818 !important;
+    color: #fff !important;
+}
+:is(.knopf--pdf, .knopf-farbe-pdf) svg { stroke: currentColor; }
+
+
+/* Anhänge = lila umrandet (Kartenzeile Servicebericht + Protokolle), passend zu Bearbeiten blau / Löschen rot */
+.knopf--lila:not(#mail *):not(#_) {
+    background: rgba(139, 92, 246, 0.16);
+    border: 1px solid rgba(139, 92, 246, 0.55);
+    color: #c4b5fd;
+    box-shadow: none;
+}
+.knopf--lila:not(#mail *):not(#_):hover:not(:disabled) {
+    background: #8b5cf6;
+    border-color: #8b5cf6;
+    color: #fff;
+}
+.knopf--lila svg { stroke: currentColor; }

@@ -3,7 +3,7 @@
 // =========================================================
 // Ein Termin ist ein normaler Kalendereintrag (maintenance_events) mit
 // Uhrzeit, Adressbezug und eingeladenen Kollegen (event_participants,
-// siehe supabase/supabase_add_event_participants.sql).
+// siehe supabase/migrationen/supabase_add_event_participants.sql).
 //
 // Was hier drin steckt:
 //   - openAppointmentDialog(...)  Fenster „Termin anlegen" (Routenplanung)
@@ -233,7 +233,7 @@
             stoerend.forEach(k => { delete versuch[k]; weggelassen.push(k); });
         }
         if (weggelassen.includes('customer_id') && typeof window.showToast === 'function') {
-            window.showToast('Termin angelegt, aber ohne Adressbezug — dazu muss supabase/supabase_add_event_customer.sql in Supabase laufen.');
+            window.showToast('Termin angelegt, aber ohne Adressbezug — dazu muss supabase/migrationen/supabase_add_event_customer.sql in Supabase laufen.');
         }
         const eventId = res.data && res.data.length ? res.data[0].id : null;
 

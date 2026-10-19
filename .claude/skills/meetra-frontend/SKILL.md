@@ -14,6 +14,12 @@ UI-Texte deutsch, Dark Mode + Glas. Projektwissen steht in `CLAUDE.md` — hier 
 - Nie lesen: `lib/`, `assets/data/`.
 - Gibt es den Baustein schon? Menüs → `css/components/dropdowns.css` (`.menu-panel > .menu-list > li`, `.menu-block`, `.selected`).
   Hilfsklassen → `css/base/utilities.css` (`.form-label-caps`, `.row-clickable`, `.clickable`, `.text-muted-sm`).
+  **Knöpfe → `css/components/knopf.css` (verbindlich, mit dem Nutzer abgestimmt):**
+  `knopf knopf--primaer|sekundaer|bearbeiten(blau)|gefahr(rot)|text|ki`, optional `knopf--klein` / `knopf--icon`;
+  Schließen `knopf-x`; Fensterkopf `.fenster-kopf`, Fensterfuß `.fenster-fuss` (Löschen links, Primär rechts).
+  Ein Primär je Bereich, Symbol (SVG) links, normale Schreibweise, keine Inline-Stile außer Layout.
+  Alte `.btn-*`-Klassen nicht neu verwenden; Regeln und Tabelle in `CLAUDE.md` → „Knöpfe".
+  Neue Knopf-Art nötig? Erst mit dem Nutzer klären, dann in `knopf.css` + `tools/knopf-vorschau.html`.
   Kunden-Suche → `customerCacheSearch` (`js/lookup-cache.js`), Maschinenname → `getMachineName(id)` / `window.machineById`.
 
 ## 2. Wohin gehört was

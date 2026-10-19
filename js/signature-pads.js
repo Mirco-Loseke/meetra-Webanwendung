@@ -169,8 +169,8 @@
             signatureCanvas.ontouchcancel = stopDraw;
         }
         
-        window.clearSignatureCanvas = function() {
-            if (!confirm("Möchten Sie die Zeichnung der Unterschrift wirklich zurücksetzen?")) return;
+        window.clearSignatureCanvas = async function() {
+            if (!await window.appFrage("Möchten Sie die Zeichnung der Unterschrift wirklich zurücksetzen?")) return;
             if (signatureCtx && signatureCanvas) {
                 signatureCtx.fillStyle = '#ffffff';
                 signatureCtx.fillRect(0, 0, signatureCanvas.width, signatureCanvas.height);
@@ -197,8 +197,8 @@
             }
         };
         
-        window.clearSignature = function() {
-            if (!confirm("Möchten Sie die gespeicherte Unterschrift wirklich löschen?")) return;
+        window.clearSignature = async function() {
+            if (!await window.appFrage("Möchten Sie die gespeicherte Unterschrift wirklich löschen?")) return;
             document.getElementById('service-customer-signature').value = '';
             const sigPreviewImg = document.getElementById('signature-preview-img');
             if (sigPreviewImg) {
@@ -263,8 +263,8 @@
             if (modal) { modal.classList.remove('show'); modal.classList.add('hidden'); modal.style.display = 'none'; }
         };
 
-        window.clearTechSignatureCanvas = function() {
-            if (!confirm("Möchten Sie die Zeichnung der Unterschrift wirklich zurücksetzen?")) return;
+        window.clearTechSignatureCanvas = async function() {
+            if (!await window.appFrage("Möchten Sie die Zeichnung der Unterschrift wirklich zurücksetzen?")) return;
             if (techSignatureCtx && techSignatureCanvas) {
                 techSignatureCtx.fillStyle = '#ffffff';
                 techSignatureCtx.fillRect(0, 0, techSignatureCanvas.width, techSignatureCanvas.height);
@@ -286,8 +286,8 @@
             }
         };
 
-        window.clearTechSignature = function() {
-            if (!confirm("Möchten Sie die gespeicherte Unterschrift wirklich löschen?")) return;
+        window.clearTechSignature = async function() {
+            if (!await window.appFrage("Möchten Sie die gespeicherte Unterschrift wirklich löschen?")) return;
             document.getElementById('service-tech-signature').value = '';
             const img = document.getElementById('tech-signature-preview-img');
             if (img) { img.src = ''; img.classList.add('hidden'); img.style.display = 'none'; }
@@ -356,8 +356,8 @@
             if (modal) { modal.classList.remove('show'); modal.classList.add('hidden'); modal.style.display = 'none'; }
         };
 
-        window.clearDriverSignatureCanvas = function() {
-            if (!confirm("Möchten Sie die Zeichnung der Unterschrift wirklich zurücksetzen?")) return;
+        window.clearDriverSignatureCanvas = async function() {
+            if (!await window.appFrage("Möchten Sie die Zeichnung der Unterschrift wirklich zurücksetzen?")) return;
             if (driverSignatureCtx && driverSignatureCanvas) {
                 driverSignatureCtx.fillStyle = '#ffffff';
                 driverSignatureCtx.fillRect(0, 0, driverSignatureCanvas.width, driverSignatureCanvas.height);
@@ -427,8 +427,8 @@
             if (modal) { modal.classList.remove('show'); modal.classList.add('hidden'); modal.style.display = 'none'; }
         };
 
-        window.clearUserSignatureCanvas = function() {
-            if (!confirm("Möchten Sie die Zeichnung der Unterschrift wirklich zurücksetzen?")) return;
+        window.clearUserSignatureCanvas = async function() {
+            if (!await window.appFrage("Möchten Sie die Zeichnung der Unterschrift wirklich zurücksetzen?")) return;
             if (userSignatureCtx && userSignatureCanvas) {
                 userSignatureCtx.fillStyle = '#ffffff';
                 userSignatureCtx.fillRect(0, 0, userSignatureCanvas.width, userSignatureCanvas.height);
@@ -449,8 +449,8 @@
             }
         };
 
-        window.clearUserSignature = function() {
-            if (!confirm("Möchten Sie die gespeicherte Unterschrift wirklich löschen?")) return;
+        window.clearUserSignature = async function() {
+            if (!await window.appFrage("Möchten Sie die gespeicherte Unterschrift wirklich löschen?")) return;
             document.getElementById('edit-user-signature').value = '';
             const img = document.getElementById('user-signature-preview-img');
             if (img) { img.src = ''; img.classList.add('hidden'); img.style.display = 'none'; }

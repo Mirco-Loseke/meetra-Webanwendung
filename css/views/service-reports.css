@@ -552,3 +552,24 @@
     /* unter 16px zoomt iOS beim Antippen hinein */
     #servicebericht-modal .sb-wa, #servicebericht-modal .sb-wa input { font-size: 16px !important; }
 }
+
+/* Berichtskarte: „i" (Stundenübersicht, oben rechts) und Verknüpfung
+   (oben links) liegen über dem Maschinenfoto — Knopf-Art kommt aus
+   knopf.css (knopf--sekundaer knopf--klein knopf--icon), hier nur Lage
+   und ein dunkler Grund, damit das Symbol auf hellen Fotos lesbar bleibt. */
+.knopf.service-quickinfo-btn,
+.knopf.service-link-badge {
+    position: absolute;
+    z-index: 12;
+    background: rgba(15, 23, 42, 0.75);
+    backdrop-filter: blur(var(--blur-surface));
+    -webkit-backdrop-filter: blur(var(--blur-surface));
+}
+.service-quickinfo-btn {
+    top: var(--space-2);
+    right: var(--space-2);
+}
+.knopf.service-quickinfo-btn:hover:not(:disabled),
+.knopf.service-link-badge:hover:not(:disabled) {
+    background: rgba(15, 23, 42, 0.92);
+}

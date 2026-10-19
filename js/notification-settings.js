@@ -68,6 +68,27 @@
                  text: 'Dringendes meldet sich als Benachrichtigung von Windows bzw. vom Handy – auch wenn die App im Hintergrund ist.' };
     }
 
+    // Welche Karten auf dem Bildschirm aufgehen dürfen — dieselben Schalter wie
+    // das Zahnrad neben „Jetzt nicht" an den Karten selbst.
+    function popupBlock() {
+        const t = window.meldungsTakt;
+        if (!t || !Array.isArray(t.arten)) return '';
+        return `
+                <section class="notifset-block">
+                    <h3>Pop-ups auf dem Bildschirm</h3>
+                    <p class="notifset-note">Die Karten oben rechts (Handy: unten). Jede Art hat ihre eigene Farbe — so siehst du sofort, ob du handeln musst oder es nur eine Info ist.</p>
+                    <div class="meldung-einstellen-liste">
+                        ${t.arten.map(a => `
+                        <label class="meldung-einstellen-zeile meldung--${a.art}">
+                            <span class="meldung-art">${esc(a.kurz)}</span>
+                            <span class="meldung-einstellen-text"><b>${esc(a.label)}</b><em>${esc(a.info)}</em></span>
+                            <span class="notifset-switch"><input type="checkbox" ${t.artErlaubt(a.art) ? 'checked' : ''}
+                                onchange="window.meldungsTakt.artSetzen('${a.art}', this.checked)"><span></span></span>
+                        </label>`).join('')}
+                    </div>
+                </section>`;
+    }
+
     function html() {
         const P = prefs();
         const z = pushZustand();
@@ -100,6 +121,9 @@
                         </label>
                     </div>
                 </section>
+
+                <!-- 0b) Pop-ups auf dem Bildschirm (Karten oben rechts) — je Art, js/meldungs-takt.js -->
+                ${popupBlock()}
 
                 <!-- 1) Systemmeldungen: Zustand + Schalter -->
                 <section class="notifset-block notifset-push notifset-push-${z.stufe}">
@@ -153,7 +177,7 @@
                             </div>`;
                         }).join('')}
                     </div>
-                    <p class="notifset-note">Ist „In der Glocke“ für eine Sorte aus, wird sie gar nicht erst geladen — dann kommt dafür auch keine Windows-/Handy-Meldung. Die großen Karten oben rechts in der App (Wecker, „Jetzt erledigen / Später erinnern“) hängen nicht an diesen Schaltern. <strong>Erneut</strong> steuert, wie hartnäckig etwas ist: <em>0</em> meldet jeden Eintrag genau einmal, <em>24</em> erinnert einmal am Tag, solange er offen bleibt.</p>
+                    <p class="notifset-note">Ist „In der Glocke“ für eine Sorte aus, wird sie gar nicht erst geladen — dann kommt dafür auch keine Windows-/Handy-Meldung. Die Karten auf dem Bildschirm stellst du oben unter „Pop-ups auf dem Bildschirm“ ein. <strong>Erneut</strong> steuert, wie hartnäckig etwas ist: <em>0</em> meldet jeden Eintrag genau einmal, <em>24</em> erinnert einmal am Tag, solange er offen bleibt.</p>
                 </section>
 
                 <!-- 3) Ab welcher Dringlichkeit ein Fenster aufgeht -->
@@ -251,8 +275,34 @@
     };
 
     // Probemeldung: zeigt genau den Weg, der gerade eingestellt ist.
+    // Je eine Musterkarte pro Art auf den Bildschirm — damit man die Farben
+    // einmal gesehen hat. Läuft nicht über die Schlange (sofort, alle drei),
+    // wird aber von js/meldungs-takt.js genauso eingefärbt wie echte Karten.
+    function musterKarten() {
+        const box = document.getElementById('alarm-stack');
+        if (!box) return;
+        const jetzt = new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+        [
+            { key: 'proc:probe:1', zeit: jetzt, sorte: 'Vorgang', titel: 'Angebot nachfassen (Probe)', sub: 'Erinnerung zur eingestellten Uhrzeit — bitte handeln', ok: 'Verstanden' },
+            { key: 'handoff:probe', zeit: '', sorte: 'Vorgang', titel: 'Neuer Vorgang für dich (Probe)', sub: 'Ein Kollege hat dir etwas zugewiesen', ok: 'Jetzt erledigen' },
+            { key: 'handoff-ack:probe', zeit: jetzt, sorte: 'Rückmeldung', titel: 'Kollege hat den Vorgang erhalten (Probe)', sub: 'Nur zur Info — verschwindet von selbst', ok: 'Alles klar' }
+        ].forEach(m => {
+            if (box.querySelector(`[data-alarm-key="${m.key}"]`)) return;
+            const k = document.createElement('div');
+            k.className = 'alarm-card';
+            k.setAttribute('data-alarm-key', m.key);
+            k.innerHTML = `<div class="alarm-head"><span class="alarm-time">${esc(m.zeit)}</span><span class="alarm-kind">${esc(m.sorte)}</span></div>
+                <div class="alarm-title">${esc(m.titel)}</div><div class="alarm-sub">${esc(m.sub)}</div>
+                <div class="alarm-actions"><button type="button" class="alarm-btn alarm-btn-ok">${esc(m.ok)}</button></div>`;
+            k.querySelector('.alarm-btn-ok').addEventListener('click', () => k.remove());
+            box.appendChild(k);
+            requestAnimationFrame(() => k.classList.add('show'));
+        });
+    }
+
     window.notifSettingsTest = function (event) {
         if (event) event.stopPropagation();
+        musterKarten();
         const an = typeof window.notificationsPushEnabled === 'function' && window.notificationsPushEnabled();
         if (an) {
             try {
@@ -265,7 +315,7 @@
             } catch (e) { /* faellt unten auf den Hinweis zurueck */ }
         }
         if (window.showToast) {
-            window.showToast('Systemmeldungen sind aus — die Meldung stünde nur in der Glocke.');
+            window.showToast('Musterkarten oben rechts. Windows-/Handy-Meldungen sind aus — die gibt es erst, wenn du sie oben erlaubst.');
         }
     };
 

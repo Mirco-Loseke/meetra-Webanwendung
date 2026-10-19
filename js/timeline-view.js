@@ -2794,7 +2794,7 @@
           + (heuteFrei.length ? esc(heuteFrei.join(', ')) : 'niemand') + '</b></div>'
           + (ABWESEND_DA ? abwesenheitFormular() : '<div class="tlv-frei-hinweis">'
               + 'Urlaub und Krankheit fehlen noch: dafür muss '
-              + '<code>supabase/supabase_add_absences.sql</code> in Supabase laufen.</div>')
+              + '<code>supabase/migrationen/supabase_add_absences.sql</code> in Supabase laufen.</div>')
           + '</div>'
           + '<div class="tlv-frei-tafel" style="--tlv-frei-cols:' + n + '">'
           + '<div class="tlv-frei-zeile kopfzeile">' + kopf + '</div>' + zeilen + '</div>'
@@ -2857,7 +2857,7 @@
     async function abwesenheitLoeschen(id) {
         if (!id || id === 'null') return;
         if (typeof window.canDelete === 'function' && !window.canDelete('Abwesenheiten')) return;
-        if (!confirm('Diese Abwesenheit löschen?')) return;
+        if (!await window.appFrage('Diese Abwesenheit löschen?')) return;
         if (sb()) {
             var r = await sb().from('absences').delete().eq('id', id);
             if (r && r.error) { meldung('Löschen fehlgeschlagen: ' + r.error.message, false); return; }
@@ -2941,7 +2941,7 @@
     // ------------------------------------------------------------------
     var AB_GRUENDE = ['Urlaub', 'Krank', 'Schulung', 'Frei', 'Sonstiges'];
     function abwDialog(ab, vorgabe) {
-        if (!ABWESEND_DA) { meldung('Die Tabelle für Abwesenheiten fehlt noch — supabase/supabase_add_absences.sql ausführen.', false); return; }
+        if (!ABWESEND_DA) { meldung('Die Tabelle für Abwesenheiten fehlt noch — supabase/migrationen/supabase_add_absences.sql ausführen.', false); return; }
         vorgabe = vorgabe || {};
         var alt = document.getElementById('tlv-ab-dlg'); if (alt) alt.remove();
         var pid = ab ? (ab.personen[0] || '') : (vorgabe.pid || S.person || '');
@@ -3244,7 +3244,7 @@
     async function mietLoeschen(it) {
         if (typeof window.canDelete === 'function' && !window.canDelete('Mietvereinbarungen')) return;
         if (typeof window.deleteRentalAgreement !== 'function') return;
-        if (!confirm('Diese Mietvereinbarung endgültig löschen? PDF und Fotos werden ebenfalls gelöscht.')) return;
+        if (!await window.appFrage('Diese Mietvereinbarung endgültig löschen? PDF und Fotos werden ebenfalls gelöscht.')) return;
         try {
             await window.deleteRentalAgreement(it.dbId);
             ITEMS = ITEMS.filter(function (i) { return i.id !== it.id; });
@@ -3394,7 +3394,7 @@
         Array.prototype.forEach.call(p.querySelectorAll('[data-dok-weg]'), function (el) {
             el.onclick = async function () {
                 var x = l[+el.dataset.dokWeg];
-                if (!confirm('„' + dokName(x.d) + '“ von dieser Vermietung entfernen?')) return;
+                if (!await window.appFrage('„' + dokName(x.d) + '“ von dieser Vermietung entfernen?')) return;
                 try {
                     if (x.weg === 'vertrag') await vertragAnlagenSetzen(vertrag, vertrag.anlagen.filter(function (_, i) { return i !== x.i; }));
                     else await planDateienSetzen(plan, plan.dateien.filter(function (_, i) { return i !== x.i; }));
@@ -3460,7 +3460,7 @@
         planErsetzen(r.data);
     }
     async function planLoeschen(plan) {
-        if (!confirm('Diese geplante ' + PLAN_ART[plan.art] + ' löschen?')) return;
+        if (!await window.appFrage('Diese geplante ' + PLAN_ART[plan.art] + ' löschen?')) return;
         var client = sb(); if (!client) return;
         var r = await client.from('timeline_planung').delete().eq('id', plan.dbId);
         if (r.error) { meldung('Nicht gelöscht: ' + r.error.message, false); return; }
@@ -3652,7 +3652,7 @@
             this.disabled = false;
             if (r.error) {
                 var fehlt = /timeline_planung/.test(r.error.message || '') && /exist|find|schema/i.test(r.error.message || '');
-                meldung(fehlt ? 'Tabelle fehlt — bitte supabase/supabase_add_timeline_planung.sql in Supabase ausführen.'
+                meldung(fehlt ? 'Tabelle fehlt — bitte supabase/migrationen/supabase_add_timeline_planung.sql in Supabase ausführen.'
                               : 'Nicht gespeichert: ' + r.error.message, false);
                 return;
             }

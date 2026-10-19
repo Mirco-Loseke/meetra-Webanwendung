@@ -2560,7 +2560,7 @@
         const r = (window.rp2SavedRoutes || []).find(x => String(x.id) === String(id));
         if (!r) return;
         if (!istMeine(r)) { window.showToast('Routen von Kollegen können nur von ihnen selbst gelöscht werden.'); return; }
-        if (!confirm(`Gespeicherte Route "${r.name}" löschen?`)) return;
+        if (!await window.appFrage(`Gespeicherte Route "${r.name}" löschen?`)) return;
 
         if (r.local) {
             setLocalRoutes(localRoutes().filter(x => String(x.id) !== String(id)));

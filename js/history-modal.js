@@ -1242,8 +1242,20 @@
                             <span><b>Nächste Wartung neu setzen</b> (+${wartungIntervall()} Monate ab diesem Datum)<br><span style="font-size: 0.8rem; color: rgba(255,255,255,0.55);">Ohne Haken bleibt der Termin der nächsten Wartung unverändert. Nachträglich abwählen stellt den vorherigen Termin wieder her.</span></span>
                         </label>
                         <input type="hidden" id="manual-content">
-                        <textarea id="manual-remark" placeholder="Notiz (optional)..." class="glass-input" style="min-height: 60px;"></textarea>
+                        <textarea id="manual-remark" placeholder="Notiz (optional)..." class="glass-input" style="min-height: 60px; margin-bottom: 0.75rem;"></textarea>
+                        <label style="font-size: 0.7rem; font-weight: 700; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.4rem; display: block;">Originalbericht / Nachweis (optional)</label>
+                        <div id="manual-wartung-drop" style="background: rgba(255,255,255,0.05); border: 2px dashed rgba(255,255,255,0.1); border-radius: 12px; padding: 1rem; text-align: center; transition: border-color 0.15s, background 0.15s;"
+                            ondragenter="window.wartungDateiDrag(event, true)" ondragover="window.wartungDateiDrag(event, true)"
+                            ondragleave="window.wartungDateiDrag(event, false)" ondrop="window.wartungDateiDrop(event)">
+                            <input type="file" id="manual-wartung-files" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,image/*" style="display: none;" onchange="window.wartungDateienZeichnen()">
+                            <label for="manual-wartung-files" style="cursor: pointer; display: block;">
+                                <div style="font-size: 0.85rem; color: rgba(255,255,255,0.6);">PDF, Foto oder Dokument hierher ziehen oder klicken</div>
+                            </label>
+                            <div id="manual-wartung-files-list" style="display: flex; flex-direction: column; gap: 6px; margin-top: 0.6rem; text-align: left;"></div>
+                        </div>
+                        <button type="button" class="knopf knopf--text knopf--klein" style="margin-top: 0.5rem;" onclick="window.openWartungImport(window.currentHistoryMachineId)">Mehrere alte Wartungen auf einmal nachtragen …</button>
                     `;
+                window._wartungBestand = [];
             } else if (type === 'auslieferung') {
                 html = `
                         <input type="hidden" id="manual-title" value="Auslieferung">
@@ -1405,6 +1417,59 @@
             }
         };
 
+        // Wartung: Originalbericht/Nachweis (PDF, Foto, Dokument) ablegen.
+        // Bestehende Dateien liegen in window._wartungBestand, neue im <input>.
+        window.wartungDateiDrag = function (e, aktiv) {
+            e.preventDefault();
+            e.stopPropagation();
+            const zone = document.getElementById('manual-wartung-drop');
+            if (!zone) return;
+            if (!aktiv && zone.contains(e.relatedTarget)) return;
+            zone.style.borderColor = aktiv ? 'rgba(52,211,153,0.8)' : 'rgba(255,255,255,0.1)';
+            zone.style.background = aktiv ? 'rgba(52,211,153,0.08)' : 'rgba(255,255,255,0.05)';
+        };
+
+        window.wartungDateiDrop = function (e) {
+            window.wartungDateiDrag(e, false);
+            const input = document.getElementById('manual-wartung-files');
+            if (!input) return;
+            const dt = new DataTransfer();
+            Array.from(input.files || []).forEach(f => dt.items.add(f));
+            Array.from((e.dataTransfer && e.dataTransfer.files) || []).forEach(f => dt.items.add(f));
+            input.files = dt.files;
+            window.wartungDateienZeichnen();
+        };
+
+        window.wartungDateienZeichnen = function () {
+            const liste = document.getElementById('manual-wartung-files-list');
+            const input = document.getElementById('manual-wartung-files');
+            if (!liste || !input) return;
+            const zeile = (name, neu, knopf) => `<div style="display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:8px; background:rgba(255,255,255,0.05); font-size:0.82rem; color:#fff;">
+                <span style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">📄 ${escHistoryText(name)}</span>
+                ${neu ? '<span style="color:#10b981; font-size:0.7rem; font-weight:700;">NEU</span>' : ''}${knopf}</div>`;
+            const x = (js) => `<button type="button" class="knopf-x" aria-label="Entfernen" title="Entfernen" onclick="${js}">&times;</button>`;
+            const best = (window._wartungBestand || []).map((f, i) => {
+                const url = typeof f === 'string' ? f : f.url;
+                const name = (f && f.name) || decodeURIComponent((url.split('?')[0].split('/').pop() || 'Datei')).replace(/^\d{10,}[-_]/, '');
+                return zeile(name, false, x(`window.wartungBestandWeg(${i})`));
+            });
+            const neu = Array.from(input.files || []).map((f, i) => zeile(f.name, true, x(`window.wartungNeuWeg(${i})`)));
+            liste.innerHTML = best.concat(neu).join('');
+        };
+
+        window.wartungBestandWeg = function (i) {
+            (window._wartungBestand || []).splice(i, 1);
+            window.wartungDateienZeichnen();
+        };
+
+        window.wartungNeuWeg = function (i) {
+            const input = document.getElementById('manual-wartung-files');
+            const dt = new DataTransfer();
+            Array.from(input.files).forEach((f, k) => { if (k !== i) dt.items.add(f); });
+            input.files = dt.files;
+            window.wartungDateienZeichnen();
+        };
+
         window.editManualHistoryEntry = async function (id) {
             try {
                 const { data: entry, error } = await window.supabaseClient
@@ -1465,6 +1530,11 @@
                     });
                     const termin = document.getElementById('manual-wartung-termin');
                     if (termin) termin.checked = !ohne;
+                }
+                if (entry.type === 'wartung') {
+                    window._wartungBestand = Array.isArray(entry.files) ? entry.files.slice() : [];
+                    window._wartungBestandAlt = window._wartungBestand.slice();
+                    window.wartungDateienZeichnen();
                 }
 
                 // 4.5 Change button text and show delete button
@@ -1594,6 +1664,31 @@
                     });
                 }
 
+                // 1b. Wartung: behaltene Nachweise + neu gewählte hochladen (PDFs bleiben unverändert)
+                if (type === 'wartung') {
+                    filesArray = (window._wartungBestand || []).slice();
+                    const wInput = document.getElementById('manual-wartung-files');
+                    if (wInput && wInput.files && wInput.files.length > 0) {
+                        const machine = (window.machineList || []).find(m => m.id == machineId);
+                        const mFolder = machine ? window.getMachineFolderName(machine.id, machine.manufacturer, machine.name, machine.serial || machine.serial_number, machine.year) : `Maschinen/${machineId}`;
+                        const res = await window.FileUploadService.uploadFiles(
+                            Array.from(wInput.files),
+                            (file, i) => `${mFolder}/Wartung/${Date.now()}-${i}-${file.name.replace(/[^\w.\-]+/g, '_')}`,
+                            { bucket: 'dateien', compress: true, concurrency: 3, provider: 'cloudflare-r2' }
+                        );
+                        res.forEach(r => filesArray.push({ url: r.url, type: r.type, name: r.name, original: true }));
+                    }
+                    // Beim Bearbeiten entfernte Nachweise auch aus dem Speicher löschen
+                    if (id && typeof deleteFileEntryStorage === 'function') {
+                        const behalten = new Set(filesArray.map(f => typeof f === 'string' ? f : f.url));
+                        for (const f of (window._wartungBestandAlt || [])) {
+                            if (!behalten.has(typeof f === 'string' ? f : f.url)) {
+                                try { await deleteFileEntryStorage(typeof f === 'string' ? { url: f } : f); } catch (e) { console.warn('Nachweis löschen fehlgeschlagen', e); }
+                            }
+                        }
+                    }
+                }
+
                 // 2. Upload new photos (Parallel & Compressed)
                 const photoInput = document.getElementById('manual-photos');
                 if (photoInput && photoInput.files && photoInput.files.length > 0) {
@@ -1695,7 +1790,7 @@
 
         window.deleteHistoryEntry = async function (id, type) {
             if (typeof window.canDelete === 'function' && !window.canDelete('Historien-Einträgen')) return;
-            if (!confirm('Soll dieser Eintrag wirklich gelöscht werden?')) return;
+            if (!await window.appFrage('Soll dieser Eintrag wirklich gelöscht werden?')) return;
 
             try {
                 let table = 'manual_history_entries';
@@ -1777,10 +1872,15 @@
                 if (type === 'manual') {
                     const { data: manualEntry } = await window.supabaseClient
                         .from('manual_history_entries')
-                        .select('type')
+                        .select('type, files')
                         .eq('id', id)
                         .maybeSingle();
                     wasWartungEntry = manualEntry && manualEntry.type === 'wartung';
+                    if (wasWartungEntry && Array.isArray(manualEntry.files) && typeof deleteFileEntryStorage === 'function') {
+                        for (const f of manualEntry.files) {
+                            try { await deleteFileEntryStorage(typeof f === 'string' ? { url: f } : f); } catch (e) { console.warn('Nachweis löschen fehlgeschlagen', e); }
+                        }
+                    }
                 }
 
                 const { error } = await window.supabaseClient

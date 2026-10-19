@@ -1,0 +1,238 @@
+<div id="machine-history-modal" class="modal-backdrop hidden"
+    style="z-index: 11000; display: none; align-items: center; justify-content: center;">
+    <div class="modal-content glass-card"
+        style="max-width: 600px; width: 90%; padding: 2rem; max-height: 90vh; display: flex; flex-direction: column; border: 1px solid rgba(255,255,255,0.12); box-shadow: 0 24px 64px rgba(0,0,0,0.5); position: relative; overflow: hidden;">
+        <div
+            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-shrink: 0; padding-right: 8px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                    <polyline points="10 9 9 9 8 9"></polyline>
+                </svg>
+                <h2
+                    style="margin: 0; font-size: 1.5rem; color: white; display: flex; align-items: center; gap: 10px;">
+                    Historie</h2>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <button class="btn-icon-soft"
+                    onclick="window.openMachineSummary(window.currentHistoryMachineId)"
+                    title="KI-Zusammenfassung: Historie, Wartung, Probleme"
+                    style="background: transparent; border: 2px solid rgba(196,181,253,0.45); color: #c4b5fd; width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; transition: all 0.3s ease;">✨</button>
+                <button class="btn-icon-soft"
+                    onclick="window.openSingleMachineEvaluation(window.currentHistoryMachineId)"
+                    title="Maschinen Auswertung"
+                    style="background: transparent; border: 2px solid rgba(255,255,255,0.2); color: white; width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="M12 2v10h10"></path>
+                        <path d="M9 9l6 6m0-6l-6 6"></path>
+                    </svg>
+                </button>
+                <button class="btn-close-modal" onclick="window.closeHistoryModal()">&times;</button>
+            </div>
+        </div>
+
+        <div
+            style="flex: 1; overflow-y: auto; padding-right: 15px; display: flex; flex-direction: column; min-height: 0;">
+
+            <!-- Manuelle Schnelleingabe -->
+            <div
+                style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 0; margin-bottom: 1.5rem; overflow: visible;">
+                <div class="section-header" onclick="window.toggleSchnelleintrag(this)"
+                    style="display: flex; justify-content: space-between; align-items: center; padding: 1.25rem; background: rgba(255,255,255,0.02); cursor: pointer; transition: all 0.2s;">
+                    <span
+                        style="font-size: 0.85rem; font-weight: 700; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 1px;">Schnelleintrag</span>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <svg class="toggle-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                            style="transition: transform 0.3s ease; opacity: 0.5;">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                    </div>
+                </div>
+
+                <div id="schnelleintrag-content"
+                    style="display: none; padding: 1.25rem; border-top: 1px solid rgba(255,255,255,0.05);">
+                    <div
+                        style="display: grid; grid-template-columns: repeat(4, 1fr); justify-items: center; align-items: start; row-gap: 12px; padding: 0.5rem 0;">
+                        <!-- Telefon -->
+                        <button onclick="window.toggleManualHistoryForm('phone')"
+                            style="background: none; border: none; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 7px; padding: 0.5rem;">
+                            <div style="width: 46px; height: 46px; border-radius: 50%; background: rgba(16,185,129,0.12); border: 1.5px solid rgba(16,185,129,0.5); display: flex; align-items: center; justify-content: center; color: #10b981; transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1); box-shadow: 0 0 14px rgba(16,185,129,0.35), 0 0 28px rgba(16,185,129,0.15);"
+                                onmouseover="this.style.transform='scale(1.15)'; this.style.background='rgba(16,185,129,0.22)'; this.style.boxShadow='0 0 24px rgba(16,185,129,0.6), 0 0 48px rgba(16,185,129,0.3)'"
+                                onmouseout="this.style.transform='scale(1)'; this.style.background='rgba(16,185,129,0.12)'; this.style.boxShadow='0 0 14px rgba(16,185,129,0.35), 0 0 28px rgba(16,185,129,0.15)'">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <path
+                                        d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l2.19-2.19a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z">
+                                    </path>
+                                </svg>
+                            </div>
+                            <span
+                                style="font-size: 0.68rem; font-weight: 700; color: rgba(255,255,255,0.6); letter-spacing: 0.3px;">Telefon</span>
+                        </button>
+                        <!-- Bemerkung -->
+                        <button onclick="window.toggleManualHistoryForm('note')"
+                            style="background: none; border: none; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 7px; padding: 0.5rem;">
+                            <div style="width: 46px; height: 46px; border-radius: 50%; background: rgba(245,158,11,0.12); border: 1.5px solid rgba(245,158,11,0.5); display: flex; align-items: center; justify-content: center; color: #f59e0b; transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1); box-shadow: 0 0 14px rgba(245,158,11,0.35), 0 0 28px rgba(245,158,11,0.15);"
+                                onmouseover="this.style.transform='scale(1.15)'; this.style.background='rgba(245,158,11,0.22)'; this.style.boxShadow='0 0 24px rgba(245,158,11,0.6), 0 0 48px rgba(245,158,11,0.3)'"
+                                onmouseout="this.style.transform='scale(1)'; this.style.background='rgba(245,158,11,0.12)'; this.style.boxShadow='0 0 14px rgba(245,158,11,0.35), 0 0 28px rgba(245,158,11,0.15)'">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                </svg>
+                            </div>
+                            <span
+                                style="font-size: 0.68rem; font-weight: 700; color: rgba(255,255,255,0.6); letter-spacing: 0.3px;">Bemerkung</span>
+                        </button>
+                        <!-- Foto -->
+                        <button onclick="window.toggleManualHistoryForm('photo')"
+                            style="background: none; border: none; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 7px; padding: 0.5rem;">
+                            <div style="width: 46px; height: 46px; border-radius: 50%; background: rgba(139,92,246,0.12); border: 1.5px solid rgba(139,92,246,0.5); display: flex; align-items: center; justify-content: center; color: #8b5cf6; transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1); box-shadow: 0 0 14px rgba(139,92,246,0.35), 0 0 28px rgba(139,92,246,0.15);"
+                                onmouseover="this.style.transform='scale(1.15)'; this.style.background='rgba(139,92,246,0.22)'; this.style.boxShadow='0 0 24px rgba(139,92,246,0.6), 0 0 48px rgba(139,92,246,0.3)'"
+                                onmouseout="this.style.transform='scale(1)'; this.style.background='rgba(139,92,246,0.12)'; this.style.boxShadow='0 0 14px rgba(139,92,246,0.35), 0 0 28px rgba(139,92,246,0.15)'">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <path
+                                        d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z">
+                                    </path>
+                                    <circle cx="12" cy="13" r="4"></circle>
+                                </svg>
+                            </div>
+                            <span
+                                style="font-size: 0.68rem; font-weight: 700; color: rgba(255,255,255,0.6); letter-spacing: 0.3px;">Foto</span>
+                        </button>
+                        <!-- E-Mail -->
+                        <button onclick="window.toggleManualHistoryForm('email')"
+                            style="background: none; border: none; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 7px; padding: 0.5rem;">
+                            <div style="width: 46px; height: 46px; border-radius: 50%; background: rgba(59,130,246,0.12); border: 1.5px solid rgba(59,130,246,0.5); display: flex; align-items: center; justify-content: center; color: #3b82f6; transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1); box-shadow: 0 0 14px rgba(59,130,246,0.35), 0 0 28px rgba(59,130,246,0.15);"
+                                onmouseover="this.style.transform='scale(1.15)'; this.style.background='rgba(59,130,246,0.22)'; this.style.boxShadow='0 0 24px rgba(59,130,246,0.6), 0 0 48px rgba(59,130,246,0.3)'"
+                                onmouseout="this.style.transform='scale(1)'; this.style.background='rgba(59,130,246,0.12)'; this.style.boxShadow='0 0 14px rgba(59,130,246,0.35), 0 0 28px rgba(59,130,246,0.15)'">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                                    <polyline points="22,6 12,13 2,6"></polyline>
+                                </svg>
+                            </div>
+                            <span
+                                style="font-size: 0.68rem; font-weight: 700; color: rgba(255,255,255,0.6); letter-spacing: 0.3px;">E-Mail</span>
+                        </button>
+                        <!-- Betriebsstunden -->
+                        <button onclick="window.toggleManualHistoryForm('hours')"
+                            style="background: none; border: none; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 7px; padding: 0.5rem;">
+                            <div style="width: 46px; height: 46px; border-radius: 50%; background: rgba(6,182,212,0.12); border: 1.5px solid rgba(6,182,212,0.5); display: flex; align-items: center; justify-content: center; color: #06b6d4; transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1); box-shadow: 0 0 14px rgba(6,182,212,0.35), 0 0 28px rgba(6,182,212,0.15);"
+                                onmouseover="this.style.transform='scale(1.15)'; this.style.background='rgba(6,182,212,0.22)'; this.style.boxShadow='0 0 24px rgba(6,182,212,0.6), 0 0 48px rgba(6,182,212,0.3)'"
+                                onmouseout="this.style.transform='scale(1)'; this.style.background='rgba(6,182,212,0.12)'; this.style.boxShadow='0 0 14px rgba(6,182,212,0.35), 0 0 28px rgba(6,182,212,0.15)'">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <polyline points="12 6 12 12 16 14"></polyline>
+                                </svg>
+                            </div>
+                            <span
+                                style="font-size: 0.68rem; font-weight: 700; color: rgba(255,255,255,0.6); letter-spacing: 0.3px;">Betriebsstd.</span>
+                        </button>
+                        <!-- WhatsApp -->
+                        <button onclick="window.toggleManualHistoryForm('whatsapp')"
+                            style="background: none; border: none; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 7px; padding: 0.5rem;">
+                            <div style="width: 46px; height: 46px; border-radius: 50%; background: rgba(34,197,94,0.12); border: 1.5px solid rgba(34,197,94,0.5); display: flex; align-items: center; justify-content: center; color: #22c55e; transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1); box-shadow: 0 0 14px rgba(34,197,94,0.35), 0 0 28px rgba(34,197,94,0.15);"
+                                onmouseover="this.style.transform='scale(1.15)'; this.style.background='rgba(34,197,94,0.22)'; this.style.boxShadow='0 0 24px rgba(34,197,94,0.6), 0 0 48px rgba(34,197,94,0.3)'"
+                                onmouseout="this.style.transform='scale(1)'; this.style.background='rgba(34,197,94,0.12)'; this.style.boxShadow='0 0 14px rgba(34,197,94,0.35), 0 0 28px rgba(34,197,94,0.15)'">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M17.498 14.382c-.301-.15-1.767-.867-2.04-.966-.273-.101-.473-.15-.673.15-.197.295-.771 1.0-.945 1.196-.174.195-.346.21-.643.075-.3-.15-1.263-.465-2.403-1.485-.888-.795-1.484-1.77-1.66-2.07-.174-.3-.018-.465.131-.615.15-.15.3-.345.45-.523.146-.181.194-.301.297-.5.099-.2.05-.351-.05-.501-.099-.15-.6-1.65-.6-1.65-.156-.42-.3-.36-.502-.366-.183-.005-.394-.005-.605-.005-.211 0-.527.075-.717.27-.205.21-.78.766-.78 1.866 0 1.1.804 2.146.93 2.296.135.15 1.5 2.295 3.645 3.122 1.798.68 2.16.59 2.554.54.394-.045 1.268-.51 1.448-.997.18-.487.18-.906.135-.997-.045-.09-.187-.166-.488-.31z"/>
+                                    <path d="M12 2C6.477 2 2 6.477 2 12c0 1.821.487 3.53 1.338 5L2 22l5.116-1.317C8.564 21.524 10.236 22 12 22c5.523 0 10-4.477 10-10S17.523 2 12 2zm0 18c-1.61 0-3.122-.43-4.426-1.18l-.318-.185-3.04.782.81-2.96-.207-.327A7.94 7.94 0 0 1 4 12c0-4.418 3.582-8 8-8s8 3.582 8 8-3.582 8-8 8z"/>
+                                </svg>
+                            </div>
+                            <span
+                                style="font-size: 0.68rem; font-weight: 700; color: rgba(255,255,255,0.6); letter-spacing: 0.3px;">WhatsApp</span>
+                        </button>
+                        <!-- Wartung -->
+                        <button onclick="window.toggleManualHistoryForm('wartung')"
+                            style="background: none; border: none; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 7px; padding: 0.5rem;">
+                            <div style="width: 46px; height: 46px; border-radius: 50%; background: rgba(249,115,22,0.12); border: 1.5px solid rgba(249,115,22,0.5); display: flex; align-items: center; justify-content: center; color: #f97316; transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1); box-shadow: 0 0 14px rgba(249,115,22,0.35), 0 0 28px rgba(249,115,22,0.15);"
+                                onmouseover="this.style.transform='scale(1.15)'; this.style.background='rgba(249,115,22,0.22)'; this.style.boxShadow='0 0 24px rgba(249,115,22,0.6), 0 0 48px rgba(249,115,22,0.3)'"
+                                onmouseout="this.style.transform='scale(1)'; this.style.background='rgba(249,115,22,0.12)'; this.style.boxShadow='0 0 14px rgba(249,115,22,0.35), 0 0 28px rgba(249,115,22,0.15)'">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
+                                </svg>
+                            </div>
+                            <span
+                                style="font-size: 0.68rem; font-weight: 700; color: rgba(255,255,255,0.6); letter-spacing: 0.3px;">Wartung</span>
+                        </button>
+                        <!-- Auslieferung -->
+                        <button onclick="window.toggleManualHistoryForm('auslieferung')"
+                            style="background: none; border: none; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 7px; padding: 0.5rem;">
+                            <div style="width: 46px; height: 46px; border-radius: 50%; background: rgba(99,102,241,0.12); border: 1.5px solid rgba(99,102,241,0.5); display: flex; align-items: center; justify-content: center; color: #6366f1; transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1); box-shadow: 0 0 14px rgba(99,102,241,0.35), 0 0 28px rgba(99,102,241,0.15);"
+                                onmouseover="this.style.transform='scale(1.15)'; this.style.background='rgba(99,102,241,0.22)'; this.style.boxShadow='0 0 24px rgba(99,102,241,0.6), 0 0 48px rgba(99,102,241,0.3)'"
+                                onmouseout="this.style.transform='scale(1)'; this.style.background='rgba(99,102,241,0.12)'; this.style.boxShadow='0 0 14px rgba(99,102,241,0.35), 0 0 28px rgba(99,102,241,0.15)'">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="1" y="3" width="15" height="13"></rect>
+                                    <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
+                                    <circle cx="5.5" cy="18.5" r="2.5"></circle>
+                                    <circle cx="18.5" cy="18.5" r="2.5"></circle>
+                                </svg>
+                            </div>
+                            <span
+                                style="font-size: 0.68rem; font-weight: 700; color: rgba(255,255,255,0.6); letter-spacing: 0.3px;">Auslieferung</span>
+                        </button>
+                    </div>
+
+                    <!-- Hidden Form Area -->
+                    <div id="manual-history-form-container"
+                        style="display: none; margin-top: 1.25rem; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 1.25rem;">
+                        <input type="hidden" id="manual-history-id">
+                        <input type="hidden" id="manual-history-type">
+                        <div id="existing-photos-container" style="display: none; margin-bottom: 1rem;">
+                            <div
+                                style="font-size: 0.75rem; font-weight: 700; color: rgba(255,255,255,0.4); text-transform: uppercase; margin-bottom: 0.5rem;">
+                                Bereits hochgeladene Fotos:</div>
+                            <div id="existing-photos-list" style="display: flex; flex-wrap: wrap; gap: 8px;"></div>
+                        </div>
+                        <div id="manual-history-fields">
+                            <!-- Fields populated via JS -->
+                        </div>
+                        <div style="display: flex; gap: 12px; margin-top: 1.5rem;">
+                            <button onclick="window.saveManualHistoryEntry()" class="btn-primary"
+                                style="flex: 2; display: flex; justify-content: center; align-items: center; gap: 8px;">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z">
+                                    </path>
+                                    <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                                    <polyline points="7 3 7 8 15 8"></polyline>
+                                </svg>
+                                <span>Speichern</span>
+                            </button>
+                            <button onclick="window.deleteManualHistoryEntry()" id="btn-delete-manual"
+                                class="btn-icon-circular delete" style="display: none; width: 48px; height: 48px;"
+                                title="Eintrag löschen">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                    <path
+                                        d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2">
+                                    </path>
+                                </svg>
+                            </button>
+                            <button onclick="window.toggleManualHistoryForm(null)" class="btn-secondary"
+                                style="flex: 1;">Abbrechen</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="history-timeline-container" class="history-timeline"
+                style="display: flex; flex-direction: column; gap: 0;">
+                <!-- Items go here -->
+                <div style="text-align: center; color: rgba(255,255,255,0.4); padding: 2rem;">Lade Historie...</div>
+            </div>
+        </div>
+    </div>
+</div>

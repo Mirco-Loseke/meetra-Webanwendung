@@ -330,13 +330,13 @@
         };
 
         // Hotel / Unterkunft Felder ein-/ausblenden
-        window.toggleHotelFields = function () {
+        window.toggleHotelFields = async function () {
             const wrapper = document.getElementById('service-hotel-fields-wrapper');
             const btn = document.getElementById('btn-toggle-hotel');
             if (!wrapper) return;
 
             const show = wrapper.classList.contains('hidden');
-            if (!show && !confirm('Hotel / Unterkunft wirklich entfernen?')) return;
+            if (!show && !await window.appFrage('Hotel / Unterkunft wirklich entfernen?')) return;
             wrapper.classList.toggle('hidden', !show);
             wrapper.style.display = show ? 'block' : 'none';
 
@@ -360,7 +360,7 @@
             const _anr = _cpEsc(data?.anrede);
             const _opt = (v) => `<option value="${v}" ${_anr === v ? 'selected' : ''}>${v || '—'}</option>`;
             row.innerHTML = `
-                <button type="button" onclick="if(confirm('Ansprechpartner entfernen?'))this.closest('.contact-person-row').remove()" style="position:absolute;top:7px;right:7px;width:22px;height:22px;border-radius:50%;background:rgba(190,30,45,0.9);border:none;color:white;cursor:pointer;font-size:1.1rem;line-height:1;padding:0;display:flex;align-items:center;justify-content:center;">−</button>
+                <button type="button" onclick="const b=this;window.appFrage('Ansprechpartner entfernen?').then(ja=>{if(ja)b.closest('.contact-person-row').remove()})" style="position:absolute;top:7px;right:7px;width:22px;height:22px;border-radius:50%;background:rgba(190,30,45,0.9);border:none;color:white;cursor:pointer;font-size:1.1rem;line-height:1;padding:0;display:flex;align-items:center;justify-content:center;">−</button>
                 <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.6rem;padding-right:28px;">
                     <div><label style="font-size:0.7rem;color:rgba(255,255,255,0.45);margin-bottom:3px;display:block;">Anrede</label><select class="cp-anrede" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:white;padding:6px 9px;font-size:0.85rem;box-sizing:border-box;">${_opt('')}${_opt('Herr')}${_opt('Frau')}${_opt('Divers')}</select></div>
                     <div><label style="font-size:0.7rem;color:rgba(255,255,255,0.45);margin-bottom:3px;display:block;">Name</label><input type="text" class="cp-name" value="${_cpEsc(data?.name)}" placeholder="Max Mustermann" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:white;padding:6px 9px;font-size:0.85rem;box-sizing:border-box;"></div>
@@ -398,7 +398,7 @@
             row.className = 'service-cp-row';
             row.style.cssText = 'position:relative;padding:0.45rem 0.65rem 0.5rem;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:9px;margin-bottom:0.35rem;';
             row.innerHTML = `
-                <button type="button" onclick="if(confirm('Ansprechpartner entfernen?'))this.closest('.service-cp-row').remove()" style="position:absolute;top:5px;right:5px;width:18px;height:18px;border-radius:50%;background:rgba(190,30,45,0.9);border:none;color:white;cursor:pointer;font-size:0.9rem;line-height:1;padding:0;display:flex;align-items:center;justify-content:center;">−</button>
+                <button type="button" onclick="const b=this;window.appFrage('Ansprechpartner entfernen?').then(ja=>{if(ja)b.closest('.service-cp-row').remove()})" style="position:absolute;top:5px;right:5px;width:18px;height:18px;border-radius:50%;background:rgba(190,30,45,0.9);border:none;color:white;cursor:pointer;font-size:0.9rem;line-height:1;padding:0;display:flex;align-items:center;justify-content:center;">−</button>
                 <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.4rem;padding-right:22px;">
                     <div><label style="font-size:0.65rem;color:rgba(255,255,255,0.4);margin-bottom:2px;display:block;">Name</label><input type="text" class="scp-name glass-form-input" value="${_cpEsc(prefill?.name)}" placeholder="Max Mustermann" style="width:100%;box-sizing:border-box;padding:4px 8px;font-size:0.8rem;"></div>
                     <div><label style="font-size:0.65rem;color:rgba(255,255,255,0.4);margin-bottom:2px;display:block;">Telefon</label><input type="text" class="scp-phone glass-form-input" value="${_cpEsc(prefill?.phone)}" placeholder="0123 456789" style="width:100%;box-sizing:border-box;padding:4px 8px;font-size:0.8rem;"></div>
@@ -519,12 +519,12 @@
         });
 
         // Maschinenstandort toggle
-        window.toggleLocationFields = function() {
+        window.toggleLocationFields = async function() {
             const wrapper = document.getElementById('service-location-fields-wrapper');
             const btn = document.getElementById('btn-toggle-location');
             if (!wrapper) return;
             const show = wrapper.classList.contains('hidden');
-            if (!show && !confirm('Abweichenden Maschinenstandort wirklich entfernen?')) return;
+            if (!show && !await window.appFrage('Abweichenden Maschinenstandort wirklich entfernen?')) return;
             if (show) {
                 const machineId = document.getElementById('selected-machine-id')?.value;
                 const machine = machineId ? (window.machineList || []).find(m => String(m.id) === String(machineId)) : null;
@@ -953,7 +953,7 @@
                 work_log:               typeof window.getWorkLogTableData   === 'function' ? window.getWorkLogTableData()   : [],
                 tasks:                  typeof window.getTasksTableData     === 'function' ? window.getTasksTableData()     : [],
                 materials:              typeof window.getMaterialsTableData === 'function' ? window.getMaterialsTableData() : [],
-                checklist_payload:      typeof window.getChecklistPayload   === 'function' ? window.getChecklistPayload()   : null,
+                checklist_payload:      (function (p) { return typeof window.zaehlerInPayload === 'function' ? window.zaehlerInPayload(p) : p; })(typeof window.getChecklistPayload === 'function' ? window.getChecklistPayload() : null),
                 status_repaired:        document.getElementById('service-status-repaired')?.checked || false,
                 status_repaired_en:     document.getElementById('service-status-repaired-en')?.checked || false,
                 tech_sig_date:          document.getElementById('service-tech-sig-date')?.value || null,
@@ -1040,6 +1040,9 @@
             setVal('service-description', d.description);
             setVal('service-remarks', d.remarks);
             setVal('service-operating-hours', d.operating_hours);
+            // Weitere Stundenzähler (z. B. Generator) stehen in checklist_payload.zaehler
+            window._zaehlerGeladen = (d.checklist_payload && Array.isArray(d.checklist_payload.zaehler)) ? d.checklist_payload.zaehler : null;
+            if (window.zaehler) { try { window.zaehler.berichtAktualisieren(true); } catch (e) {} }
             setVal('service-driving-distance', d.travel_distance_km);
             setVal('service-driving-time', d.travel_time_minutes);
             if (typeof window.updateDrivingTimeHoursPreview === 'function') { try { window.updateDrivingTimeHoursPreview(); } catch (e) {} }
@@ -1355,7 +1358,7 @@
                 work_log: typeof window.getWorkLogTableData === 'function' ? window.getWorkLogTableData() : [],
                 tasks: typeof window.getTasksTableData === 'function' ? window.getTasksTableData() : [],
                 materials: typeof window.getMaterialsTableData === 'function' ? window.getMaterialsTableData() : [],
-                checklist_payload: typeof window.getChecklistPayload === 'function' ? window.getChecklistPayload() : null,
+                checklist_payload: (function (p) { return typeof window.zaehlerInPayload === 'function' ? window.zaehlerInPayload(p) : p; })(typeof window.getChecklistPayload === 'function' ? window.getChecklistPayload() : null),
                 status_repaired: document.getElementById('service-status-repaired')?.checked || false,
                 status_repaired_en: document.getElementById('service-status-repaired-en')?.checked || false,
                 tech_sig_date: document.getElementById('service-tech-sig-date')?.value || null,

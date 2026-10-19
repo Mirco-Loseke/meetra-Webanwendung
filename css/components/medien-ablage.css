@@ -157,3 +157,27 @@ button.mv-video:hover { transform: scale(1.03); }
     .ab-ablage-raster-dok { grid-template-columns: 1fr; }
     .ab-ablage-leiste .ab-btn { width: 100%; min-height: 44px; }
 }
+
+/* Drag & Drop: Hinweisfeld + Hervorhebung beim Darüberziehen (2026-10-17) */
+.ab-ablage-drop {
+    margin-bottom: var(--space-4);
+    min-height: 150px;
+    padding: var(--space-4);
+    border: 1.5px dashed rgba(255, 255, 255, 0.22);
+    border-radius: var(--radius-md);
+    color: var(--text-3);
+    font-size: var(--fs-sm);
+    text-align: center;
+    transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+.ab-ablage-drop b { color: var(--text-1); }
+.ab-ablage.ab-ablage-ueber .ab-ablage-drop { background: rgba(16, 185, 129, 0.12); border-color: rgba(16, 185, 129, 0.7); color: #6ee7b7; }
+.ab-ablage.ab-ablage-ueber { outline: 2px dashed rgba(16, 185, 129, 0.5); outline-offset: 4px; border-radius: var(--radius-md); }
+.ab-ablage-drop { text-align: left; }
+.ab-ablage-leer { min-height: 118px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-1); text-align: center; }
+.ab-ablage-leer b { color: var(--text-1); font-size: var(--fs-md, 1rem); }
+@media (max-width: 768px), (hover: none) { .ab-ablage-leer b::after { content: ''; } }
+
+/* Reiter der Adress-Ablage (Dokumente / Fotos / Videos): größer */
+.ab-ablage-reiter { min-height: 48px; padding: var(--space-2) var(--space-5); font-size: 1.1875rem; font-weight: var(--fw-bold, 700); }
+.ab-ablage-reiter .ab-tab-count { font-size: var(--fs-sm); }

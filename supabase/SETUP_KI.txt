@@ -26,7 +26,7 @@ https://supabase.com/dashboard/project/rtnpyziwyaqrlfazxkyr/functions/secrets
 Optional:
   GROQ_API_KEY     (nur wenn AI_PROVIDER=groq)
   AI_DAILY_LIMIT   z. B. 200 — Anfragen je Nutzer und Tag; braucht die
-                   Tabelle aus supabase/supabase_add_ai_usage.sql
+                   Tabelle aus supabase/migrationen/supabase_add_ai_usage.sql
 
 GROQ_API_KEY ist schon da und darf bleiben — er wird nur bei AI_PROVIDER=groq
 benutzt.

@@ -1,0 +1,66 @@
+<div id="signature-modal" class="modal-backdrop hidden" style="z-index: 999999 !important; align-items: center; justify-content: center; position: fixed; inset: 0;">
+    <div class="modal-content glass-card" style="max-width: 600px; width: 95%; padding: 1.5rem; display: flex; flex-direction: column;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h3 style="margin: 0; color: white;">Kundenunterschrift leisten</h3>
+            <button type="button" class="btn-close-modal" onclick="window.closeSignaturePad()">&times;</button>
+        </div>
+        <div style="background: white; border-radius: 8px; overflow: hidden; height: 300px; position: relative;">
+            <canvas id="signature-canvas" style="width: 100%; height: 100%; display: block; cursor: crosshair; touch-action: none; background: white;"></canvas>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 1.5rem;">
+            <button type="button" class="btn-secondary" onclick="window.clearSignatureCanvas()">Zurücksetzen</button>
+            <button type="button" class="btn-primary" onclick="window.saveSignatureCanvas()">Fertig</button>
+        </div>
+    </div>
+</div>
+
+<!-- Technician Signature Pad Modal -->
+<div id="tech-signature-modal" class="modal-backdrop hidden" style="z-index: 999999 !important; align-items: center; justify-content: center; position: fixed; inset: 0;">
+    <div class="modal-content glass-card" style="max-width: 600px; width: 95%; padding: 1.5rem; display: flex; flex-direction: column;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h3 style="margin: 0; color: white;">Techniker-Unterschrift leisten</h3>
+            <button type="button" class="btn-close-modal" onclick="window.closeTechSignaturePad()">&times;</button>
+        </div>
+        <div style="background: white; border-radius: 8px; overflow: hidden; height: 300px; position: relative;">
+            <canvas id="tech-signature-canvas" style="width: 100%; height: 100%; display: block; cursor: crosshair; touch-action: none; background: white;"></canvas>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 1.5rem;">
+            <button type="button" class="btn-secondary" onclick="window.clearTechSignatureCanvas()">Zurücksetzen</button>
+            <button type="button" class="btn-primary" onclick="window.saveTechSignatureCanvas()">Fertig</button>
+        </div>
+    </div>
+</div>
+
+<!-- Generic Driver/Mechanic Signature Pad Modal (Einweisung, beliebig viele) -->
+<div id="driver-signature-modal" class="modal-backdrop hidden" style="z-index: 999999 !important; align-items: center; justify-content: center; position: fixed; inset: 0;">
+    <div class="modal-content glass-card" style="max-width: 600px; width: 95%; padding: 1.5rem; display: flex; flex-direction: column;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h3 style="margin: 0; color: white;">Unterschrift Fahrer/Mechaniker</h3>
+            <button type="button" class="btn-close-modal" onclick="window.closeDriverSignaturePad()">&times;</button>
+        </div>
+        <div style="background: white; border-radius: 8px; overflow: hidden; height: 300px; position: relative;">
+            <canvas id="driver-signature-canvas" style="width: 100%; height: 100%; display: block; cursor: crosshair; touch-action: none; background: white;"></canvas>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 1.5rem;">
+            <button type="button" class="btn-secondary" onclick="window.clearDriverSignatureCanvas()">Zurücksetzen</button>
+            <button type="button" class="btn-primary" onclick="window.saveDriverSignatureCanvas()">Fertig</button>
+        </div>
+    </div>
+</div>
+
+<!-- User (Settings) Signature Pad Modal -->
+<div id="user-signature-modal" class="modal-backdrop hidden" style="z-index: 99999999 !important; align-items: center; justify-content: center; position: fixed; inset: 0;">
+    <div class="modal-content glass-card" style="max-width: 600px; width: 95%; padding: 1.5rem; display: flex; flex-direction: column;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h3 style="margin: 0; color: white;">Unterschrift hinterlegen</h3>
+            <button type="button" class="btn-close-modal" onclick="window.closeUserSignaturePad()">&times;</button>
+        </div>
+        <div style="background: white; border-radius: 8px; overflow: hidden; height: 300px; position: relative;">
+            <canvas id="user-signature-canvas" style="width: 100%; height: 100%; display: block; cursor: crosshair; touch-action: none; background: white;"></canvas>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 1.5rem;">
+            <button type="button" class="btn-secondary" onclick="window.clearUserSignatureCanvas()">Zurücksetzen</button>
+            <button type="button" class="btn-primary" onclick="window.saveUserSignatureCanvas()">Fertig</button>
+        </div>
+    </div>
+</div>

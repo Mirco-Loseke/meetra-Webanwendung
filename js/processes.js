@@ -1,7 +1,7 @@
 // Zuständige eines Vorgangs = assigned_users PLUS jeder, dem ein Schritt zugewiesen ist
 // (ID und Name). Gilt für „Meine Vorgänge", Briefing und To-do. Die Datenbank trägt
 // Schritt-Zuständige zusätzlich per Trigger in assigned_users ein
-// (supabase/supabase_add_schritt_zustaendige.sql).
+// (supabase/migrationen/supabase_add_schritt_zustaendige.sql).
 window.procZustaendige = function (p) {
     const out = Array.isArray(p && p.assigned_users) ? p.assigned_users.slice() : [];
     (Array.isArray(p && p.steps) ? p.steps : []).forEach(st => {
@@ -493,7 +493,7 @@ window.buildProcessRemindersPanel = function(base) {
                 <span style="color:${g.color}; font-weight:800; font-size:0.7rem; text-transform:uppercase; letter-spacing:0.5px;">${g.label}</span>
                 <span style="color:rgba(255,255,255,0.4); font-size:0.7rem; font-weight:700;">${gi.length}</span>
             </div>
-            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:6px;">${gi.map(fmtRow).join('')}</div>
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:6px;">${gi.map(fmtRow).join('')}</div>
         </div>`;
     }).join('');
     return `
@@ -1229,7 +1229,7 @@ window.deleteProcess = async function(id) {
     const frage = anzDateien
         ? `Diesen Vorgang wirklich unwiderruflich löschen?\n\nDabei werden auch ${anzDateien} hinterlegte Dokument(e) endgültig aus dem Speicher entfernt.`
         : "Diesen Vorgang wirklich unwiderruflich löschen?";
-    if (!confirm(frage)) return;
+    if (!await window.appFrage(frage)) return;
     if (!window.supabaseClient) return;
 
     try {

@@ -490,3 +490,11 @@
 }
 /* breiter, damit die Vorschlagstitel nicht abgeschnitten werden */
 #ai-task-extend-modal > .modal-content { max-width: 880px !important; width: 94% !important; }
+
+/* Vorgang anlegen/bearbeiten: .msg-Import eingeklappt am Ende der linken Spalte (UX-07) */
+.proc-msg-details { margin-bottom: var(--space-3); }
+.proc-msg-details > summary { cursor: pointer; list-style: none; padding: var(--space-2) 0; color: var(--text-2, var(--text-3)); font-size: var(--fs-sm); font-weight: 700; }
+.proc-msg-details > summary::-webkit-details-marker { display: none; }
+.proc-msg-details > summary::before { content: '▸'; display: inline-block; margin-right: var(--space-2); transition: transform var(--dur-fast, 0.15s) ease; }
+.proc-msg-details[open] > summary::before { transform: rotate(90deg); }
+.proc-msg-details > summary span { font-weight: 500; opacity: 0.6; margin-left: var(--space-1); }

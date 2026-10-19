@@ -1,0 +1,113 @@
+<div id="workshop-photo-modal" class="modal-backdrop hidden"
+    style="z-index: 1060; display: none; align-items: center; justify-content: center;">
+    <div class="modal-content glass-card"
+        style="max-width: 800px; width: 95%; padding: 2.5rem; max-height: 90vh; display: flex; flex-direction: column; border: 1px solid rgba(139, 92, 246, 0.3); border-top: 6px solid #8b5cf6; box-shadow: 0 30px 80px rgba(0,0,0,0.6); position: relative; overflow: hidden; background: linear-gradient(135deg, rgba(30, 41, 59, 0.98), rgba(15, 23, 42, 0.98));">
+
+        <div
+            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-shrink: 0;">
+            <div>
+                <h2
+                    style="margin: 0; font-size: 1.8rem; color: white; display: flex; align-items: center; gap: 12px;">
+                    <span
+                        style="background: rgba(139, 92, 246, 0.2); padding: 8px; border-radius: 12px; display: flex; color: #8b5cf6;">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path
+                                d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z">
+                            </path>
+                            <circle cx="12" cy="13" r="4"></circle>
+                        </svg>
+                    </span>
+                    Werkstatt-Fotos
+                </h2>
+                <p id="workshop-photo-machine-name"
+                    style="margin: 0.5rem 0 0 0; color: rgba(255,255,255,0.6); font-size: 1rem; font-weight: 500;">
+                </p>
+            </div>
+            <button class="btn-icon-soft" onclick="window.closeWorkshopPhotoModal()"
+                style="background: rgba(255,255,255,0.05); border-radius: 12px; padding: 10px; transition: all 0.2s;"
+                onmouseover="this.style.background='rgba(239, 68, 68, 0.2)'; this.style.color='#ef4444'"
+                onmouseout="this.style.background='rgba(255,255,255,0.05)'; this.style.color=''">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+
+        <div
+            style="flex: 1; overflow-y: auto; padding-right: 15px; display: flex; flex-direction: column; min-height: 0; gap: 2rem;">
+
+            <!-- Section 1: New Photo Upload -->
+            <div
+                style="background: rgba(139, 92, 246, 0.05); border: 1px solid rgba(139, 92, 246, 0.2); border-radius: 20px; padding: 1.5rem;">
+                <h3
+                    style="margin: 0 0 1rem 0; font-size: 1.2rem; color: #fff; display: flex; align-items: center; gap: 8px;">
+                    <span style="color: #8b5cf6;">➕</span> Neues Foto aufnehmen
+                </h3>
+
+                <div class="form-group" style="margin-bottom: 1.5rem;">
+                    <label style="color: rgba(255,255,255,0.7); font-weight: 600; font-size: 0.9rem;">Titel
+                        (Pflichtfeld)</label>
+                    <input type="text" id="workshop-new-photo-title" class="glass-input"
+                        placeholder="z.B. Schadensaufnahme Front, Motorraum..."
+                        oninput="window.renderWorkshopPhotoPreview()" style="margin-bottom: 1rem;">
+                </div>
+
+                <div class="form-group" style="margin-bottom: 1.5rem;">
+                    <div class="file-drop-zone" id="workshop-photo-dropzone"
+                        style="background: rgba(0,0,0,0.2) !important; border-color: rgba(139, 92, 246, 0.3) !important;"
+                        onclick="document.getElementById('workshop-new-photo-input').click()">
+                        <input type="file" id="workshop-new-photo-input" multiple accept="image/*"
+                            class="hidden-file-input" onchange="window.handleWorkshopPhotoSelect(event)">
+                        <div class="drop-zone-content" style="pointer-events: none;">
+                            <span class="icon" style="filter: hue-rotate(250deg);">📸</span>
+                            <p>Fotos hierher ziehen oder klicken</p>
+                        </div>
+                    </div>
+                    <!-- Preview Grid -->
+                    <div id="workshop-new-photo-preview"
+                        style="display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap;"></div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label style="color: rgba(255,255,255,0.7); font-weight: 600; font-size: 0.9rem;">Notiz
+                        (optional)</label>
+                    <textarea id="workshop-new-photo-note" class="glass-input" rows="2"
+                        placeholder="Zustand, festgestellter Defekt..."></textarea>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end;">
+                    <button id="btn-save-workshop-photo" class="btn-primary" onclick="window.saveNewWorkshopPhoto()"
+                        style="display: flex; align-items: center; gap: 8px;"
+                        disabled>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                            <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                            <polyline points="7 3 7 8 15 8"></polyline>
+                        </svg>
+                        Speichern
+                    </button>
+                </div>
+            </div>
+
+            <!-- Layout Separator -->
+            <div style="height: 1px; background: rgba(255,255,255,0.1); width: 100%;"></div>
+
+            <!-- Section 2: Existing Workshop Photos -->
+            <div>
+                <h3
+                    style="margin: 0 0 1.5rem 0; font-size: 1.2rem; color: #fff; display: flex; align-items: center; gap: 8px;">
+                    <span style="color: #64748b;">⏳</span> Bisherige/Kürzliche Fotos
+                </h3>
+
+                <div id="workshop-photos-list" style="display: flex; flex-direction: column; gap: 1rem;">
+                    <!-- Dynamically populated entries go here -->
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>

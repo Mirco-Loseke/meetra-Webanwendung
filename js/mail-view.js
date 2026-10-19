@@ -658,7 +658,7 @@
 
     // Mail an den Vorgang hängen — eigenes Feld internal_processes.mails, NICHT
     // unter „Stand". Sichtbar über das Mail-Symbol der Karte (Fenster „E-Mails").
-    // Migration: supabase/supabase_add_process_mails.sql
+    // Migration: supabase/migrationen/supabase_add_process_mails.sql
     async function mailAnVorgang(m, von, p) {
         if (!p) return;
         const { data, error } = await window.supabaseClient.from('internal_processes').select('mails').eq('id', p.id).single();
@@ -876,6 +876,21 @@
             const suche = adressen.map(a => 'from:' + a + ' OR to:' + a).join(' OR ');
             const d = await window.graphFetch('/me/messages?$search=' + encodeURIComponent('"' + suche + '"') + '&$top=50&' + MAILFELDER);
             const liste = (d.value || []).sort((a, b) => (b.receivedDateTime || '').localeCompare(a.receivedDateTime || ''));
+            // Zahl merken und am Reiter anzeigen (Adressbuch zeigt sie beim nächsten Öffnen sofort)
+            try {
+                const schl = adressen.slice().sort().join(',');
+                const gem = JSON.parse(localStorage.getItem('meetra_adr_mails') || '{}');
+                gem[schl] = { n: liste.length, at: Date.now() };
+                const keys = Object.keys(gem);
+                if (keys.length > 300) keys.sort((x, y) => gem[x].at - gem[y].at).slice(0, keys.length - 300).forEach(k => delete gem[k]);
+                localStorage.setItem('meetra_adr_mails', JSON.stringify(gem));
+            } catch (e) { /* egal */ }
+            const tabEl = document.querySelector('.ab-tab[data-ab-tab="mails"]');
+            if (tabEl) {
+                let z = tabEl.querySelector('.ab-tab-count');
+                if (!z) { z = document.createElement('span'); z.className = 'ab-tab-count'; tabEl.appendChild(z); }
+                z.textContent = liste.length + (d['@odata.nextLink'] ? '+' : '');
+            }
             if (!el.isConnected) return;
             el.innerHTML = '<div class="ab-mails-kopf">'
                 + '<span class="text-muted-sm">' + liste.length + (d['@odata.nextLink'] ? '+' : '') + ' Mails mit ' + esc(adressen.join(', ')) + '</span>'

@@ -216,7 +216,7 @@
     // ---------------------------------------------------------------
     // Mehrere Abfragen holen den Adressnamen per Join mit (customers(...)).
     // Fehlt die Verknüpfung in der Datenbank — z. B. weil
-    // supabase/supabase_add_event_customer.sql noch nicht gelaufen ist —
+    // supabase/migrationen/supabase_add_event_customer.sql noch nicht gelaufen ist —
     // antwortet Supabase mit 400 und die Abfrage wird ohne Join wiederholt.
     // Das funktionierte, kostete aber bei JEDEM Laden eine vergebliche
     // Anfrage samt roter Meldung in der Konsole. Das Ergebnis wird deshalb
@@ -265,7 +265,7 @@
             // Adressnamen gleich mitladen, damit ein Adress-Termin im Kalender
             // zeigt, zu WEM er gehört. Der Einbau kann scheitern, solange
             // maintenance_events.customer_id noch nicht als uuid existiert
-            // (supabase/supabase_add_event_customer.sql) — dann wird ohne ihn
+            // (supabase/migrationen/supabase_add_event_customer.sql) — dann wird ohne ihn
             // geladen, statt die ganze Kalenderliste leer zu lassen.
             const { data, error } = await ladeMitKunden(
                 'maintenance_events',
@@ -1153,13 +1153,13 @@
                 }
             } catch (e) {
                 console.warn('Kalender: Teilnehmer nicht gespeichert:', e);
-                if (window.showToast) window.showToast('Eintrag gespeichert, die Einladung der Kollegen aber nicht.\n\nDazu muss supabase/supabase_add_event_participants.sql in Supabase laufen.');
+                if (window.showToast) window.showToast('Eintrag gespeichert, die Einladung der Kollegen aber nicht.\n\nDazu muss supabase/migrationen/supabase_add_event_participants.sql in Supabase laufen.');
             }
         }
 
         if (window.showToast) {
             window.showToast(ohneZeit
-                ? 'Gespeichert, aber ohne Uhrzeit — dazu muss supabase/supabase_add_event_participants.sql in Supabase laufen.'
+                ? 'Gespeichert, aber ohne Uhrzeit — dazu muss supabase/migrationen/supabase_add_event_participants.sql in Supabase laufen.'
                 : (editingId ? 'Eintrag aktualisiert.' : 'Eintrag angelegt.'));
         }
         formOpen = false;
@@ -1174,7 +1174,7 @@
 
     async function deleteEntry() {
         if (!editingId || !sb()) return;
-        if (!confirm('Diesen Kalendereintrag wirklich löschen?')) return;
+        if (!await window.appFrage('Diesen Kalendereintrag wirklich löschen?')) return;
         const { error } = await sb().from('maintenance_events').delete().eq('id', editingId);
         if (error) {
             if (window.showToast) window.showToast('Löschen fehlgeschlagen: ' + error.message);

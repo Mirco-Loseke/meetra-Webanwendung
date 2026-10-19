@@ -358,3 +358,8 @@ body.kic-offen #kic-fab { transform: scale(0.9); opacity: 0; pointer-events: non
 /* Abschrift handschriftlicher Zettel (Aktion „handschrift") */
 .kic-f-abschrift { min-height: 140px; font-family: var(--font-mono, ui-monospace, Consolas, monospace); font-size: 0.85rem; line-height: 1.45; resize: vertical; }
 .kic-unsicher { margin: 4px 0 6px; padding: 6px 10px; border-radius: 8px; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.35); color: #fbbf24; font-size: 0.78rem; }
+
+/* Neue Maschine aus Typenschild: Bildwahl */
+.kic-mb-wahl { gap: 10px; }
+.kic-mb { display: grid; gap: 4px; justify-items: center; font-size: var(--fs-xs); color: var(--text-2, inherit); cursor: pointer; }
+.kic-mb span { display: inline-flex; align-items: center; gap: 4px; }

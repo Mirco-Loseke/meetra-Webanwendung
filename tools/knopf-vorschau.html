@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Knopf-Vorschau</title>
+    <!-- Lädt dieselben Stylesheets wie index.html (Reihenfolge gleich), damit
+         „Vorher“ echt aussieht; danach den Vorschlag css/components/knopf.css. -->
+    <link rel="stylesheet" href="../css/base/variables.css?v=1">
+    <link rel="stylesheet" href="../css/base/tokens.css?v=2">
+    <link rel="stylesheet" href="../css/base/reset.css?v=3">
+    <link rel="stylesheet" href="../css/base/brand-accents.css?v=1">
+    <link rel="stylesheet" href="../css/components/navigation.css?v=1">
+    <link rel="stylesheet" href="../css/components/modals.css?v=13">
+    <link rel="stylesheet" href="../css/components/ai-capture.css?v=2">
+    <link rel="stylesheet" href="../css/components/process-attachments.css?v=2">
+    <link rel="stylesheet" href="../css/components/buttons.css?v=3">
+    <link rel="stylesheet" href="../css/components/forms.css?v=6">
+    <link rel="stylesheet" href="../css/components/notifications.css?v=8">
+    <link rel="stylesheet" href="../css/components/reminder-alarm.css?v=10">
+    <link rel="stylesheet" href="../css/components/calendar.css?v=1">
+    <link rel="stylesheet" href="../css/components/calendar-widget.css?v=7">
+    <link rel="stylesheet" href="../css/components/dropdowns.css?v=4">
+    <link rel="stylesheet" href="../css/components/focus-mode.css?v=3">
+    <link rel="stylesheet" href="../css/components/elements.css?v=1">
+    <link rel="stylesheet" href="../css/components/appointments.css?v=1">
+    <link rel="stylesheet" href="../css/components/notification-settings.css?v=2">
+    <link rel="stylesheet" href="../css/components/sprachwahl.css?v=1">
+    <link rel="stylesheet" href="../css/views/documents.css?v=2">
+    <link rel="stylesheet" href="../css/views/protocols.css?v=2">
+    <link rel="stylesheet" href="../css/views/tasks.css?v=6">
+    <link rel="stylesheet" href="../css/views/service-reports.css?v=7">
+    <link rel="stylesheet" href="../css/views/machines.css?v=1">
+    <link rel="stylesheet" href="../css/views/timeline.css?v=55">
+    <link rel="stylesheet" href="../css/views/procurement.css?v=1">
+    <link rel="stylesheet" href="../css/views/settings.css?v=7">
+    <link rel="stylesheet" href="../css/views/user-edit.css?v=2">
+    <link rel="stylesheet" href="../css/views/accounting.css?v=2">
+    <link rel="stylesheet" href="../css/views/ausgangsrechnungen.css?v=2">
+    <link rel="stylesheet" href="../css/views/workshop.css?v=1">
+    <link rel="stylesheet" href="../css/views/workshop-tasks.css?v=4">
+    <link rel="stylesheet" href="../css/views/rechnungsliste.css?v=3">
+    <link rel="stylesheet" href="../css/components/ki-chat.css?v=7">
+    <link rel="stylesheet" href="../css/components/todo-liste.css?v=22">
+    <link rel="stylesheet" href="../css/components/entwurf-sicher.css?v=1">
+    <link rel="stylesheet" href="../css/components/cockpit.css?v=6">
+    <link rel="stylesheet" href="../css/components/globale-suche.css?v=4">
+    <link rel="stylesheet" href="../css/views/tasks-print.css?v=5">
+    <link rel="stylesheet" href="../css/views/dashboard.css?v=1">
+    <link rel="stylesheet" href="../css/views/listen.css?v=4">
+    <link rel="stylesheet" href="../css/views/addressbook.css?v=36">
+    <link rel="stylesheet" href="../css/components/medien-ablage.css?v=1">
+    <link rel="stylesheet" href="../css/views/routenplanung.css?v=8">
+    <link rel="stylesheet" href="../css/views/mail.css?v=26">
+    <link rel="stylesheet" href="../css/views/foto-eingang.css?v=4">
+    <link rel="stylesheet" href="../css/views/datenschutz.css?v=2">
+    <link rel="stylesheet" href="../css/base/responsive.css?v=35">
+    <link rel="stylesheet" href="../css/views/login.css?v=2">
+    <link rel="stylesheet" href="../css/views/history.css?v=9">
+    <link rel="stylesheet" href="../css/base/landscape.css?v=2">
+    <link rel="stylesheet" href="../css/components/voice-dictation.css?v=3">
+    <link rel="stylesheet" href="../css/views/machine-modal.css?v=6">
+    <link rel="stylesheet" href="../css/views/uvv-protokoll.css?v=5">
+    <link rel="stylesheet" href="../css/base/handy-kompakt.css?v=18">
+    <link rel="stylesheet" href="../css/base/utilities.css?v=5">
+    <link rel="stylesheet" href="../css/components/dropdown-look.css?v=5">
+    <link rel="stylesheet" href="../css/views/mietvereinbarung.css?v=76">
+    <link rel="stylesheet" href="../css/views/einstellungen.css?v=18">
+    <link rel="stylesheet" href="../css/views/accounting-modal.css?v=2">
+    <link rel="stylesheet" href="../css/views/accounting-toggle.css?v=2">
+    <link rel="stylesheet" href="../css/views/accounting-finance-cards.css?v=2">
+    <link rel="stylesheet" href="../css/components/knopf.css">
+    <style>
+        /* Nur für diese Vorschauseite */
+        body { padding: var(--space-8) var(--space-6); min-height: 100vh; }
+        .vs-wrap { max-width: 1100px; margin: 0 auto; display: grid; gap: var(--space-6); }
+        .vs-h1 { font-family: var(--font-heading); font-size: var(--fs-2xl); color: var(--text-1); }
+        .vs-sub { color: var(--text-3); font-size: var(--fs-md); margin-top: var(--space-1); }
+        .vs-karte { background: rgba(15, 23, 42, 0.55); border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-lg); padding: var(--space-6); }
+        .vs-karte h2 { font-family: var(--font-heading); font-size: var(--fs-lg); color: var(--text-1); margin-bottom: var(--space-4); }
+        .vs-zeile { display: grid; grid-template-columns: 190px 1fr 280px; gap: var(--space-4); align-items: center; padding: var(--space-3) 0; border-top: 1px solid rgba(255,255,255,0.06); }
+        .vs-zeile:first-of-type { border-top: 0; }
+        .vs-name { color: var(--text-1); font-weight: 700; font-size: var(--fs-md); }
+        .vs-name small { display: block; color: var(--text-3); font-weight: 500; font-size: var(--fs-xs); margin-top: 2px; font-family: monospace; }
+        .vs-reihe { display: flex; gap: var(--space-3); flex-wrap: wrap; align-items: center; }
+        .vs-wofuer { color: var(--text-2); font-size: var(--fs-sm); line-height: 1.45; }
+        .vs-label { color: var(--text-3); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: var(--ls-caps); font-weight: 700; margin-bottom: var(--space-2); }
+        .vs-zwei { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-6); }
+        .vs-fenster { background: linear-gradient(135deg, rgba(30,41,59,0.98), rgba(15,23,42,0.99)); border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-xl); padding: var(--space-6); box-shadow: var(--shadow-3); }
+        .vs-fenster .fenster-kopf h3 { font-family: var(--font-heading); font-size: var(--fs-xl); color: var(--text-1); }
+        .vs-feld { margin-bottom: var(--space-4); }
+        .vs-feld label { display: block; color: var(--text-3); font-size: var(--fs-xs); font-weight: 700; text-transform: uppercase; letter-spacing: var(--ls-caps); margin-bottom: var(--space-2); }
+        .vs-feld div { height: 42px; border-radius: var(--radius-sm); background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); color: var(--text-2); display: flex; align-items: center; padding: 0 var(--space-3); font-size: var(--fs-md); }
+        .vs-kartenbsp { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-md); padding: var(--space-4); display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); }
+        .vs-kartenbsp b { color: var(--text-1); }
+        .vs-kartenbsp span { color: var(--text-3); font-size: var(--fs-sm); display: block; }
+        .vs-hover.knopf--primaer { background: var(--knopf-primaer-hover); }
+        .vs-hover.knopf--sekundaer { background: var(--knopf-flaeche-hover); }
+        .vs-hover.knopf--gefahr { background: var(--danger); border-color: var(--danger); color: #fff; }
+        .vs-hover.knopf--text { background: var(--knopf-flaeche); color: var(--text-1); }
+        .vs-hover.knopf--ki { background: var(--knopf-ki); border-color: var(--knopf-ki); color: #fff; }
+        .vs-vorher { display: flex; gap: var(--space-3); flex-wrap: wrap; align-items: center; }
+        .vs-vorher > * { position: static !important; }
+        @media (max-width: 768px) {
+            body { padding: var(--space-4) 14px; }
+            .vs-zeile { grid-template-columns: 1fr; gap: var(--space-2); }
+            .vs-zwei { grid-template-columns: 1fr; }
+            .vs-karte { padding: var(--space-4); }
+            .vs-fenster { padding: var(--space-4); border-radius: var(--radius-lg); }
+            .vs-nur-desktop { display: none; }
+            /* in der Vorschau scrollt die Seite, nicht das Fenster */
+            .vs-fenster .fenster-fuss { position: static; }
+        }
+    </style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+    <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.6L19.5 10l-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.4Z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8Z"/></symbol>
+    <symbol id="i-print" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></symbol>
+    <symbol id="i-ext" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></symbol>
+</svg>
+
+<div class="vs-wrap">
+    <div>
+        <div class="vs-h1">Knöpfe — Vorschlag</div>
+        <div class="vs-sub">5 Arten, 2 Größen, ein Schließen-X. Symbol immer links. Diese Seite: tools/knopf-vorschau.html</div>
+    </div>
+
+    <!-- 1. Die Arten -->
+    <section class="vs-karte">
+        <h2>1 · Die fünf Arten</h2>
+
+        <div class="vs-zeile">
+            <div class="vs-name">Primär<small>.knopf--primaer</small></div>
+            <div class="vs-reihe">
+                <button class="knopf knopf--primaer"><svg><use href="#i-check"/></svg>Speichern</button>
+                <button class="knopf knopf--primaer vs-hover"><svg><use href="#i-check"/></svg>Hover</button>
+                <button class="knopf knopf--primaer" disabled><svg><use href="#i-check"/></svg>Gesperrt</button>
+            </div>
+            <div class="vs-wofuer">Speichern, Anlegen, Senden, Übernehmen. <b>Nur einer pro Fenster/Bereich.</b> Ersetzt das grüne, blaue und rote „Speichern“.</div>
+        </div>
+
+        <div class="vs-zeile">
+            <div class="vs-name">Sekundär<small>.knopf--sekundaer</small></div>
+            <div class="vs-reihe">
+                <button class="knopf knopf--sekundaer">Abbrechen</button>
+                <button class="knopf knopf--sekundaer vs-hover">Hover</button>
+                <button class="knopf knopf--sekundaer"><svg><use href="#i-print"/></svg>Drucken</button>
+            </div>
+            <div class="vs-wofuer">Abbrechen, Zurück, Vorschau, Drucken, Export, Filter-Knöpfe.</div>
+        </div>
+
+        <div class="vs-zeile">
+            <div class="vs-name">Gefahr<small>.knopf--gefahr</small></div>
+            <div class="vs-reihe">
+                <button class="knopf knopf--gefahr"><svg><use href="#i-trash"/></svg>Löschen</button>
+                <button class="knopf knopf--gefahr vs-hover"><svg><use href="#i-trash"/></svg>Hover</button>
+            </div>
+            <div class="vs-wofuer">Löschen, Entfernen, Verwerfen. Nur umrandet, füllt sich rot erst beim Drüberfahren. Steht <b>nie</b> direkt neben Speichern.</div>
+        </div>
+
+        <div class="vs-zeile">
+            <div class="vs-name">Text<small>.knopf--text</small></div>
+            <div class="vs-reihe">
+                <button class="knopf knopf--text"><svg><use href="#i-ext"/></svg>Adresse öffnen</button>
+                <button class="knopf knopf--text vs-hover">Mehr anzeigen</button>
+            </div>
+            <div class="vs-wofuer">Leise Nebenaktionen in Karten und Listen, die nicht um Aufmerksamkeit kämpfen sollen.</div>
+        </div>
+
+        <div class="vs-zeile">
+            <div class="vs-name">KI<small>.knopf--ki</small></div>
+            <div class="vs-reihe">
+                <button class="knopf knopf--ki"><svg><use href="#i-spark"/></svg>KI-Erfassung</button>
+                <button class="knopf knopf--ki vs-hover"><svg><use href="#i-spark"/></svg>Hover</button>
+            </div>
+            <div class="vs-wofuer">Alles, was die KI auslöst. Lila bleibt damit eindeutig „KI“.</div>
+        </div>
+    </section>
+
+    <!-- 2. Größen -->
+    <section class="vs-karte">
+        <h2>2 · Größen &amp; Symbol-Knöpfe</h2>
+        <div class="vs-zeile">
+            <div class="vs-name">Normal / Klein<small>.knopf--klein</small></div>
+            <div class="vs-reihe">
+                <button class="knopf knopf--primaer"><svg><use href="#i-plus"/></svg>Vorgang erstellen</button>
+                <button class="knopf knopf--sekundaer knopf--klein">Alle</button>
+                <button class="knopf knopf--sekundaer knopf--klein">Meine</button>
+                <button class="knopf knopf--sekundaer knopf--klein"><svg><use href="#i-edit"/></svg>Bearbeiten</button>
+            </div>
+            <div class="vs-wofuer">Normal 40 px, Klein 32 px (Filter, Karten). Auf dem Handy werden <b>beide</b> mindestens 44 px hoch.</div>
+        </div>
+        <div class="vs-zeile">
+            <div class="vs-name">Symbol<small>.knopf--icon</small></div>
+            <div class="vs-reihe">
+                <button class="knopf knopf--sekundaer knopf--icon" title="Bearbeiten" aria-label="Bearbeiten"><svg><use href="#i-edit"/></svg></button>
+                <button class="knopf knopf--gefahr knopf--icon" title="Löschen" aria-label="Löschen"><svg><use href="#i-trash"/></svg></button>
+                <button class="knopf knopf--sekundaer knopf--icon knopf--klein" title="Bearbeiten" aria-label="Bearbeiten"><svg><use href="#i-edit"/></svg></button>
+                <button class="knopf knopf--gefahr knopf--icon knopf--klein" title="Löschen" aria-label="Löschen"><svg><use href="#i-trash"/></svg></button>
+            </div>
+            <div class="vs-wofuer">Quadratisch, gleiche Farben wie oben. Immer mit Tooltip.</div>
+        </div>
+        <div class="vs-zeile">
+            <div class="vs-name">Schließen<small>.knopf-x</small></div>
+            <div class="vs-reihe">
+                <button class="knopf-x" title="Schließen" aria-label="Schließen"><svg><use href="#i-x"/></svg></button>
+            </div>
+            <div class="vs-wofuer">Eins für alle Fenster: grau, oben rechts im Kopf, Hover hell. Ersetzt 16 Varianten (rotes Quadrat, Kreis, ×-Zeichen …). Handy 44 × 44.</div>
+        </div>
+    </section>
+
+    <!-- 3. Beispiele -->
+    <section class="vs-zwei">
+        <div>
+            <div class="vs-label">Beispiel: Fenster „Vorgang bearbeiten“</div>
+            <div class="vs-fenster">
+                <div class="fenster-kopf">
+                    <h3>Vorgang bearbeiten</h3>
+                    <button class="knopf-x" title="Schließen" aria-label="Schließen"><svg><use href="#i-x"/></svg></button>
+                </div>
+                <div class="vs-feld"><label>Betreff</label><div>Ersatzteil Rotor BEAR 3000</div></div>
+                <div class="vs-feld"><label>Adresse</label><div>meetra Recycling Maschinen · Wardenburg</div></div>
+                <div class="fenster-fuss">
+                    <button class="knopf knopf--gefahr"><svg><use href="#i-trash"/></svg>Löschen</button>
+                    <button class="knopf knopf--sekundaer">Abbrechen</button>
+                    <button class="knopf knopf--primaer"><svg><use href="#i-check"/></svg>Speichern</button>
+                </div>
+            </div>
+        </div>
+        <div>
+            <div class="vs-label">Beispiel: Karten-Aktionen (Serviceberichte, Buchhaltung)</div>
+            <div class="vs-kartenbsp">
+                <div><b>JT RecTec E530</b><span>20.10.2026 · Reparatur</span></div>
+                <div class="vs-reihe">
+                    <button class="knopf knopf--sekundaer knopf--klein"><svg><use href="#i-edit"/></svg>Bearbeiten</button>
+                    <button class="knopf knopf--text knopf--icon knopf--klein" title="Löschen" aria-label="Löschen"><svg><use href="#i-trash"/></svg></button>
+                </div>
+            </div>
+            <div class="vs-wofuer" style="margin-top: var(--space-3);">Löschen auf Karten nur noch als leises Symbol — der knallrote Papierkorb neben „Bearbeiten“ entfällt.</div>
+
+            <div class="vs-label vs-nur-desktop" style="margin-top: var(--space-6);">Seitenkopf</div>
+            <div class="vs-reihe vs-nur-desktop">
+                <button class="knopf knopf--ki"><svg><use href="#i-spark"/></svg>KI-Erfassung</button>
+                <button class="knopf knopf--primaer"><svg><use href="#i-plus"/></svg>Vorgang erstellen</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- 4. Vorher -->
+    <section class="vs-karte">
+        <h2>Zum Vergleich: so sieht es heute aus</h2>
+        <div class="vs-label">„Speichern“ in verschiedenen Fenstern</div>
+        <div class="vs-vorher">
+            <button class="btn-primary btn-red-animated">VORGANG SPEICHERN</button>
+            <button class="btn-modal-base btn-modal-save">Speichern</button>
+            <button class="btn-primary">Maschine anlegen</button>
+            <button class="btn-add-bg">+ Maschine hinzufügen</button>
+        </div>
+        <div class="vs-label" style="margin-top: var(--space-4);">Abbrechen / Löschen / Schließen</div>
+        <div class="vs-vorher">
+            <button class="btn-secondary">Abbrechen</button>
+            <button class="btn-modal-base btn-modal-cancel">Abbrechen</button>
+            <button class="btn-icon-soft delete" title="Löschen">🗑</button>
+            <button class="btn-close-modal">&times;</button>
+            <button class="modal-close-btn">✕</button>
+        </div>
+    </section>
+</div>
+</body>
+</html>

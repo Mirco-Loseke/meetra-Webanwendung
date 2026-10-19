@@ -7,6 +7,15 @@
 (function () {
     'use strict';
 
+    // Symbole für die Tabellen-Knöpfe (.knopf setzt die Größe auf 16 px)
+    const SVG_ATTR = 'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"';
+    const SVG_PLUS = `<svg ${SVG_ATTR}><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
+    const SVG_STIFT = `<svg ${SVG_ATTR}><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>`;
+    const SVG_DOWNLOAD = `<svg ${SVG_ATTR}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>`;
+    const SVG_MAIL = `<svg ${SVG_ATTR}><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>`;
+    const SVG_PAPIERKORB = `<svg ${SVG_ATTR}><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`;
+    const SVG_BUEROKLAMMER = `<svg ${SVG_ATTR}><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>`;
+
     // Global state for Angebote import
     let angeboteHeaders = [];
     let angeboteRows = [];
@@ -213,7 +222,7 @@
         if (vorgangSpalteFehlt) {
             if (!vorgangSpalteGemeldet) {
                 vorgangSpalteGemeldet = true;
-                window.showToast('Angebote ohne Vorgangs-Verknüpfung — supabase/supabase_add_angebot_vorgang.sql in Supabase ausführen.');
+                window.showToast('Angebote ohne Vorgangs-Verknüpfung — supabase/migrationen/supabase_add_angebot_vorgang.sql in Supabase ausführen.');
             }
             return;
         }
@@ -485,9 +494,8 @@
         const letzte = liste[0] || null;
         const stamp = letzte && typeof window.formatProcessStatusStamp === 'function' ? window.formatProcessStatusStamp(letzte.at) : '';
         const plus = `
-            <button type="button" onclick="event.stopPropagation(); window.openAngebotStand('${a.id}', event)" title="Stand hinzufügen"
-                style="flex-shrink:0; width:28px; height:28px; padding:0; border-radius:999px; font-size:1rem; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center;
-                       background:rgba(96,165,250,0.15); border:1px solid rgba(96,165,250,0.5); color:#60a5fa;">+</button>`;
+            <button type="button" class="knopf knopf--sekundaer knopf--klein knopf--icon" onclick="event.stopPropagation(); window.openAngebotStand('${a.id}', event)" title="Stand hinzufügen" aria-label="Stand hinzufügen"
+                style="flex-shrink:0;">${SVG_PLUS}</button>`;
         return `
             <div style="display:flex; align-items:center; gap:6px; min-width:200px; max-width:300px;">
                 <div onclick="event.stopPropagation(); window.openAngebotStand('${a.id}', event)" title="Stand ansehen / ändern — derselbe Stand wie im Vorgang"
@@ -561,18 +569,17 @@
             <div style="display:flex; align-items:center; gap:5px; min-width:0;">
                 <a href="${escapeHtml(f.url || '#')}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="${escapeHtml(f.name || '')} öffnen"
                    style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#34d399; font-size:0.82rem; font-weight:600; text-decoration:none;">${escapeHtml(f.name || 'Datei')}</a>
-                <a href="${escapeHtml(f.url || '#')}" onclick="event.stopPropagation(); event.preventDefault(); window.angebotDokumentHerunterladen('${a.id}', '${escapeHtml(String(f.id))}')" title="Herunterladen"
-                   style="flex-shrink:0; color:rgba(255,255,255,0.55); display:flex;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg></a>
-                <span onclick="event.stopPropagation(); window.angebotDokumentMailen('${a.id}', '${escapeHtml(String(f.id))}')" title="Per E-Mail senden"
-                      style="flex-shrink:0; cursor:pointer; color:rgba(255,255,255,0.55); display:flex;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg></span>
+                <a href="${escapeHtml(f.url || '#')}" class="knopf knopf--text knopf--klein knopf--icon" onclick="event.stopPropagation(); event.preventDefault(); window.angebotDokumentHerunterladen('${a.id}', '${escapeHtml(String(f.id))}')" title="Herunterladen" aria-label="Herunterladen"
+                   style="flex-shrink:0;">${SVG_DOWNLOAD}</a>
+                <button type="button" class="knopf knopf--text knopf--klein knopf--icon" onclick="event.stopPropagation(); window.angebotDokumentMailen('${a.id}', '${escapeHtml(String(f.id))}')" title="Per E-Mail senden" aria-label="Per E-Mail senden"
+                      style="flex-shrink:0;">${SVG_MAIL}</button>
             </div>`).join('');
         return `
             <div style="display:flex; flex-direction:column; gap:4px; min-width:170px;">
                 ${zeilen}
                 ${docs.length > 3 ? `<div style="font-size:0.72rem; color:rgba(255,255,255,0.45);">+ ${docs.length - 3} weitere</div>` : ''}
-                <button type="button" onclick="event.stopPropagation(); window.openAngebotDokumente('${a.id}')" title="Dokument hinzufügen / verwalten — dieselben Dokumente wie im Vorgang"
-                    style="align-self:flex-start; height:26px; padding:0 10px; border-radius:999px; font-size:0.75rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:5px;
-                           background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.4); color:#34d399;">📎 ${docs.length ? docs.length + ' · verwalten' : 'Dokument hinzufügen'}</button>
+                <button type="button" class="knopf knopf--sekundaer knopf--klein" onclick="event.stopPropagation(); window.openAngebotDokumente('${a.id}')" title="Dokument hinzufügen / verwalten — dieselben Dokumente wie im Vorgang"
+                    style="align-self:flex-start;">${SVG_BUEROKLAMMER}${docs.length ? docs.length + ' · verwalten' : 'Dokument hinzufügen'}</button>
             </div>`;
     }
 
@@ -674,9 +681,9 @@
                         Neu:<br><strong>${neueNamen}</strong>
                     </div>
                     <div style="display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap; margin-top:18px;">
-                        <button type="button" class="btn-secondary" data-wahl="">Abbrechen</button>
-                        <button type="button" class="btn-secondary" data-wahl="hinzu">Zusätzlich anhängen</button>
-                        <button type="button" class="btn-primary" data-wahl="ersetzen" style="background:#ef4444; border-color:#ef4444;">Ersetzen — alte endgültig löschen</button>
+                        <button type="button" class="knopf knopf--gefahr" data-wahl="ersetzen" style="margin-right:auto;">Ersetzen — alte endgültig löschen</button>
+                        <button type="button" class="knopf knopf--sekundaer" data-wahl="">Abbrechen</button>
+                        <button type="button" class="knopf knopf--primaer" data-wahl="hinzu">Zusätzlich anhängen</button>
                     </div>
                 </div>`;
             ov.addEventListener('click', ev => {
@@ -705,7 +712,7 @@
                 if (anzeige) anzeige.textContent = `⏳ ${i} von ${n} …`;
             });
             const teile = [];
-            if (zuGross) teile.push(`${zuGross} Datei(en) über 8 MB übersprungen`);
+            if (zuGross) teile.push(`${zuGross} Datei(en) über 10 MB übersprungen`);
             if (fehler) teile.push(`${fehler} Datei(en) fehlgeschlagen`);
             window.showToast(teile.length ? teile.join(' · ')
                 : `${dateien.length} Dokument${dateien.length === 1 ? '' : 'e'} zum Angebot ${a.belegnummer || ''} ${ersetzt ? `hochgeladen — ${ersetzt} altes Dokument${ersetzt === 1 ? '' : 'e'} gelöscht` : 'hochgeladen'}.`);
@@ -1630,13 +1637,12 @@
         if (!box) {
             box = document.createElement('div');
             box.id = 'angebote-scroll-pfeile';
-            box.style.cssText = 'position:fixed; right:18px; bottom:22px; z-index:9000; display:none; gap:8px; padding:6px; border-radius:999px;'
+            // Lage (unten mittig, damit To-do- und KI-Knopf frei bleiben) steht in css/views/listen.css.
+            box.style.cssText = 'display:none; gap:8px; padding:6px; border-radius:999px;'
                 + ' background:rgba(15,23,42,0.96); border:2px solid rgba(16,185,129,0.7); box-shadow:0 10px 30px rgba(0,0,0,0.6);';
             box.innerHTML = ['links', 'rechts'].map(r => `
-                <button type="button" data-richtung="${r}" title="${r === 'links' ? 'Eine Spalte nach links (Doppelklick: ganz nach links)' : 'Eine Spalte nach rechts (Doppelklick: ganz nach rechts)'}"
-                    style="width:48px; height:48px; border-radius:50%; border:0; background:transparent; color:#34d399; cursor:pointer;
-                           display:flex; align-items:center; justify-content:center; font-size:2rem; font-weight:800; line-height:1; transition:background .15s, opacity .15s;"
-                    onmouseover="this.style.background='rgba(16,185,129,0.3)'" onmouseout="this.style.background='transparent'">${r === 'links' ? '‹' : '›'}</button>`).join('');
+                <button type="button" class="knopf knopf--text knopf--icon" data-richtung="${r}" title="${r === 'links' ? 'Eine Spalte nach links (Doppelklick: ganz nach links)' : 'Eine Spalte nach rechts (Doppelklick: ganz nach rechts)'}"
+                    aria-label="${r === 'links' ? 'Eine Spalte nach links' : 'Eine Spalte nach rechts'}"><svg ${SVG_ATTR}><polyline points="${r === 'links' ? '15 18 9 12 15 6' : '9 18 15 12 9 6'}"></polyline></svg></button>`).join('');
             document.body.appendChild(box);
             box.querySelectorAll('button').forEach(b => {
                 b.addEventListener('click', (e) => { e.stopPropagation(); window.angeboteSpalteScrollen(b.dataset.richtung === 'links' ? -1 : 1); });
@@ -1718,14 +1724,14 @@
         const sichtbar = entries.slice(0, angeboteSichtbar);
         const rest = entries.length - sichtbar.length;
         const mehrKnopf = rest > 0
-            ? `<button type="button" class="btn-secondary angebote-mehr-btn" onclick="window.angeboteMehrLaden()" style="padding:8px 18px;">Weitere ${Math.min(rest, ANGEBOTE_SEITE)} von ${rest} laden</button>`
+            ? `<button type="button" class="knopf knopf--text angebote-mehr-btn" onclick="window.angeboteMehrLaden()">Weitere ${Math.min(rest, ANGEBOTE_SEITE)} von ${rest} laden</button>`
             : '';
 
         if (entries.length === 0) {
             container.innerHTML = `
                 <div class="empty-state" style="text-align:center; padding:3rem 2rem; background: rgba(255,255,255,0.02); border-radius: 16px; border: 1px dashed rgba(255,255,255,0.1);">
                     <p style="color:#fff; font-size: 1rem;">${nurOhneAdresse ? 'Alle Angebote haben eine Adresse.' : 'Keine Angebote vorhanden. Oben importieren.'}</p>
-                    ${nurOhneAdresse ? '<button type="button" class="btn-secondary" onclick="window.toggleAngeboteOhneAdresse()">Filter „ohne Adresse" aus</button>' : ''}
+                    ${nurOhneAdresse ? '<button type="button" class="knopf knopf--sekundaer" onclick="window.toggleAngeboteOhneAdresse()">Filter „ohne Adresse" aus</button>' : ''}
                 </div>`;
             return;
         }
@@ -2141,8 +2147,7 @@
         html += `
             <div style="display:flex; justify-content:flex-start; align-items:center; gap:14px; margin:0 0 4px; flex-wrap:wrap;">
                 ${letzterImportZeile()}
-                ${(() => { const n = angeboteList.filter(a => !a.customer_id).length; return n ? `<button type="button" onclick="window.toggleAngeboteOhneAdresse()" title="Angebote, die noch keiner Adresse aus dem Adressbuch zugeordnet sind — Klick auf die Firma ordnet zu"
-                    style="height:28px; padding:0 12px; border-radius:999px; font-size:0.78rem; font-weight:700; cursor:pointer; background:${nurOhneAdresse ? 'rgba(245,158,11,0.35)' : 'rgba(245,158,11,0.12)'}; border:1px solid rgba(245,158,11,0.6); color:#f59e0b;">⚠ ${n} ohne Adresse${nurOhneAdresse ? ' · Filter aktiv' : ''}</button>` : ''; })()}
+                ${(() => { const n = angeboteList.filter(a => !a.customer_id).length; return n ? `<button type="button" class="knopf knopf--sekundaer knopf--klein angebote-ohne-adresse" aria-pressed="${nurOhneAdresse ? 'true' : 'false'}" onclick="window.toggleAngeboteOhneAdresse()" title="Angebote, die noch keiner Adresse aus dem Adressbuch zugeordnet sind — Klick auf die Firma ordnet zu"><svg ${SVG_ATTR}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>${n} ohne Adresse${nurOhneAdresse ? ' · Filter aktiv' : ''}</button>` : ''; })()}
             </div>
             <div class="angebote-table-wrap" style="overflow-x:auto;">
                 <table style="width:100%; min-width:1650px; border-collapse:collapse;">
@@ -2220,10 +2225,7 @@
                                 <td class="angebot-dok-drop" data-angebot-id="${a.id}" style="padding:12px 10px; font-size:0.95rem; min-width:170px; position:relative; border-radius:10px; transition:background .15s, box-shadow .15s;">${renderAngebotDokumenteCell(a)}</td>
                                 <td style="padding:12px 10px; font-size:0.95rem; min-width:220px;">${renderAngebotErinnerungCell(a)}</td>
                                 <td class="delete-permission-required" data-del-area="angebote" style="padding:10px; text-align:center;">
-                                    <button onclick="window.deleteAngebot('${a.id}')" title="Angebot endgültig löschen"
-                                        style="width:22px; height:22px; padding:0; border-radius:999px; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#f87171; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;">
-                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                                    </button>
+                                    <button type="button" class="knopf knopf--text knopf--klein knopf--icon" onclick="window.deleteAngebot('${a.id}')" title="Angebot endgültig löschen" aria-label="Angebot löschen">${SVG_PAPIERKORB}</button>
                                 </td>
                             </tr>
                         `;
@@ -2341,12 +2343,9 @@
         const notes = a.angebot_notizen || [];
         const hasNotes = notes.length > 0;
         return `
-            <button type="button" class="angebot-notiz-btn" onclick="event.stopPropagation(); window.toggleAngebotNotizPanel('${a.id}', this)"
-                title="${hasNotes ? notes.length + ' Notiz(en)' : 'Notiz hinzufügen'}"
-                style="flex-shrink:0; width:26px; height:26px; padding:0; border-radius:999px; font-size:0.78rem; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center;
-                    background:${hasNotes ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.06)'};
-                    border:1px solid ${hasNotes ? 'rgba(16,185,129,0.4)' : 'rgba(255,255,255,0.15)'};
-                    color:${hasNotes ? 'var(--color-primary-green)' : 'rgba(255,255,255,0.6)'};">${hasNotes ? notes.length : '+'}</button>
+            <button type="button" class="knopf knopf--sekundaer knopf--klein knopf--icon angebot-notiz-btn" onclick="event.stopPropagation(); window.toggleAngebotNotizPanel('${a.id}', this)"
+                title="${hasNotes ? notes.length + ' Notiz(en)' : 'Notiz hinzufügen'}" aria-label="${hasNotes ? notes.length + ' Notiz(en) anzeigen' : 'Notiz hinzufügen'}"
+                style="flex-shrink:0;">${hasNotes ? notes.length : SVG_PLUS}</button>
         `;
     }
 
@@ -2421,9 +2420,9 @@
                         <div style="color:#fff; font-size:0.72rem; margin-bottom:3px;">${fmtTimestamp(n.created_at)}</div>
                         <textarea id="angebot-notiz-edit-${n.id}" class="glass-form-input" rows="5" style="width:100%; font-size:0.9rem; resize:vertical;">${escapeHtml(n.content)}</textarea>
                         <div style="display:flex; justify-content:flex-end; gap:6px; margin-top:6px;">
-                            <button type="button" onclick="event.stopPropagation(); window.deleteAngebotNotiz('${angebotId}', '${n.id}')" class="delete-permission-required" data-del-area="notizen" style="padding:4px 10px; font-size:0.75rem; border-radius:8px; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#f87171; cursor:pointer; margin-right:auto;">Löschen</button>
-                            <button type="button" onclick="event.stopPropagation(); window.cancelEditAngebotNotiz('${angebotId}')" class="btn-secondary" style="padding:4px 10px; font-size:0.75rem;">Abbrechen</button>
-                            <button type="button" onclick="event.stopPropagation(); window.saveEditAngebotNotiz('${angebotId}', '${n.id}')" class="btn-primary" style="padding:4px 10px; font-size:0.75rem;">Speichern</button>
+                            <button type="button" onclick="event.stopPropagation(); window.deleteAngebotNotiz('${angebotId}', '${n.id}')" class="knopf knopf--gefahr knopf--klein delete-permission-required" data-del-area="notizen" style="margin-right:auto;">Löschen</button>
+                            <button type="button" onclick="event.stopPropagation(); window.cancelEditAngebotNotiz('${angebotId}')" class="knopf knopf--sekundaer knopf--klein">Abbrechen</button>
+                            <button type="button" onclick="event.stopPropagation(); window.saveEditAngebotNotiz('${angebotId}', '${n.id}')" class="knopf knopf--primaer knopf--klein">Speichern</button>
                         </div>
                     </div>
                 `;
@@ -2443,8 +2442,8 @@
                 <div style="color:#fff; font-size:0.75rem; margin-bottom:5px;">Neue Notiz · ${fmtTimestamp(new Date().toISOString())}</div>
                 <textarea id="angebot-notiz-input" class="glass-form-input" rows="5" placeholder="Notiz eingeben..." style="width:100%; font-size:0.9rem; resize:vertical;"></textarea>
                 <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:8px;">
-                    <button type="button" onclick="window.toggleAngebotNotizPanel('${angebotId}')" class="btn-secondary" style="padding:6px 14px; font-size:0.8rem;">Schließen</button>
-                    <button type="button" onclick="window.saveAngebotNotiz('${angebotId}')" class="btn-primary" style="padding:6px 14px; font-size:0.8rem;">Speichern</button>
+                    <button type="button" onclick="window.toggleAngebotNotizPanel('${angebotId}')" class="knopf knopf--sekundaer knopf--klein">Schließen</button>
+                    <button type="button" onclick="window.saveAngebotNotiz('${angebotId}')" class="knopf knopf--primaer knopf--klein">Speichern</button>
                 </div>
             </div>
         `;
@@ -2524,7 +2523,7 @@
     window.deleteAngebotNotiz = async function (angebotId, notizId) {
         if (typeof window.canDelete === 'function' && !window.canDelete('Notizen')) return;
         if (!window.supabaseClient) return;
-        if (!confirm('Notiz wirklich löschen?')) return;
+        if (!await window.appFrage('Notiz wirklich löschen?')) return;
 
         try {
             const { error } = await window.supabaseClient
@@ -2586,7 +2585,7 @@
         if (!window.supabaseClient) return;
         const entry = angeboteList.find(x => x.id === angebotId);
         const label = entry ? entry.belegnummer : angebotId;
-        if (!confirm(`Angebot "${label}" wirklich endgültig löschen? Das kann nicht rückgängig gemacht werden.`)) return;
+        if (!await window.appFrage(`Angebot "${label}" wirklich endgültig löschen? Das kann nicht rückgängig gemacht werden.`)) return;
         try {
             // Der zugehörige Vorgang ist das Angebot selbst — er geht mit.
             const proc = vorgangZu(entry);
@@ -2684,7 +2683,7 @@
         try {
             // Wer die Erinnerung setzt, bekommt sie auch — und nur der.
             // Ohne diesen Vermerk landete sie bei jedem in der Glocke.
-            // Migration: supabase/supabase_add_erinnerung_owner.sql
+            // Migration: supabase/migrationen/supabase_add_erinnerung_owner.sql
             const feld = { erinnerung: date };
             if (date && window.activeUser) {
                 feld.erinnerung_by = window.activeUser.id || null;
@@ -2928,13 +2927,10 @@
 
         return `
             <div style="display:flex; align-items:flex-start; gap:8px;">
-                <button type="button" class="angebot-machine-edit-btn" onclick="event.stopPropagation(); window.startEditAngebotMachine('${a.id}')"
-                    title="${hasMachine ? 'Maschine bearbeiten' : 'Maschine hinzufügen'}"
-                    style="flex-shrink:0; width:26px; height:26px; padding:0; border-radius:999px; font-size:0.78rem; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center;
-                        background:${hasMachine ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.06)'};
-                        border:1px solid ${hasMachine ? 'rgba(16,185,129,0.4)' : 'rgba(255,255,255,0.15)'};
-                        color:${hasMachine ? 'var(--color-primary-green)' : 'rgba(255,255,255,0.6)'};">${hasMachine ? '✎' : '+'}</button>
-                <span style="flex:1; min-width:0; white-space:normal; word-break:break-word; line-height:1.3; padding-top:3px;">${nameHtml}</span>
+                <button type="button" class="knopf knopf--sekundaer knopf--klein knopf--icon angebot-machine-edit-btn" onclick="event.stopPropagation(); window.startEditAngebotMachine('${a.id}')"
+                    title="${hasMachine ? 'Maschine bearbeiten' : 'Maschine hinzufügen'}" aria-label="${hasMachine ? 'Maschine bearbeiten' : 'Maschine hinzufügen'}"
+                    style="flex-shrink:0;">${hasMachine ? SVG_STIFT : SVG_PLUS}</button>
+                <span style="flex:1; min-width:0; white-space:normal; word-break:break-word; line-height:1.3; padding-top:6px;">${nameHtml}</span>
             </div>
         `;
     }

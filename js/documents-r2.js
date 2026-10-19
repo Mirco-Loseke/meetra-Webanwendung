@@ -29,46 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
         fetchDocuments();
     }
 
-    // Set up upload dropzone drag-and-drop
-    const dropzone = document.getElementById('doc-dropzone');
-    if (dropzone) {
-        dropzone.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            dropzone.classList.add('dragover');
-        });
-
-        dropzone.addEventListener('dragleave', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            dropzone.classList.remove('dragover');
-        });
-
-        dropzone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            dropzone.classList.remove('dragover');
-
-            const files = Array.from(e.dataTransfer.files);
-            if (files.length > 0) {
-                selectedDocFiles = files;
-                const fileNameLabel = document.getElementById('doc-file-name');
-                if (files.length === 1) {
-                    fileNameLabel.textContent = files[0].name;
-                    const nameInput = document.getElementById('doc-upload-name');
-                    if (nameInput && !nameInput.value) {
-                        nameInput.value = files[0].name.split('.').slice(0, -1).join('.');
-                    }
-                } else {
-                    fileNameLabel.textContent = `${files.length} Dateien ausgewählt`;
-                    const nameInput = document.getElementById('doc-upload-name');
-                    if (nameInput) {
-                        nameInput.value = "Mehrere Dokumente";
-                    }
-                }
-            }
-        });
-    }
+    // Upload-Feld (js/upload-feld.js) wird beim Öffnen des Fensters aufgebaut — openDocumentUploadModal
 });
 
 // For cross-module compatibility (switchView)
@@ -1083,8 +1044,21 @@ window.openDocumentUploadModal = async function() {
     
     // Reset form
     document.getElementById('document-upload-form').reset();
-    document.getElementById('doc-file-name').textContent = 'Klicken oder Datei hierher ziehen';
     selectedDocFiles = []; // Reset file array
+    if (!docUploadFeld && document.getElementById('doc-upload-feld') && window.uploadFeld) {
+        docUploadFeld = window.uploadFeld(document.getElementById('doc-upload-feld'), {
+            accept: '.pdf,image/*', multiple: true, maxMB: 10, kamera: true,
+            text: 'Dateien hierher ziehen',
+            onChange: (dateien) => {
+                selectedDocFiles = dateien;
+                const nameInput = document.getElementById('doc-upload-name');
+                if (!nameInput) return;
+                if (dateien.length === 1) { if (!nameInput.value) nameInput.value = dateien[0].name.split('.').slice(0, -1).join('.'); }
+                else if (dateien.length > 1) nameInput.value = 'Mehrere Dokumente';
+            }
+        });
+    }
+    if (docUploadFeld) docUploadFeld.leeren();
     
     // Reset category selections
     activeUploadDocTypes = [];
@@ -1123,24 +1097,7 @@ window.closeDocumentUploadModal = function() {
 };
 
 let selectedDocFiles = []; // Changed from single selectedDocFile
-
-window.handleDocFileSelection = function(event) {
-    const files = Array.from(event.target.files);
-    if (files.length > 0) {
-        selectedDocFiles = files;
-        const fileNameLabel = document.getElementById('doc-file-name');
-        if (files.length === 1) {
-            fileNameLabel.textContent = files[0].name;
-            const nameInput = document.getElementById('doc-upload-name');
-            if (!nameInput.value) {
-                nameInput.value = files[0].name.split('.').slice(0, -1).join('.');
-            }
-        } else {
-            fileNameLabel.textContent = `${files.length} Dateien ausgewählt`;
-            document.getElementById('doc-upload-name').value = "Mehrere Dokumente";
-        }
-    }
-};
+let docUploadFeld = null;  // js/upload-feld.js-Instanz im Dokument-Upload-Fenster
 
 window.saveDocument = async function(event) {
     event.preventDefault();
@@ -1667,7 +1624,7 @@ window.deleteDocument = async function(id, filePath) {
         window.showToast('Keine Berechtigung zum Löschen von Dokumenten.');
         return;
     }
-    if (!confirm('Möchtest du dieses Dokument wirklich löschen?')) return;
+    if (!await window.appFrage('Möchtest du dieses Dokument wirklich löschen?')) return;
 
     const doc = (allDocuments || []).find(d => String(d.id) === String(id));
 
@@ -1751,7 +1708,7 @@ window.deleteFolder = async function(id) {
         window.showToast('Keine Berechtigung zum Löschen von Ordnern.');
         return;
     }
-    if (!confirm('Möchtest du diesen Ordner und alle darin enthaltenen Dokumente wirklich löschen?')) return;
+    if (!await window.appFrage('Möchtest du diesen Ordner und alle darin enthaltenen Dokumente wirklich löschen?')) return;
 
     try {
         // 1. Fetch all documents in this folder and its subfolders recursively

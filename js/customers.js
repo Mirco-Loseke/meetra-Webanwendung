@@ -400,7 +400,7 @@
     // Sperrliste leeren (Einstellungen → Adressimport, falls mal eine Adresse
     // doch gewollt ist): beim nächsten Import wird wieder gefragt.
     window.importAusschlussLeeren = async function () {
-        if (!confirm('Sperrliste der beim Import ausgeschlossenen Adressen leeren? Beim nächsten Import wird für diese wieder gefragt.')) return;
+        if (!await window.appFrage('Sperrliste der beim Import ausgeschlossenen Adressen leeren? Beim nächsten Import wird für diese wieder gefragt.')) return;
         await window.supabaseClient.from('app_settings').upsert({ key: 'customer_import_ausgeschlossen', value: [] });
         window.showToast('Sperrliste geleert.');
     };

@@ -954,7 +954,7 @@
                 : (prefix === 'steps-modal' ? (window.stepsModalProcessId || '') : '');
             if (procId && typeof window.processAttachCount === 'function') {
                 const n = window.processAttachCount(procId, id);
-                if (n && !confirm(`An diesem Schritt hängen ${n} Dokument(e).\n\nBeim Löschen des Schritts werden sie endgültig aus dem Speicher entfernt. Fortfahren?`)) return;
+                if (n && !await window.appFrage(`An diesem Schritt hängen ${n} Dokument(e).\n\nBeim Löschen des Schritts werden sie endgültig aus dem Speicher entfernt. Fortfahren?`)) return;
                 if (n && typeof window.deleteProcessStepFiles === 'function') {
                     try { await window.deleteProcessStepFiles(procId, id); }
                     catch (e) { console.warn('Dokumente des Schritts konnten nicht gelöscht werden:', e); }
@@ -1359,7 +1359,7 @@
                     const { data: q } = await window.supabaseClient.from('internal_processes').select('*').eq('id', a.process_id).maybeSingle();
                     quelle = q || null;
                 }
-                if (quelle && !confirm(`Angebot ${a.belegnummer} hat bereits einen eigenen Vorgang („${quelle.title || ''}“).\n\nBeide zusammenführen? Schritte, Zuständige, Stände und Dokumente des anderen Vorgangs kommen in diesen; der andere wird danach gelöscht.`)) return;
+                if (quelle && !await window.appFrage(`Angebot ${a.belegnummer} hat bereits einen eigenen Vorgang („${quelle.title || ''}“).\n\nBeide zusammenführen? Schritte, Zuständige, Stände und Dokumente des anderen Vorgangs kommen in diesen; der andere wird danach gelöscht.`)) return;
             }
 
             const maschine = a.machine_id
@@ -1810,7 +1810,7 @@
             if (typeof window.canDelete === 'function' && !window.canDelete('Stand-Einträgen')) return;
             const proc = currentStatusProcess();
             if (!proc || !Array.isArray(proc.status_updates) || !proc.status_updates[index]) return;
-            if (!confirm('Diesen Stand-Eintrag unwiderruflich löschen?')) return;
+            if (!await window.appFrage('Diesen Stand-Eintrag unwiderruflich löschen?')) return;
             const list = proc.status_updates.slice();
             list.splice(index, 1);
             try {
@@ -1922,7 +1922,7 @@
             if (typeof window.canDelete === 'function' && !window.canDelete('Stand-Einträgen')) return;
             const proc = procById(processId);
             if (!proc || !Array.isArray(proc.status_updates) || !proc.status_updates[index]) return;
-            if (!confirm('Diesen Stand-Eintrag unwiderruflich löschen?')) return;
+            if (!await window.appFrage('Diesen Stand-Eintrag unwiderruflich löschen?')) return;
             const list = proc.status_updates.slice();
             list.splice(index, 1);
             try {

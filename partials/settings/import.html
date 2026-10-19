@@ -96,7 +96,7 @@
                             <span id="import-stats" style="font-size: 0.9rem; color: rgba(255,255,255,0.6); font-weight: 600;"></span>
                             <div style="display: flex; gap: 1rem;">
                                 <button type="button" class="btn-secondary" onclick="cancelImport()">Abbrechen</button>
-                                <button type="button" class="btn-primary" id="btn-execute-import" onclick="executeImport()" style="padding: 12px 24px; font-weight: 700;">Import starten</button>
+                                <button type="button" class="btn-primary" id="btn-execute-import" onclick="executeImport()">Import starten</button>
                             </div>
                         </div>
                     </div>
@@ -117,8 +117,8 @@
                             <div>
                                 <h4 style="color: #fff; margin-top: 0; margin-bottom: 0.5rem; font-size: 1.1rem;">Import erfolgreich abgeschlossen</h4>
                                 <p id="import-result-message" style="margin: 0; font-size: 0.95rem; color: rgba(255,255,255,0.85); line-height: 1.5;"></p>
-                                <button type="button" class="btn-primary" onclick="resetImportUI()" style="margin-top: 1rem; padding: 10px 20px; font-weight: 700;">Weitere Datei importieren</button>
-                                <button type="button" class="btn-secondary" onclick="window.importAusschlussLeeren()" style="margin-top: 1rem; margin-left: 8px; padding: 10px 20px;" title="Beim Import als Dopplung abgewählte Adressen werden dauerhaft übersprungen — hier die Liste leeren">Sperrliste der Dopplungen leeren</button>
+                                <button type="button" class="btn-primary" onclick="resetImportUI()" style="margin-top: 1rem;">Weitere Datei importieren</button>
+                                <button type="button" class="btn-secondary" onclick="window.importAusschlussLeeren()" style="margin-top: 1rem; margin-left: 8px;" title="Beim Import als Dopplung abgewählte Adressen werden dauerhaft übersprungen — hier die Liste leeren">Sperrliste der Dopplungen leeren</button>
                             </div>
                         </div>
                     </div>
@@ -189,7 +189,7 @@
                             <span id="angebote-import-stats" style="font-size: 0.9rem; color: rgba(255,255,255,0.6); font-weight: 600;"></span>
                             <div style="display: flex; gap: 1rem;">
                                 <button type="button" class="btn-secondary" onclick="window.cancelAngeboteImport()">Abbrechen</button>
-                                <button type="button" class="btn-primary" id="btn-execute-angebote-import" onclick="window.executeAngeboteImport()" style="padding: 12px 24px; font-weight: 700;">Import starten</button>
+                                <button type="button" class="btn-primary" id="btn-execute-angebote-import" onclick="window.executeAngeboteImport()">Import starten</button>
                             </div>
                         </div>
                     </div>
@@ -210,7 +210,7 @@
                             <div>
                                 <h4 style="color: #fff; margin-top: 0; margin-bottom: 0.5rem; font-size: 1.1rem;">Import erfolgreich abgeschlossen</h4>
                                 <p id="angebote-import-result-message" style="margin: 0; font-size: 0.95rem; color: rgba(255,255,255,0.85); line-height: 1.5;"></p>
-                                <button type="button" class="btn-primary" onclick="window.resetAngeboteImportUI()" style="margin-top: 1rem; padding: 10px 20px; font-weight: 700;">Weitere Datei importieren</button>
+                                <button type="button" class="btn-primary" onclick="window.resetAngeboteImportUI()" style="margin-top: 1rem;">Weitere Datei importieren</button>
                             </div>
                         </div>
                     </div>

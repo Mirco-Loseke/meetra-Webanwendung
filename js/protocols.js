@@ -1007,9 +1007,9 @@
         customCheckpoints[index].result = value;
     };
 
-    window.deleteCustomCheckpoint = function (index) {
+    window.deleteCustomCheckpoint = async function (index) {
         if (typeof window.canDelete === 'function' && !window.canDelete('Prüfpunkten')) return;
-        if (confirm('Prüfpunkt wirklich löschen?')) {
+        if (await window.appFrage('Prüfpunkt wirklich löschen?')) {
             customCheckpoints.splice(index, 1);
             renderCustomCheckpoints();
         }
@@ -1128,7 +1128,7 @@
 
     window.deleteProtocolPhoto = async function (index) {
         if (typeof window.canDelete === 'function' && !window.canDelete('Fotos')) return;
-        if (confirm('Foto wirklich löschen?')) {
+        if (await window.appFrage('Foto wirklich löschen?')) {
             const photo = protocolPhotos[index];
             if (photo && photo.file_name) {
                 const sessionIdx = sessionUploadedPhotos.indexOf(photo.file_name);
@@ -1395,7 +1395,7 @@
             return;
         }
 
-        if (!confirm('Protokoll abschließen? Nach dem Abschluss können Sie weiterhin Änderungen vornehmen.')) return;
+        if (!await window.appFrage('Protokoll abschließen? Nach dem Abschluss können Sie weiterhin Änderungen vornehmen.')) return;
 
         currentProtocol.status = 'completed';
         currentProtocol.completed_at = new Date().toISOString();
@@ -2528,42 +2528,28 @@
                                 </div>` : ''}
                             </div>
                             
-                            <!-- Action buttons -->
-                            <div class="card-actions" style="margin-top: auto; padding-top: 0.75rem; display: flex; gap: 8px; align-items: center;">
-                                <button style="cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; flex: 1; height: 44px; background: rgba(59,130,246,0.85); border: 2.5px solid rgba(147,197,253,0.8); color: #ffffff; border-radius: 20px; font-weight: 700; font-family: 'Inter', sans-serif; box-shadow: 0 4px 18px rgba(59,130,246,0.6); backdrop-filter: blur(12px); padding: 0 16px; transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);"
-                                        onmouseover="this.style.transform='scale(1.05)'; this.style.background='rgba(59,130,246,0.95)'"
-                                        onmouseout="this.style.transform='scale(1)'; this.style.background='rgba(59,130,246,0.85)'"
+                            <!-- Action buttons (gleiche Optik wie Serviceberichte: Bearbeiten blau, Anhänge lila, Löschen rot) -->
+                            <div class="card-actions" style="margin-top: auto; padding-top: 0.75rem; display: flex; gap: 10px; align-items: center;">
+                                <button type="button" class="knopf knopf--bearbeiten" style="flex: 1;" title="Bearbeiten"
                                         onclick="event.stopPropagation(); ${isAcceptance ? 'window.openAcceptanceProtocol' : 'window.openIntakeProtocol'}('${p.machine_id || ''}', '${p.id || ''}')">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                                    Öffnen
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                    Bearbeiten
                                 </button>
                                 ${p._photoUrls && p._photoUrls.length > 0 ? `
                                 <div style="position: relative; flex: none;">
-                                    <button onclick="event.stopPropagation(); window.openPhotosLightbox(${JSON.stringify(p._photoUrls).replace(/"/g, '&quot;')}, 0)" title="Fotos öffnen"
-                                        style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: rgba(139,92,246,0.85); border: 2.5px solid rgba(196,181,253,0.8); color: #ffffff; border-radius: 50%; cursor: pointer; transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1); box-shadow: 0 4px 18px rgba(139,92,246,0.6); backdrop-filter: blur(12px); padding: 0;"
-                                        onmouseover="this.style.transform='scale(1.08)'; this.style.background='rgba(139,92,246,0.95)'"
-                                        onmouseout="this.style.transform='scale(1)'; this.style.background='rgba(139,92,246,0.85)'">
-                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+                                    <button type="button" class="knopf knopf--lila knopf--icon" onclick="event.stopPropagation(); window.openPhotosLightbox(${JSON.stringify(p._photoUrls).replace(/"/g, '&quot;')}, 0)" title="Anhänge öffnen" aria-label="Anhänge öffnen">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
                                     </button>
                                     <span style="position: absolute; top: -4px; left: -4px; background: #ffffff; color: #7c3aed; font-size: 0.6rem; font-weight: 800; border-radius: 999px; min-width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; padding: 0 3px; line-height: 1; pointer-events: none;">${p._photoUrls.length}</span>
                                 </div>` : ''}
                                 ${p.status === 'completed' ? `
-                                <button onclick="event.stopPropagation(); window.openProtocolPDF('${p.machine_id}', '${p.id}', '${p.type}')" title="PDF öffnen"
-                                    style="flex: none; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: rgba(16,185,129,0.85); border: 2.5px solid rgba(167,243,208,0.8); color: #ffffff; border-radius: 50%; cursor: pointer; transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1); box-shadow: 0 4px 18px rgba(16,185,129,0.6); backdrop-filter: blur(12px); padding: 0;"
-                                    onmouseover="this.style.transform='scale(1.08)'; this.style.background='rgba(16,185,129,0.95)'"
-                                    onmouseout="this.style.transform='scale(1)'; this.style.background='rgba(16,185,129,0.85)'">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                                <button type="button" class="knopf knopf--pdf knopf--icon" style="flex: none;" onclick="event.stopPropagation(); window.openProtocolPDF('${p.machine_id}', '${p.id}', '${p.type}')" title="PDF öffnen" aria-label="PDF öffnen">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
                                 </button>` : ''}
-                                 <button class="btn-icon-circular delete delete-permission-required" data-del-area="protokolle" title="Löschen"
-                                         style="flex: none; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: rgba(239, 68, 68, 0.85); border: 2.5px solid rgba(252, 165, 165, 0.8); color: #ffffff; border-radius: 50%; cursor: pointer; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); box-shadow: 0 4px 18px rgba(239, 68, 68, 0.6); backdrop-filter: blur(12px); padding: 0;"
-                                         onclick="event.stopPropagation(); window.deleteProtocol('${p.id}', '${p.type}')"
-                                         onmouseover="this.style.transform='scale(1.08)'; this.style.background='rgba(239, 68, 68, 0.95)'; this.style.boxShadow='0 4px 24px rgba(239, 68, 68, 0.7)'; this.style.borderColor='rgba(252, 165, 165, 1)'"
-                                         onmouseout="this.style.transform='scale(1)'; this.style.background='rgba(239, 68, 68, 0.85)'; this.style.boxShadow='0 4px 18px rgba(239, 68, 68, 0.6)'; this.style.borderColor='rgba(252, 165, 165, 0.8)'">
-                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                         <polyline points="3 6 5 6 21 6"></polyline>
-                                         <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2-2v2"></path>
-                                     </svg>
-                                 </button>
+                                <button type="button" class="knopf knopf--gefahr knopf--icon delete-permission-required" data-del-area="protokolle" style="flex: none;" title="Protokoll löschen" aria-label="Protokoll löschen"
+                                        onclick="event.stopPropagation(); window.deleteProtocol('${p.id}', '${p.type}')">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -2605,7 +2591,7 @@
     window.deleteProtocol = async function(protocolId, protocolType) {
         if (typeof window.canDelete === 'function' && !window.canDelete('Protokollen')) return;
         if (!window.supabaseClient) { window.showToast('Datenbank nicht verbunden'); return; }
-        if (!confirm('Möchten Sie dieses Protokoll und alle zugehörigen Dateien (PDF, Bilder) wirklich unwiderruflich löschen?')) {
+        if (!await window.appFrage('Möchten Sie dieses Protokoll und alle zugehörigen Dateien (PDF, Bilder) wirklich unwiderruflich löschen?')) {
             return;
         }
 

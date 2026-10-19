@@ -146,6 +146,13 @@
         ziel.insertBefore(leiste, ziel.firstChild);
     }
 
+    // Für den Ungespeichert-Dialog („Verwerfen“): Entwürfe aller gerade offenen Fenster löschen.
+    window.entwurfSichtbareVerwerfen = function () {
+        const o = lesen();
+        document.querySelectorAll(MODAL_SEL).forEach(m => { if (m.id && sichtbar(m)) delete o[schluessel(m)]; });
+        schreiben(o);
+    };
+
     document.addEventListener('DOMContentLoaded', function () {
         document.addEventListener('input', merken, true);
         document.addEventListener('change', merken, true);

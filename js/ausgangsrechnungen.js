@@ -163,7 +163,7 @@
         if (!box) return;
         if (migrationFehlt) {
             if (kpiBox) kpiBox.innerHTML = '';
-            box.innerHTML = `<div class="ar-leer">Migration fehlt: <code>supabase/supabase_rechnungen_zahlung.sql</code> im Supabase SQL-Editor ausführen.</div>`;
+            box.innerHTML = `<div class="ar-leer">Migration fehlt: <code>supabase/migrationen/supabase_rechnungen_zahlung.sql</code> im Supabase SQL-Editor ausführen.</div>`;
             return;
         }
         if (ladeFehler) {
@@ -246,7 +246,7 @@
     window.arStufeZurueck = async function (id) {
         const r = liste.find(x => x.id === id);
         if (!r || !(r.mahnstufe > 0)) return;
-        if (!confirm(`„${STUFEN[r.mahnstufe].name}" für Rechnung ${r.belegnummer} zurücknehmen?`)) return;
+        if (!await window.appFrage(`„${STUFEN[r.mahnstufe].name}" für Rechnung ${r.belegnummer} zurücknehmen?`)) return;
         const verlauf = (Array.isArray(r.mahn_verlauf) ? r.mahn_verlauf : []).slice(0, -1);
         const vorige = verlauf[verlauf.length - 1];
         await speichern(r, { mahnstufe: r.mahnstufe - 1, mahnung_am: vorige ? vorige.am : null, mahn_verlauf: verlauf });

@@ -183,6 +183,26 @@
             speichern(); zeichnen();
         });
         document.body.classList.add('todo-an');
+        kopfKnopfAufbauen(fab);
+    }
+
+    // „Meine Liste" in der Kopfleiste — an der Stelle der früheren Glocke
+    // (2026-10-17, auf Wunsch: EINE sichtbare Stelle statt Glocke + schwebendem
+    // Knopf). Der schwebende #todo-fab bleibt im DOM, ist aber per CSS
+    // ausgeblendet (css/components/todo-liste.css) — so wirkt alter Code weiter.
+    function kopfKnopfAufbauen(fab) {
+        const leiste = document.querySelector('.topbar-right');
+        if (!leiste || document.getElementById('todo-kopf-btn')) return;
+        const w = document.createElement('div');
+        w.className = 'todo-kopf-wrapper';
+        w.innerHTML = `<button type="button" id="todo-kopf-btn" title="Meine Liste — was ich zu tun habe" aria-label="Meine Liste öffnen">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            <span class="todo-kopf-text">Meine Liste</span>
+            <span class="todo-fab-zahl" hidden></span></button>`;
+        const glocke = leiste.querySelector('.notif-wrapper');
+        if (glocke) glocke.before(w); else leiste.prepend(w);
+        w.querySelector('button').addEventListener('click', () => fab.click());
+        zaehlerSetzen();
     }
 
     function vollbild(an) {
@@ -211,14 +231,19 @@
         vollbild(vb);
         if (!geladen) { document.getElementById('todo-liste').innerHTML = '<div class="todo-leer">Lade …</div>'; await laden(); }
         zeichnen();
+        ueberfaelligLaden();   // überfällige Vorgänge, die nicht (mehr) auf der Liste stehen
     };
 
     function zaehlerSetzen() {
-        const z = document.querySelector('#todo-fab .todo-fab-zahl');
-        if (!z) return;
         const n = sichtbar().filter(e => !e.erledigt).length;
-        z.hidden = !n;
-        z.textContent = n > 99 ? '99+' : String(n);
+        // Schwebender Knopf (alt) und Knopf in der Kopfleiste zeigen dieselbe Zahl
+        document.querySelectorAll('#todo-fab .todo-fab-zahl, #todo-kopf-btn .todo-fab-zahl').forEach(z => {
+            z.hidden = !n;
+            z.textContent = n > 99 ? '99+' : String(n);
+        });
+        // Eine Zahl, eine Bedeutung: offene Einträge auf „Meine Liste“ (Tooltip sagt es)
+        const kb = document.getElementById('todo-kopf-btn');
+        if (kb) { const t = n ? 'Meine Liste — ' + n + (n === 1 ? ' offener Eintrag' : ' offene Einträge') : 'Meine Liste — nichts offen'; kb.title = t; kb.setAttribute('aria-label', t); }
     }
 
     // ---------------------------------------------------------- Zeichnen
@@ -381,7 +406,14 @@
         }
     }, 60000);
 
+    // Liste + darunter der Bereich „Überfällig, nicht auf der Liste" (ueberHtml)
     function zeichnen() {
+        zeichnenListe();
+        const box = document.getElementById('todo-liste');
+        if (box) box.insertAdjacentHTML('beforeend', ueberHtml());
+    }
+
+    function zeichnenListe() {
         const box = document.getElementById('todo-liste');
         if (!box) return;
         zaehlerSetzen();
@@ -980,6 +1012,111 @@
         }
     };
 
+    // ---------------------------------------------------------- Überfällig (nicht auf der Liste)
+    // Was einmal entfernt/„Erledigte weg" wurde, kommt nur mit NEUEM Datum zurück
+    // (todoUebernehmen). Ist der Vorgang aber noch offen und überfällig, ging er
+    // dadurch unter. Dieser Bereich holt ihn live aus der Datenbank — nur die
+    // eigenen, nur was NICHT sichtbar auf der Liste steht, aufgeteilt in
+    // „bis 7 Tage" und „länger" (eingeklappt). Geladen beim Öffnen, höchstens
+    // alle 2 Minuten (Egress-Regel: schmal, serverseitig gefiltert).
+    const UEBER_KEY = 'meetra_todo_ueber_auf';
+    const ueber = { liste: [], am: 0, laedt: null };
+    let ueberAuf = { kurz: true, lang: false };
+    try { Object.assign(ueberAuf, JSON.parse(localStorage.getItem(UEBER_KEY) || '{}')); } catch (e) { /* Standard */ }
+    function ueberAufMerken() { try { localStorage.setItem(UEBER_KEY, JSON.stringify(ueberAuf)); } catch (e) { /* egal */ } }
+    const OFFEN_RE = /verloren|abgelehnt|absage|abgesagt|storniert|kein interesse|gewonnen|auftrag|bestellt|verkauft|angenommen|zusage/i;
+
+    async function ueberfaelligLaden(erzwingen) {
+        if (!window.activeUser || !sb()) return;
+        if (ueber.laedt) return ueber.laedt;
+        if (!erzwingen && Date.now() - ueber.am < 120000) return;
+        ueber.laedt = (async () => {
+            const heute = isoTag(new Date());
+            const c = sb();
+            const q = p => p.then(r => (r.error ? [] : r.data || [])).catch(() => []);
+            const [faellig, mitSchritten, angebote] = await Promise.all([
+                q(c.from('internal_processes').select('id, title, remind_at, assigned_users, customer_id, status, steps').neq('status', 'erledigt').not('remind_at', 'is', null).lt('remind_at', heute + 'T00:00:00').limit(300)),
+                q(c.from('internal_processes').select('id, title, remind_at, assigned_users, customer_id, status, steps').neq('status', 'erledigt').contains('steps', JSON.stringify([{ done: false }])).limit(300)),
+                q(c.from('angebote').select('id, belegnummer, status, erinnerung, erinnerung_by, customer_id, kundenmatchcode').not('erinnerung', 'is', null).lt('erinnerung', heute).limit(300))
+            ]);
+            const tageSeit = tag => Math.max(1, Math.round((new Date(heute + 'T00:00:00') - new Date(String(tag).slice(0, 10) + 'T00:00:00')) / 864e5));
+            const je = new Map();
+            const merken = x => { const alt = je.get(x.key); if (!alt || x.tag < alt.tag) je.set(x.key, x); };
+            faellig.forEach(p => {
+                if (!(window.procZustaendige ? window.procZustaendige(p) : (p.assigned_users || [])).some(istMeins)) return;
+                const tag = String(p.remind_at).slice(0, 10);
+                merken({ key: 'process:' + p.id, art: 'Wiedervorlage', titel: p.title || 'Vorgang', sub: '', tag, tage: tageSeit(tag), targetType: 'process', targetId: p.id, customerId: p.customer_id || null });
+            });
+            mitSchritten.forEach(p => (p.steps || []).forEach(st => {
+                if (st.done || !st.remind_at) return;
+                const tag = String(st.remind_at).slice(0, 10);
+                if (tag >= heute) return;
+                const persoenlich = (st.assigned_id != null && st.assigned_id !== '') || !!st.assigned_to;
+                const meins = persoenlich ? (istMeins(st.assigned_id) || istMeins(st.assigned_to)) : (p.assigned_users || []).some(istMeins);
+                if (!meins) return;
+                merken({ key: 'process:' + p.id, art: 'Schritt', titel: p.title || 'Vorgang', sub: 'Schritt: ' + (st.text || ''), tag, tage: tageSeit(tag), targetType: 'process', targetId: p.id, customerId: p.customer_id || null });
+            }));
+            angebote.forEach(a => {
+                if (a.erinnerung_by == null || !istMeins(a.erinnerung_by) || OFFEN_RE.test(a.status || '')) return;
+                const tag = String(a.erinnerung).slice(0, 10);
+                merken({ key: 'angebot:' + a.id, art: 'Angebot', titel: 'Angebot ' + (a.belegnummer || '') + ' nachfassen', sub: [a.kundenmatchcode, a.status].filter(Boolean).join(' · '), tag, tage: tageSeit(tag), targetType: 'angebot', targetId: a.id, customerId: a.customer_id || null });
+            });
+            ueber.liste = [...je.values()].sort((a, b) => b.tage - a.tage);
+            ueber.am = Date.now();
+        })().finally(() => { ueber.laedt = null; });
+        await ueber.laedt;
+        zeichnen();
+    }
+
+    function ueberSichtbar() {
+        // Was offen und sichtbar auf der Liste steht, wird hier nicht doppelt gezeigt.
+        const aufListe = new Set(sichtbar().filter(e => !e.erledigt).map(schluessel));
+        return ueber.liste.filter(x => !aufListe.has(x.key));
+    }
+
+    function ueberHtml() {
+        if (suche.trim()) return '';
+        const alle = ueberSichtbar();
+        if (!alle.length) return '';
+        const kurz = alle.filter(x => x.tage <= 7), lang = alle.filter(x => x.tage > 7);
+        const zeile = x => `
+            <div class="todo-ueber-zeile" data-ueber="${esc(x.key)}">
+                <span class="todo-ueber-tage${x.tage > 7 ? ' lang' : ''}">seit ${x.tage} T</span>
+                <div class="todo-ueber-text"><b>${esc(x.titel)}</b><small>${esc([x.art, x.sub].filter(Boolean).join(' · '))}</small></div>
+                <div class="todo-ueber-knoepfe">
+                    <button type="button" class="knopf knopf--text knopf--klein" data-todo="ueber-oeffnen">Öffnen</button>
+                    <button type="button" class="knopf knopf--sekundaer knopf--klein" data-todo="ueber-auf" title="Wieder oben auf die Liste setzen">+ Liste</button>
+                </div>
+            </div>`;
+        const block = (art, titel, liste, auf, hinweis) => liste.length ? `
+            <div class="todo-ueber todo-ueber-${art}">
+                <button type="button" class="todo-ueber-kopf" data-todo="ueber-${art}" aria-expanded="${auf}">
+                    <span class="todo-ueber-punkt"></span>${titel} <span class="todo-ueber-zahl">${liste.length}</span>
+                    <span class="todo-ueber-pfeil">${auf ? '▴' : '▾'}</span>
+                </button>
+                ${auf ? `${hinweis ? `<div class="todo-ueber-hinweis">${hinweis}</div>` : ''}${liste.map(zeile).join('')}
+                    <button type="button" class="knopf knopf--text knopf--klein todo-ueber-alle" data-todo="ueber-alle-${art}">Alle ${liste.length} wieder auf die Liste</button>` : ''}
+            </div>` : '';
+        return block('kurz', 'Überfällig, nicht auf der Liste', kurz, ueberAuf.kurz, '')
+            + block('lang', 'Liegengeblieben — länger als 7 Tage überfällig', lang, ueberAuf.lang,
+                'Diese Vorgänge sind noch offen, standen aber nicht mehr auf deiner Liste (entfernt oder „Erledigte weg"). Wiedervorlage im Vorgang neu setzen oder hier zurück auf die Liste holen.');
+    }
+
+    function ueberAufListe(liste) {
+        if (!liste.length) return;
+        const vorhanden = new Map(eintraege.map(e => [schluessel(e), e]));
+        liste.forEach(x => {
+            const daten = { gruppe: 'Heute unbedingt', day: x.tag, datumText: wtDatum(x.tag), ki: x.art + ' seit ' + x.tage + ' Tagen überfällig',
+                erledigt: false, erledigtAm: null, archiviert: false, archiviertAm: null, neu: true };
+            const alt = vorhanden.get(x.key);
+            if (alt) Object.assign(alt, daten);
+            else eintraege.push(Object.assign({ id: neueId(), typ: x.targetType === 'angebot' ? 'Angebot' : 'Vorgang', titel: x.titel, subject: x.sub,
+                targetType: x.targetType, targetId: x.targetId, customerId: x.customerId, auto: true, notiz: '', am: new Date().toISOString() }, daten));
+        });
+        speichern(); zeichnen();
+        toast(liste.length === 1 ? 'Wieder auf der Liste.' : liste.length + ' Einträge wieder auf der Liste.', 'success');
+    }
+
     // ---------------------------------------------------------- Aktionen
     const eintragZu = el => { const w = el.closest('.todo-eintrag'); return w ? eintraege.find(x => x.id === w.dataset.id) : null; };
 
@@ -989,6 +1126,20 @@
         const e = eintragZu(t);
         if (!a) return;
         const was = a.dataset.todo;
+        if (was === 'ueber-kurz' || was === 'ueber-lang') {
+            const art = was.slice(6); ueberAuf[art] = !ueberAuf[art]; ueberAufMerken(); zeichnen(); return;
+        }
+        if (was === 'ueber-alle-kurz' || was === 'ueber-alle-lang') {
+            const lang = was.endsWith('lang');
+            return ueberAufListe(ueberSichtbar().filter(x => lang ? x.tage > 7 : x.tage <= 7));
+        }
+        if (was === 'ueber-auf' || was === 'ueber-oeffnen') {
+            const z = t.closest('[data-ueber]');
+            const x = z && ueber.liste.find(y => y.key === z.dataset.ueber);
+            if (!x) return;
+            if (was === 'ueber-auf') return ueberAufListe([x]);
+            return zielOeffnen({ targetType: x.targetType, targetId: x.targetId, customerId: x.customerId });
+        }
         if (was === 'zu') return schliessen();
         if (was === 'vollbild') return vollbild(!document.body.classList.contains('todo-vollbild'));
         if (was === 'briefing') { schliessen(); if (window.openKiBriefing) window.openKiBriefing('heute'); return; }
@@ -1476,8 +1627,10 @@
         });
         const n = await window.todoUebernehmen([...je.values()], { still: true });
         if (n && !document.body.classList.contains('todo-offen')) {
-            const fab = document.getElementById('todo-fab');
-            if (fab) { fab.classList.remove('todo-puls'); void fab.offsetWidth; fab.classList.add('todo-puls'); }
+            ['todo-fab', 'todo-kopf-btn'].forEach(id => {
+                const k = document.getElementById(id);
+                if (k) { k.classList.remove('todo-puls'); void k.offsetWidth; k.classList.add('todo-puls'); }
+            });
         }
     }
     window.todoAutoPruefen = () => autoPruefen(true);

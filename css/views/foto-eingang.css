@@ -157,3 +157,39 @@ textarea.fe-feld { min-height: 70px; resize: vertical; }
 .fe-sprache-text { width: 100%; min-height: 90px; resize: vertical; cursor: text; white-space: pre-wrap; }
 .fe-sprache-info { margin: 0; font-size: var(--fs-sm); color: var(--text-2); display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
 .fe-sprache-info.fehler { color: var(--danger); }
+
+/* Zuordnen → Mietvereinbarung: Fotos auf Positionen ziehen */
+#fe-such[hidden], .fe-treffer[hidden], #fe-miet-plan[hidden] { display: none; }
+.fe-fenster.fe-breit { width: min(1040px, 100%); max-height: 92vh; }
+.fe-plan-kopf { display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-2); }
+.fe-plan { display: grid; grid-template-columns: minmax(180px, 240px) 1fr; gap: var(--space-4); align-items: start; }
+.fe-plan h3 { margin: 0 0 var(--space-2); font-size: var(--fs-sm); color: var(--text-2); text-transform: uppercase; letter-spacing: var(--ls-wide, 0.04em); }
+.fe-plan-links { position: sticky; top: 0; }
+.fe-plan-thumbs { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-2); max-height: 52vh; overflow: auto; }
+.fe-plan-thumb { position: relative; aspect-ratio: 1; border-radius: var(--radius-sm); overflow: hidden; border: 2px solid var(--glass-border); cursor: grab; transition: border-color var(--dur-fast), opacity var(--dur-fast); }
+.fe-plan-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.fe-plan-thumb.aktiv { border-color: var(--color-primary-green); box-shadow: 0 0 0 2px var(--color-primary-green); }
+.fe-plan-thumb.fertig { opacity: 0.45; }
+.fe-plan-thumb span { position: absolute; left: 0; right: 0; bottom: 0; padding: 2px var(--space-1); font-size: var(--fs-2xs); background: rgba(0, 0, 0, 0.7); color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fe-plan-rechts { display: flex; flex-direction: column; gap: var(--space-4); }
+.fe-plan-phase header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); margin-bottom: var(--space-2); }
+.fe-plan-phase h3 { margin: 0; }
+.fe-plan-slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: var(--space-2); }
+.fe-plan-slot { position: relative; display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-2); border: 2px dashed var(--glass-border); border-radius: var(--radius-sm); font-size: var(--fs-xs); transition: border-color var(--dur-fast), background var(--dur-fast); }
+.fe-plan-slot b { font-size: var(--fs-xs); }
+.fe-plan-slot small { color: var(--text-3); }
+.fe-plan-slot.ziel { border-color: var(--color-primary-green); background: var(--success-soft); }
+.fe-plan-slot.belegt { border-style: solid; border-color: var(--color-primary-green); }
+.fe-plan-slot.zusatz { grid-column: 1 / -1; }
+.fe-plan-inh { aspect-ratio: 4 / 3; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: var(--space-1); overflow: hidden; border-radius: var(--radius-xs); background: rgba(255, 255, 255, 0.04); color: var(--text-3); }
+.fe-plan-slot.zusatz .fe-plan-inh { aspect-ratio: auto; min-height: 64px; justify-content: flex-start; padding: var(--space-1); }
+.fe-plan-inh img { width: 100%; height: 100%; object-fit: cover; }
+.fe-plan-inh img.alt { opacity: 0.4; }
+.fe-plan-slot > button, .fe-plan-mini button { position: absolute; top: 2px; right: 2px; width: 22px; height: 22px; border: none; border-radius: var(--radius-circle); background: rgba(0, 0, 0, 0.75); color: #fff; cursor: pointer; line-height: 1; }
+.fe-plan-mini { position: relative; width: 56px; height: 56px; display: inline-block; }
+.fe-plan-mini img { width: 100%; height: 100%; object-fit: cover; border-radius: var(--radius-xs); }
+@media (max-width: 768px) {
+    .fe-plan { grid-template-columns: 1fr; }
+    .fe-plan-links { position: static; }
+    .fe-plan-thumbs { grid-template-columns: repeat(4, 1fr); max-height: 30vh; }
+}

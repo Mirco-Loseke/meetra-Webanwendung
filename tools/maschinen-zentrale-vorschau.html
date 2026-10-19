@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maschinen-Zentrale – Entwurf</title>
+    <!-- Entwurf (2026-10-17): eine Detailansicht je Maschine statt fünf Fenstern. Echte Daten der JT RecTec 580 #100, statisch. -->
+    <link rel="stylesheet" href="../css/base/variables.css?v=1">
+    <link rel="stylesheet" href="../css/base/tokens.css?v=2">
+    <link rel="stylesheet" href="../css/base/reset.css?v=3">
+    <link rel="stylesheet" href="../css/base/brand-accents.css?v=1">
+    <link rel="stylesheet" href="../css/components/navigation.css?v=1">
+    <link rel="stylesheet" href="../css/components/modals.css?v=13">
+    <link rel="stylesheet" href="../css/components/ai-capture.css?v=2">
+    <link rel="stylesheet" href="../css/components/process-attachments.css?v=2">
+    <link rel="stylesheet" href="../css/components/buttons.css?v=3">
+    <link rel="stylesheet" href="../css/components/forms.css?v=6">
+    <link rel="stylesheet" href="../css/components/notifications.css?v=8">
+    <link rel="stylesheet" href="../css/components/reminder-alarm.css?v=13">
+    <link rel="stylesheet" href="../css/components/calendar.css?v=1">
+    <link rel="stylesheet" href="../css/components/calendar-widget.css?v=7">
+    <link rel="stylesheet" href="../css/components/dropdowns.css?v=4">
+    <link rel="stylesheet" href="../css/components/focus-mode.css?v=3">
+    <link rel="stylesheet" href="../css/components/elements.css?v=1">
+    <link rel="stylesheet" href="../css/components/appointments.css?v=1">
+    <link rel="stylesheet" href="../css/components/notification-settings.css?v=2">
+    <link rel="stylesheet" href="../css/components/sprachwahl.css?v=1">
+    <link rel="stylesheet" href="../css/views/documents.css?v=2">
+    <link rel="stylesheet" href="../css/views/protocols.css?v=2">
+    <link rel="stylesheet" href="../css/views/tasks.css?v=6">
+    <link rel="stylesheet" href="../css/views/service-reports.css?v=8">
+    <link rel="stylesheet" href="../css/views/machines.css?v=1">
+    <link rel="stylesheet" href="../css/views/timeline.css?v=55">
+    <link rel="stylesheet" href="../css/views/procurement.css?v=1">
+    <link rel="stylesheet" href="../css/views/settings.css?v=7">
+    <link rel="stylesheet" href="../css/views/user-edit.css?v=2">
+    <link rel="stylesheet" href="../css/views/accounting.css?v=2">
+    <link rel="stylesheet" href="../css/views/ausgangsrechnungen.css?v=2">
+    <link rel="stylesheet" href="../css/views/workshop.css?v=1">
+    <link rel="stylesheet" href="../css/views/workshop-tasks.css?v=4">
+    <link rel="stylesheet" href="../css/views/rechnungsliste.css?v=3">
+    <link rel="stylesheet" href="../css/components/ki-chat.css?v=7">
+    <link rel="stylesheet" href="../css/components/todo-liste.css?v=25">
+    <link rel="stylesheet" href="../css/components/entwurf-sicher.css?v=1">
+    <link rel="stylesheet" href="../css/components/cockpit.css?v=6">
+    <link rel="stylesheet" href="../css/components/globale-suche.css?v=4">
+    <link rel="stylesheet" href="../css/views/tasks-print.css?v=5">
+    <link rel="stylesheet" href="../css/views/dashboard.css?v=1">
+    <link rel="stylesheet" href="../css/views/listen.css?v=5">
+    <link rel="stylesheet" href="../css/views/addressbook.css?v=36">
+    <link rel="stylesheet" href="../css/components/medien-ablage.css?v=1">
+    <link rel="stylesheet" href="../css/views/routenplanung.css?v=8">
+    <link rel="stylesheet" href="../css/views/mail.css?v=26">
+    <link rel="stylesheet" href="../css/views/foto-eingang.css?v=4">
+    <link rel="stylesheet" href="../css/views/datenschutz.css?v=2">
+    <link rel="stylesheet" href="../css/base/responsive.css?v=35">
+    <link rel="stylesheet" href="../css/views/login.css?v=2">
+    <link rel="stylesheet" href="../css/views/history.css?v=9">
+    <link rel="stylesheet" href="../css/base/landscape.css?v=2">
+    <link rel="stylesheet" href="../css/components/voice-dictation.css?v=3">
+    <link rel="stylesheet" href="../css/views/machine-modal.css?v=6">
+    <link rel="stylesheet" href="../css/views/uvv-protokoll.css?v=5">
+    <link rel="stylesheet" href="../css/base/handy-kompakt.css?v=19">
+    <link rel="stylesheet" href="../css/base/utilities.css?v=5">
+    <link rel="stylesheet" href="../css/components/dropdown-look.css?v=5">
+    <link rel="stylesheet" href="../css/views/mietvereinbarung.css?v=76">
+    <link rel="stylesheet" href="../css/views/einstellungen.css?v=18">
+    <link rel="stylesheet" href="../css/views/accounting-modal.css?v=2">
+    <link rel="stylesheet" href="../css/views/accounting-toggle.css?v=2">
+    <link rel="stylesheet" href="../css/views/accounting-finance-cards.css?v=2">
+    <link rel="stylesheet" href="../css/components/knopf.css?v=3">
+    <style>
+        /* Nur für diese Vorschauseite */
+        body { padding: var(--space-6); min-height: 100vh; }
+        .mz-wrap { max-width: 1180px; margin: 0 auto; display: grid; gap: var(--space-5); }
+        .mz-h1 { font-family: var(--font-heading); font-size: var(--fs-2xl); color: var(--text-1); }
+        .mz-sub { color: var(--text-3); font-size: var(--fs-md); margin-top: 4px; line-height: 1.5; max-width: 900px; }
+        .mz-sub b { color: var(--text-1); }
+
+        .mz-fenster { background: #0f172a; border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-xl); box-shadow: var(--shadow-3); overflow: hidden; }
+        .mz-kopf { display: grid; grid-template-columns: 120px minmax(0,1fr) auto; gap: var(--space-5); padding: var(--space-5) var(--space-6); border-bottom: 1px solid rgba(255,255,255,0.07);
+                   background: linear-gradient(180deg, rgba(16,185,129,0.10), transparent); }
+        .mz-bild { width: 120px; height: 90px; border-radius: var(--radius-md); background: linear-gradient(135deg, #334155, #1e293b); display: flex; align-items: center; justify-content: center; color: var(--text-3); position: relative; overflow: hidden; }
+        .mz-bild small { position: absolute; bottom: 4px; right: 6px; font-size: 10px; color: var(--text-2); background: rgba(0,0,0,.5); padding: 1px 5px; border-radius: 6px; }
+        .mz-kat { display: inline-block; font-size: var(--fs-2xs); font-weight: 800; letter-spacing: var(--ls-caps); text-transform: uppercase; color: #93c5fd; background: rgba(59,130,246,.16); border: 1px solid rgba(59,130,246,.4); border-radius: 999px; padding: 2px 9px; }
+        .mz-name { font-family: var(--font-heading); font-size: var(--fs-2xl); color: var(--text-1); margin: 6px 0 2px; line-height: 1.1; }
+        .mz-meta { color: var(--text-2); font-size: var(--fs-md); }
+        .mz-chips { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-3); }
+        .mz-chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: var(--radius-sm); background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.09); color: var(--text-1); font-size: var(--fs-sm); }
+        .mz-chip svg { width: 14px; height: 14px; color: var(--text-3); }
+        .mz-chip.lila { color: #c4b5fd; border-color: rgba(167,139,250,.35); }
+        .mz-chip.gruen { color: #6ee7b7; border-color: rgba(16,185,129,.35); }
+        .mz-chip.gelb { color: #fcd34d; border-color: rgba(245,158,11,.35); }
+        .mz-aktionen { display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-2); }
+        .mz-reihe { display: flex; gap: var(--space-2); flex-wrap: wrap; justify-content: flex-end; }
+        .mz-neu-menue { position: relative; }
+        .mz-menue { position: absolute; right: 0; top: calc(100% + 6px); width: 270px; background: #0b1220; border: 1px solid rgba(255,255,255,0.14); border-radius: var(--radius-md); box-shadow: var(--shadow-3); padding: 6px; z-index: 5; }
+        .mz-menue div { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; color: var(--text-1); font-size: var(--fs-sm); }
+        .mz-menue div:hover, .mz-menue div.an { background: rgba(255,255,255,0.07); }
+        .mz-menue i { font-style: normal; width: 22px; text-align: center; }
+        .mz-menue hr { border: 0; border-top: 1px solid rgba(255,255,255,0.08); margin: 4px 0; }
+
+        .mz-reiter { display: flex; gap: 2px; padding: 0 var(--space-6); border-bottom: 1px solid rgba(255,255,255,0.07); overflow-x: auto; }
+        .mz-reiter span { padding: 12px 14px; color: var(--text-2); font-size: var(--fs-sm); font-weight: 700; white-space: nowrap; border-bottom: 2px solid transparent; }
+        .mz-reiter span.an { color: #6ee7b7; border-color: #10b981; }
+        .mz-reiter em { font-style: normal; font-size: 11px; margin-left: 5px; padding: 1px 6px; border-radius: 999px; background: rgba(255,255,255,0.08); color: var(--text-2); }
+
+        .mz-inhalt { display: grid; grid-template-columns: 1.15fr 1fr 0.9fr; gap: var(--space-4); padding: var(--space-5) var(--space-6) var(--space-6); }
+        .mz-karte { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-lg); padding: var(--space-4); }
+        .mz-karte h3 { display: flex; align-items: center; gap: 8px; color: var(--text-3); font-size: var(--fs-xs); font-weight: 800; text-transform: uppercase; letter-spacing: var(--ls-caps); margin-bottom: var(--space-3); }
+        .mz-karte h3 em { font-style: normal; margin-left: auto; text-transform: none; letter-spacing: 0; color: #6ee7b7; font-weight: 700; }
+        .mz-offen { display: grid; gap: var(--space-2); }
+        .mz-offen-z { display: grid; grid-template-columns: 8px 1fr auto; gap: 10px; align-items: center; padding: 10px; border-radius: var(--radius-sm); background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); }
+        .mz-dot { width: 8px; height: 8px; border-radius: 50%; }
+        .mz-offen-z b { display: block; color: var(--text-1); font-size: var(--fs-sm); }
+        .mz-offen-z small { color: var(--text-3); font-size: var(--fs-xs); }
+        .mz-zeit { display: grid; gap: 0; }
+        .mz-zeit-z { display: grid; grid-template-columns: 52px 26px 1fr; gap: 8px; align-items: start; padding: 7px 0; border-top: 1px solid rgba(255,255,255,0.05); }
+        .mz-zeit-z:first-child { border-top: 0; }
+        .mz-zeit-z time { color: var(--text-3); font-size: var(--fs-xs); font-weight: 700; padding-top: 2px; }
+        .mz-zeit-z i { font-style: normal; width: 24px; height: 24px; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 12px; background: rgba(255,255,255,0.06); }
+        .mz-zeit-z b { color: var(--text-1); font-size: var(--fs-sm); font-weight: 600; display: block; }
+        .mz-zeit-z small { color: var(--text-3); font-size: var(--fs-xs); }
+        .mz-daten { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; font-size: var(--fs-sm); }
+        .mz-daten dt { color: var(--text-3); }
+        .mz-daten dd { color: var(--text-1); text-align: right; font-weight: 600; }
+        .mz-fotos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: var(--space-3); }
+        .mz-fotos span { aspect-ratio: 4/3; border-radius: 8px; background: linear-gradient(135deg, #3f4b5e, #273244); }
+        .mz-ablage { border: 1.5px dashed rgba(255,255,255,0.22); border-radius: var(--radius-md); padding: var(--space-3); text-align: center; color: var(--text-2); font-size: var(--fs-sm); }
+        .mz-ablage b { color: var(--text-1); }
+        .mz-ablage small { display: block; color: var(--text-3); font-size: var(--fs-xs); margin-top: 2px; }
+
+        .mz-erklaer { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4); }
+        .mz-erklaer > div { background: rgba(15,23,42,0.6); border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-lg); padding: var(--space-4); }
+        .mz-erklaer h4 { color: var(--text-1); font-size: var(--fs-md); margin-bottom: 6px; }
+        .mz-erklaer li, .mz-erklaer p { color: var(--text-2); font-size: var(--fs-sm); line-height: 1.5; }
+        .mz-erklaer ul { padding-left: 18px; }
+
+        @media (max-width: 768px) {
+            body { padding: var(--space-3) 10px; }
+            .mz-kopf { grid-template-columns: 84px minmax(0,1fr); padding: var(--space-4); gap: var(--space-3); }
+            .mz-bild { width: 84px; height: 66px; }
+            .mz-name { font-size: var(--fs-xl); }
+            .mz-aktionen { grid-column: 1 / -1; align-items: stretch; }
+            .mz-reihe { justify-content: stretch; }
+            .mz-reihe .knopf--primaer { flex: 1 1 100%; }
+            .mz-reihe .knopf:not(.knopf--primaer):not(.knopf--icon) { flex: 1; }
+            .mz-menue { display: none; }
+            .mz-reiter { padding: 0 var(--space-3); }
+            .mz-inhalt { grid-template-columns: 1fr; padding: var(--space-4); }
+            .mz-erklaer { grid-template-columns: 1fr; }
+            .mz-nur-desktop { display: none; }
+        }
+    </style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+    <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.6L19.5 10l-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.4Z"/></symbol>
+    <symbol id="i-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></symbol>
+    <symbol id="i-haus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6"/></symbol>
+    <symbol id="i-wrench" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4Z"/></symbol>
+    <symbol id="i-cam" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></symbol>
+</svg>
+
+<div class="mz-wrap">
+    <div>
+        <div class="mz-h1">Maschinen-Zentrale — Entwurf</div>
+        <div class="mz-sub">Klick auf die Maschinenkarte öffnet <b>dieses eine Fenster</b>. Statt heute fünf getrennter Fenster (Detail, „Protokolle", Historie, ✨, Bearbeiten) steht hier alles zur Maschine: oben <b>wer, wo, Wartung</b>, rechts <b>was man tun kann</b>, darunter <b>was offen ist, was zuletzt passiert ist</b> und Fotos/Dokumente mit Ablage-Feld. Inhalte = echte Daten der JT RecTec 580 #100.</div>
+    </div>
+
+    <div class="mz-fenster">
+        <div class="mz-kopf">
+            <div class="mz-bild"><svg width="30" height="30"><use href="#i-cam"/></svg><small>39 Fotos</small></div>
+            <div>
+                <span class="mz-kat">Selbstfahrender Umsetzer</span>
+                <div class="mz-name">JT RecTec 580</div>
+                <div class="mz-meta">#100 · Baujahr 2023</div>
+                <div class="mz-chips">
+                    <span class="mz-chip lila"><svg><use href="#i-haus"/></svg>Abfallwirtschaftsbetrieb Landkreis Emsland</span>
+                    <span class="mz-chip"><svg><use href="#i-pin"/></svg>Dörpen</span>
+                    <span class="mz-chip gruen"><svg><use href="#i-wrench"/></svg>Wartung zuletzt 15.04.2026 · nächste 15.04.2027</span>
+                    <span class="mz-chip gelb">1 Vorgang offen</span>
+                </div>
+            </div>
+            <div class="mz-aktionen">
+                <div class="mz-reihe">
+                    <button class="knopf knopf--ki knopf--icon" title="KI-Zusammenfassung" aria-label="KI-Zusammenfassung"><svg><use href="#i-spark"/></svg></button>
+                    <button class="knopf knopf--sekundaer knopf--icon" title="Bearbeiten" aria-label="Bearbeiten"><svg><use href="#i-edit"/></svg></button>
+                    <button class="knopf-x" aria-label="Schließen"><svg><use href="#i-x"/></svg></button>
+                </div>
+                <div class="mz-reihe">
+                    <div class="mz-neu-menue">
+                        <button class="knopf knopf--sekundaer">Neu …<svg><use href="#i-down"/></svg></button>
+                        <div class="mz-menue mz-nur-desktop">
+                            <div><i>📄</i>Servicebericht</div>
+                            <div><i>📥</i>Eingangsprotokoll</div>
+                            <div><i>✅</i>Abnahmeprotokoll</div>
+                            <div><i>🛡️</i>UVV- / Wartungsprotokoll</div>
+                            <div><i>🔑</i>Mietvereinbarung</div>
+                            <hr>
+                            <div class="an"><i>📋</i>Vorgang zu dieser Maschine</div>
+                            <div><i>📞</i>Notiz / Anruf</div>
+                            <div><i>⏱️</i>Betriebsstunden eintragen</div>
+                            <div><i>📅</i>Termin / Wartung planen</div>
+                        </div>
+                    </div>
+                    <button class="knopf knopf--primaer"><svg><use href="#i-plus"/></svg>Servicebericht</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="mz-reiter">
+            <span class="an">Übersicht</span>
+            <span>Verlauf<em>16</em></span>
+            <span>Berichte &amp; Protokolle<em>7</em></span>
+            <span>Fotos &amp; Dokumente<em>39</em></span>
+            <span>Vorgänge &amp; Angebote<em>4</em></span>
+            <span>Miete<em>0</em></span>
+            <span>Daten</span>
+        </div>
+
+        <div class="mz-inhalt">
+            <div class="mz-karte">
+                <h3>Offen <em>2</em></h3>
+                <div class="mz-offen">
+                    <div class="mz-offen-z"><span class="mz-dot" style="background:#f59e0b"></span><div><b>Anruf Peter Hoberg Emsland: SBA BMR, Trittstufen/Griff, Joystick</b><small>Vorgang · Wiedervorlage 22.10.</small></div><button class="knopf knopf--text knopf--klein">Öffnen</button></div>
+                    <div class="mz-offen-z"><span class="mz-dot" style="background:#3b82f6"></span><div><b>Servicebericht vom 13.10.2026</b><small>nicht abgeschlossen · Unterschrift fehlt</small></div><button class="knopf knopf--text knopf--klein">Öffnen</button></div>
+                </div>
+                <h3 style="margin-top: var(--space-5)">Zuletzt <em>ganzer Verlauf ›</em></h3>
+                <div class="mz-zeit">
+                    <div class="mz-zeit-z"><time>14.10.</time><i>📞</i><div><b>Telefonnotiz Anruf Peter Hoberg, LK Emsland</b><small>Notiz</small></div></div>
+                    <div class="mz-zeit-z"><time>13.10.</time><i>📄</i><div><b>Servicebericht</b><small>offen</small></div></div>
+                    <div class="mz-zeit-z"><time>28.09.</time><i>📄</i><div><b>Servicebericht</b><small>abgeschlossen</small></div></div>
+                    <div class="mz-zeit-z"><time>25.09.</time><i>✉️</i><div><b>Fwd: Mangelanzeige JD Rectec 580/630</b><small>E-Mail</small></div></div>
+                    <div class="mz-zeit-z"><time>25.09.</time><i>📷</i><div><b>Zustand Spurräumer Gelenkaugen</b><small>Fotos</small></div></div>
+                </div>
+            </div>
+
+            <div class="mz-karte">
+                <h3>Fotos &amp; Dokumente <em>alle 39 ›</em></h3>
+                <div class="mz-fotos"><span></span><span></span><span></span><span></span><span></span><span></span></div>
+                <div class="mz-ablage"><b>Fotos oder Dokumente hierher ziehen</b> — oder <u>auswählen</u> / 📷 Foto<small>landet im Verlauf der Maschine, mit Datum</small></div>
+                <h3 style="margin-top: var(--space-5)">Angebote</h3>
+                <div class="mz-zeit">
+                    <div class="mz-zeit-z"><time>10.08.</time><i>💶</i><div><b>Angebot 30121</b><small>Angebot</small></div></div>
+                    <div class="mz-zeit-z"><time>10.07.</time><i>💶</i><div><b>Angebot 30104</b><small>Angebot</small></div></div>
+                </div>
+            </div>
+
+            <div class="mz-karte">
+                <h3>Daten <em>bearbeiten ›</em></h3>
+                <dl class="mz-daten">
+                    <dt>Hersteller</dt><dd>JT RecTec</dd>
+                    <dt>Typ</dt><dd>580</dd>
+                    <dt>Seriennummer</dt><dd>100</dd>
+                    <dt>Baujahr</dt><dd>2023</dd>
+                    <dt>Betriebsstunden</dt><dd>— eintragen</dd>
+                    <dt>Standort</dt><dd>Bundesstr. 401, 26892 Dörpen</dd>
+                </dl>
+                <p style="color:var(--text-3); font-size: var(--fs-xs); margin-top: var(--space-3); line-height:1.45">Leere Felder stehen hier nicht mehr als „/“ — nur was da ist, plus ein Hinweis zum Ergänzen.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="mz-erklaer">
+        <div><h4>Was ändert sich?</h4><ul>
+            <li>Ein Fenster statt fünf — Karte anklicken reicht</li>
+            <li>„Neu …" bündelt alles, was man an der Maschine anlegen kann</li>
+            <li>„Offen" zeigt sofort, was hängt (Vorgänge, unfertige Berichte)</li>
+            <li>Fotos/Dokumente direkt hineinziehen</li></ul></div>
+        <div><h4>Was bleibt?</h4><ul>
+            <li>Alle bisherigen Fenster gibt es weiter — die Reiter öffnen dieselben Inhalte</li>
+            <li>Knöpfe auf der Karte (Protokolle, Historie, ✨) bleiben vorerst</li>
+            <li>Keine neue Tabelle, keine Datenänderung</li></ul></div>
+        <div><h4>Reihenfolge beim Bau</h4><ul>
+            <li>1. Kopf + Aktionen + Reiter „Übersicht"</li>
+            <li>2. Reiter Verlauf / Berichte / Fotos aus Historie</li>
+            <li>3. Ablage-Feld (gleiches Muster wie Adress-Ablage)</li></ul></div>
+    </div>
+</div>
+</body>
+</html>

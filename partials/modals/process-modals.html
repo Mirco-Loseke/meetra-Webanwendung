@@ -3,7 +3,7 @@
         <div class="modal-content glass-card proc-modal-scroll" style="max-width: 1080px; width: 94%; max-height: 92vh; overflow-y: auto !important; padding: 1.75rem 2rem; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 50px rgba(0,0,0,0.5);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
                 <h2 style="margin: 0; color: #fff; font-size: 1.8rem; font-weight: 800;">Vorgang hinzufügen</h2>
-                <button class="btn-close" onclick="window.closeProcessAddModal()" style="background: none; border: none; color: rgba(255,255,255,0.4); cursor: pointer;">
+                <button class="btn-close" onclick="window.closeProcessAddModal()" style="cursor: pointer;">
                     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
             </div>
@@ -18,22 +18,39 @@
                     </div>
                 </div>
 
-                <div class="form-group" style="margin-bottom: 0.9rem;">
-                    <label class="form-label-caps">Outlook-E-Mail (.msg) importieren</label>
-                    <div id="process-add-msg-dropzone"
-                        onclick="document.getElementById('process-add-msg-file-input').click()"
-                        ondragover="event.preventDefault(); this.style.borderColor='var(--color-primary-green)'; this.style.background='rgba(52,211,153,0.06)';"
-                        ondragleave="this.style.borderColor='rgba(255,255,255,0.15)'; this.style.background='transparent';"
-                        ondrop="window.handleMsgFileDrop(event, 'process-add')"
-                        style="border: 2px dashed rgba(255,255,255,0.15); border-radius: 12px; padding: 12px; text-align: center; cursor: pointer; color: rgba(255,255,255,0.45); font-size: 0.85rem; font-weight: 600; transition: border-color 0.2s, background 0.2s;">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: block; margin: 0 auto 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                        .msg-Datei hierher ziehen oder klicken
-                    </div>
-                    <input type="file" id="process-add-msg-file-input" accept=".msg" style="display:none;" onchange="window.handleMsgFileSelect(event, 'process-add')">
-                </div>
+
 
                 <div class="proc-add-columns">
                 <div class="proc-add-col">
+
+                <div class="form-group" id="process-add-address-group" style="margin-bottom: 0.75rem;">
+                    <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 12px;">
+                        <div class="form-group" style="position: relative; margin: 0;">
+                            <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+                                <label class="form-label-caps">Adresse</label>
+                                <button type="button" onclick="window.openProcessAddressCreate('process-add')" title="Neue Adresse anlegen (auch .vcf-Import)" style="display:inline-flex; align-items:center; gap:4px; background:rgba(56,189,248,0.12); border:1px solid rgba(56,189,248,0.4); color:#38bdf8; font-size:0.72rem; font-weight:700; padding:3px 9px; border-radius:999px; cursor:pointer;">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                    Adresse anlegen
+                                </button>
+                            </div>
+                            <input type="hidden" id="process-add-customer-id" value="">
+                            <input type="text" id="process-add-address-search" class="glass-input" placeholder="Name, PLZ oder Ort suchen..." autocomplete="off"
+                                oninput="window.filterProcessAddressDropdown('process-add', this.value)"
+                                onfocus="window.showProcessAddressDropdown('process-add')">
+                            <div id="process-add-address-suggestions" class="autocomplete-suggestions proc-address-suggestions" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:9999; max-height:220px; overflow-y:auto; margin-top:4px;"></div>
+                        </div>
+                        <div class="form-group" id="process-add-contact-group" style="position: relative; margin: 0; display: none;">
+                            <label class="form-label-caps">Ansprechpartner</label>
+                            <input type="hidden" id="process-add-contact-name" value="">
+                            <div id="process-add-contact-trigger" class="glass-select" style="cursor:pointer; display:flex; align-items:center; gap:8px;" onclick="window.toggleProcessContactDropdown('process-add')">
+                                <span id="process-add-contact-text" style="flex:1; color:rgba(255,255,255,0.4);">Ansprechpartner wählen...</span>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                            </div>
+                            <div id="process-add-contact-suggestions" class="autocomplete-suggestions proc-contact-suggestions" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:9999; max-height:220px; overflow-y:auto; margin-top:4px;"></div>
+                        </div>
+                    </div>
+                </div>
+
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 0.75rem;">
                     <div class="form-group">
@@ -152,33 +169,24 @@
 
                 <div id="process-add-vorhandene" class="proc-vorhandene" style="display:none;"></div>
 
-                <div class="form-group" id="process-add-address-group" style="margin-bottom: 0.75rem;">
-                    <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 12px;">
-                        <div class="form-group" style="position: relative; margin: 0;">
-                            <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
-                                <label class="form-label-caps">Adresse</label>
-                                <button type="button" onclick="window.openProcessAddressCreate('process-add')" title="Neue Adresse anlegen (auch .vcf-Import)" style="display:inline-flex; align-items:center; gap:4px; background:rgba(56,189,248,0.12); border:1px solid rgba(56,189,248,0.4); color:#38bdf8; font-size:0.72rem; font-weight:700; padding:3px 9px; border-radius:999px; cursor:pointer;">
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                                    Adresse anlegen
-                                </button>
-                            </div>
-                            <input type="hidden" id="process-add-customer-id" value="">
-                            <input type="text" id="process-add-address-search" class="glass-input" placeholder="Name, PLZ oder Ort suchen..." autocomplete="off"
-                                oninput="window.filterProcessAddressDropdown('process-add', this.value)"
-                                onfocus="window.showProcessAddressDropdown('process-add')">
-                            <div id="process-add-address-suggestions" class="autocomplete-suggestions proc-address-suggestions" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:9999; max-height:220px; overflow-y:auto; margin-top:4px;"></div>
-                        </div>
-                        <div class="form-group" id="process-add-contact-group" style="position: relative; margin: 0; display: none;">
-                            <label class="form-label-caps">Ansprechpartner</label>
-                            <input type="hidden" id="process-add-contact-name" value="">
-                            <div id="process-add-contact-trigger" class="glass-select" style="cursor:pointer; display:flex; align-items:center; gap:8px;" onclick="window.toggleProcessContactDropdown('process-add')">
-                                <span id="process-add-contact-text" style="flex:1; color:rgba(255,255,255,0.4);">Ansprechpartner wählen...</span>
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                            </div>
-                            <div id="process-add-contact-suggestions" class="autocomplete-suggestions proc-contact-suggestions" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:9999; max-height:220px; overflow-y:auto; margin-top:4px;"></div>
-                        </div>
+
+
+                                <details class="proc-msg-details">
+                    <summary>Outlook-E-Mail (.msg) importieren <span>optional</span></summary>
+                <div class="form-group" style="margin-bottom: 0.9rem;">
+                    
+                    <div id="process-add-msg-dropzone"
+                        onclick="document.getElementById('process-add-msg-file-input').click()"
+                        ondragover="event.preventDefault(); this.style.borderColor='var(--color-primary-green)'; this.style.background='rgba(52,211,153,0.06)';"
+                        ondragleave="this.style.borderColor='rgba(255,255,255,0.15)'; this.style.background='transparent';"
+                        ondrop="window.handleMsgFileDrop(event, 'process-add')"
+                        style="border: 2px dashed rgba(255,255,255,0.15); border-radius: 12px; padding: 12px; text-align: center; cursor: pointer; color: rgba(255,255,255,0.45); font-size: 0.85rem; font-weight: 600; transition: border-color 0.2s, background 0.2s;">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: block; margin: 0 auto 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                        .msg-Datei hierher ziehen oder klicken
                     </div>
+                    <input type="file" id="process-add-msg-file-input" accept=".msg" style="display:none;" onchange="window.handleMsgFileSelect(event, 'process-add')">
                 </div>
+                </details>
 
                 </div>
                 <div class="proc-add-col">
@@ -206,9 +214,9 @@
                     <label class="form-label-caps">Erinnerung (optional)</label>
                     <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
                         <input type="datetime-local" id="process-add-remind-input" class="glass-input" style="max-width: 240px;">
-                        <button type="button" class="btn-secondary" onclick="window.setProcessRemindQuick('process-add', 1)" style="padding: 8px 14px; height: auto; font-size: 0.82rem;">Morgen</button>
-                        <button type="button" class="btn-secondary" onclick="window.setProcessRemindQuick('process-add', 7)" style="padding: 8px 14px; height: auto; font-size: 0.82rem;">In 1 Woche</button>
-                        <button type="button" class="btn-secondary" onclick="window.setProcessRemindQuick('process-add', null)" style="padding: 8px 14px; height: auto; font-size: 0.82rem;">Löschen</button>
+                        <button type="button" class="btn-secondary knopf--klein" onclick="window.setProcessRemindQuick('process-add', 1)">Morgen</button>
+                        <button type="button" class="btn-secondary knopf--klein" onclick="window.setProcessRemindQuick('process-add', 7)">In 1 Woche</button>
+                        <button type="button" class="btn-secondary knopf--klein" onclick="window.setProcessRemindQuick('process-add', null)">Löschen</button>
                     </div>
                 </div>
 
@@ -225,8 +233,8 @@
                 </div>
 
                 <div style="display: flex; gap: 15px;">
-                    <button type="button" class="btn-secondary" onclick="window.closeProcessAddModal()" style="flex: 1; height: 44px; font-size: 0.92rem; font-weight: 700;">Abbrechen</button>
-                    <button type="submit" class="btn-primary btn-red-animated" style="flex: 1; height: 44px; font-size: 0.92rem; font-weight: 800;">VORGANG SPEICHERN</button>
+                    <button type="button" class="btn-secondary" onclick="window.closeProcessAddModal()" style="flex: 1;">Abbrechen</button>
+                    <button type="submit" class="btn-primary btn-red-animated" style="flex: 1;">Vorgang speichern</button>
                 </div>
             </form>
         </div>
@@ -240,7 +248,7 @@
                     <h2 style="margin: 0; color: #fff; font-size: 1.6rem; font-weight: 800;">Schritte</h2>
                     <div id="steps-modal-subtitle" style="color: rgba(255,255,255,0.45); font-size: 0.9rem; margin-top: 4px; word-break: break-word;"></div>
                 </div>
-                <button class="btn-close" onclick="window.closeProcessStepsModal()" style="background: none; border: none; color: rgba(255,255,255,0.4); cursor: pointer; flex-shrink: 0;">
+                <button class="btn-close" onclick="window.closeProcessStepsModal()" style="cursor: pointer; flex-shrink: 0;">
                     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
             </div>
@@ -252,8 +260,8 @@
                 </button>
             </div>
             <div style="display: flex; gap: 15px; margin-top: 22px; flex-shrink: 0;">
-                <button type="button" class="btn-secondary" onclick="window.closeProcessStepsModal()" style="flex: 1; height: 44px; font-size: 0.92rem; font-weight: 700;">Abbrechen</button>
-                <button type="button" class="btn-primary" onclick="window.saveProcessStepsModal()" style="flex: 1; height: 44px; font-size: 0.92rem;">SPEICHERN</button>
+                <button type="button" class="btn-secondary" onclick="window.closeProcessStepsModal()" style="flex: 1;">Abbrechen</button>
+                <button type="button" class="btn-primary" onclick="window.saveProcessStepsModal()" style="flex: 1;">Speichern</button>
             </div>
         </div>
     </div>
@@ -266,7 +274,7 @@
                     <h2 style="margin: 0; color: #fff; font-size: 1.6rem; font-weight: 800;">Aktueller Stand</h2>
                     <div id="status-update-modal-subtitle" style="color: rgba(255,255,255,0.45); font-size: 0.9rem; margin-top: 4px; word-break: break-word;"></div>
                 </div>
-                <button class="btn-close" onclick="window.closeProcessStatusUpdateModal()" style="background: none; border: none; color: rgba(255,255,255,0.4); cursor: pointer; flex-shrink: 0;">
+                <button class="btn-close" onclick="window.closeProcessStatusUpdateModal()" style="cursor: pointer; flex-shrink: 0;">
                     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
             </div>
@@ -287,8 +295,8 @@
                 <div id="status-update-history" style="display: flex; flex-direction: column; gap: 8px;"></div>
             </div>
             <div style="display: flex; gap: 15px; margin-top: 22px; flex-shrink: 0;">
-                <button type="button" class="btn-secondary" onclick="window.closeProcessStatusUpdateModal()" style="flex: 1; height: 44px; font-size: 0.92rem; font-weight: 700;">Abbrechen</button>
-                <button type="button" class="btn-primary" onclick="window.saveProcessStatusUpdate()" style="flex: 1; height: 44px; font-size: 0.92rem;">STAND EINTRAGEN</button>
+                <button type="button" class="btn-secondary" onclick="window.closeProcessStatusUpdateModal()" style="flex: 1;">Abbrechen</button>
+                <button type="button" class="btn-primary" onclick="window.saveProcessStatusUpdate()" style="flex: 1;">Stand eintragen</button>
             </div>
         </div>
     </div>
@@ -298,7 +306,7 @@
         <div class="modal-content glass-card proc-modal-scroll" style="max-width: 1080px; width: 94%; max-height: 92vh; overflow-y: auto !important; padding: 1.75rem 2rem; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 50px rgba(0,0,0,0.5);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
                 <h2 style="margin: 0; color: #fff; font-size: 1.8rem; font-weight: 800;">Vorgang bearbeiten</h2>
-                <button class="btn-close" onclick="window.closeEditProcessModal()" style="background: none; border: none; color: rgba(255,255,255,0.4); cursor: pointer;">
+                <button class="btn-close" onclick="window.closeEditProcessModal()" style="cursor: pointer;">
                     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
             </div>
@@ -319,22 +327,46 @@
                     </div>
                 </div>
 
-                <div class="form-group" style="margin-bottom: 0.9rem;">
-                    <label class="form-label-caps">Outlook-E-Mail (.msg) importieren</label>
-                    <div id="edit-process-msg-dropzone"
-                        onclick="document.getElementById('edit-process-msg-file-input').click()"
-                        ondragover="event.preventDefault(); this.style.borderColor='var(--color-primary-green)'; this.style.background='rgba(52,211,153,0.06)';"
-                        ondragleave="this.style.borderColor='rgba(255,255,255,0.15)'; this.style.background='transparent';"
-                        ondrop="window.handleMsgFileDrop(event, 'edit-process')"
-                        style="border: 2px dashed rgba(255,255,255,0.15); border-radius: 12px; padding: 12px; text-align: center; cursor: pointer; color: rgba(255,255,255,0.45); font-size: 0.85rem; font-weight: 600; transition: border-color 0.2s, background 0.2s;">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: block; margin: 0 auto 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                        .msg-Datei hierher ziehen oder klicken
-                    </div>
-                    <input type="file" id="edit-process-msg-file-input" accept=".msg" style="display:none;" onchange="window.handleMsgFileSelect(event, 'edit-process')">
+                <div class="form-group" style="margin-bottom: 0.75rem;">
+                    <label class="form-label-caps">Betreff / Titel</label>
+                    <input type="text" id="edit-process-title-input" class="glass-input" required placeholder="Betreff der E-Mail...">
                 </div>
+
+
 
                 <div class="proc-add-columns">
                 <div class="proc-add-col">
+
+                <div class="form-group" id="edit-process-address-group" style="margin-bottom: 1.25rem;">
+                    <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 12px;">
+                        <div class="form-group" style="position: relative; margin: 0;">
+                            <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+                                <label class="form-label-caps">Adresse</label>
+                                <button type="button" onclick="window.openProcessAddressCreate('edit-process')" title="Neue Adresse anlegen (auch .vcf-Import)" style="display:inline-flex; align-items:center; gap:4px; background:rgba(56,189,248,0.12); border:1px solid rgba(56,189,248,0.4); color:#38bdf8; font-size:0.72rem; font-weight:700; padding:3px 9px; border-radius:999px; cursor:pointer;">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                    Adresse anlegen
+                                </button>
+                            </div>
+                            <input type="hidden" id="edit-process-customer-id" value="">
+                            <input type="text" id="edit-process-address-search" class="glass-input" placeholder="Name, PLZ oder Ort suchen..." autocomplete="off"
+                                oninput="window.filterProcessAddressDropdown('edit-process', this.value)"
+                                onfocus="window.showProcessAddressDropdown('edit-process')">
+                            <div id="edit-process-address-suggestions" class="autocomplete-suggestions proc-address-suggestions" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:9999; max-height:220px; overflow-y:auto; margin-top:4px;"></div>
+                        </div>
+                        <div class="form-group" id="edit-process-contact-group" style="position: relative; margin: 0; display: none;">
+                            <label class="form-label-caps">Ansprechpartner</label>
+                            <input type="hidden" id="edit-process-contact-name" value="">
+                            <div id="edit-process-contact-trigger" class="glass-select" style="cursor:pointer; display:flex; align-items:center; gap:8px;" onclick="window.toggleProcessContactDropdown('edit-process')">
+                                <span id="edit-process-contact-text" style="flex:1; color:rgba(255,255,255,0.4);">Ansprechpartner wählen...</span>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                            </div>
+                            <div id="edit-process-contact-suggestions" class="autocomplete-suggestions proc-contact-suggestions" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:9999; max-height:220px; overflow-y:auto; margin-top:4px;"></div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Angebot am Vorgang (js/processes-ui.js, renderProcessAngebotBlock) — unter der Adresse -->
+                <div id="edit-process-angebot-block" style="margin-bottom: 1.25rem;"></div>
+
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 0.75rem;">
                     <div class="form-group">
@@ -367,9 +399,15 @@
                     </div>
                 </div>
 
-                <div class="form-group" style="margin-bottom: 0.75rem;">
-                    <label class="form-label-caps">Betreff / Titel</label>
-                    <input type="text" id="edit-process-title-input" class="glass-input" required placeholder="Betreff der E-Mail...">
+                <!-- Dokumente am Vorgang: Ablagefeld (Ziehen/Auswählen lädt sofort hoch, js/process-attachments.js)
+                     und darunter der Knopf zum Ansehen/Verwalten der vorhandenen. Beschriftung: window.updateProcessAttachButton. -->
+                <div class="form-group" id="edit-process-att-group" style="margin-bottom: 0.75rem;">
+                    <div id="edit-process-upload-feld"></div>
+                    <div id="edit-process-doc-liste" class="upload-feld"></div>
+                    <button type="button" id="edit-process-att-btn" class="proc-att-open-btn" style="display: none; margin-top: 0.5rem;"
+                            onclick="window.openProcessAttachments(document.getElementById('edit-process-id').value, null, event)">
+                        📎 Dokumente
+                    </button>
                 </div>
 
                 <!-- STAND: bewusst NICHT im Ausklapp oben. Das ist die
@@ -388,15 +426,6 @@
                     </div>
                     <div class="mic-status" data-mic-status-for="edit-process-status-text"></div>
                     <div id="edit-process-status-history" class="proc-note-history"></div>
-                </div>
-
-                <!-- Dokumente am Vorgang. Die Beschriftung samt Anzahl setzt
-                     window.updateProcessAttachButton (js/process-attachments.js). -->
-                <div class="form-group" style="margin-bottom: 0.75rem;">
-                    <button type="button" id="edit-process-att-btn" class="proc-att-open-btn"
-                            onclick="window.openProcessAttachments(document.getElementById('edit-process-id').value, null, event)">
-                        📎 Dokument hinzufügen
-                    </button>
                 </div>
 
                 <div class="form-group" id="edit-process-body-group" style="margin-bottom: 0.75rem; display: none;">
@@ -443,35 +472,25 @@
                     </div>
                 </div>
 
-                <div class="form-group" id="edit-process-address-group" style="margin-bottom: 1.25rem;">
-                    <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 12px;">
-                        <div class="form-group" style="position: relative; margin: 0;">
-                            <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
-                                <label class="form-label-caps">Adresse</label>
-                                <button type="button" onclick="window.openProcessAddressCreate('edit-process')" title="Neue Adresse anlegen (auch .vcf-Import)" style="display:inline-flex; align-items:center; gap:4px; background:rgba(56,189,248,0.12); border:1px solid rgba(56,189,248,0.4); color:#38bdf8; font-size:0.72rem; font-weight:700; padding:3px 9px; border-radius:999px; cursor:pointer;">
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                                    Adresse anlegen
-                                </button>
-                            </div>
-                            <input type="hidden" id="edit-process-customer-id" value="">
-                            <input type="text" id="edit-process-address-search" class="glass-input" placeholder="Name, PLZ oder Ort suchen..." autocomplete="off"
-                                oninput="window.filterProcessAddressDropdown('edit-process', this.value)"
-                                onfocus="window.showProcessAddressDropdown('edit-process')">
-                            <div id="edit-process-address-suggestions" class="autocomplete-suggestions proc-address-suggestions" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:9999; max-height:220px; overflow-y:auto; margin-top:4px;"></div>
-                        </div>
-                        <div class="form-group" id="edit-process-contact-group" style="position: relative; margin: 0; display: none;">
-                            <label class="form-label-caps">Ansprechpartner</label>
-                            <input type="hidden" id="edit-process-contact-name" value="">
-                            <div id="edit-process-contact-trigger" class="glass-select" style="cursor:pointer; display:flex; align-items:center; gap:8px;" onclick="window.toggleProcessContactDropdown('edit-process')">
-                                <span id="edit-process-contact-text" style="flex:1; color:rgba(255,255,255,0.4);">Ansprechpartner wählen...</span>
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                            </div>
-                            <div id="edit-process-contact-suggestions" class="autocomplete-suggestions proc-contact-suggestions" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:9999; max-height:220px; overflow-y:auto; margin-top:4px;"></div>
-                        </div>
+
+
+
+                                <details class="proc-msg-details">
+                    <summary>Outlook-E-Mail (.msg) importieren <span>optional</span></summary>
+                <div class="form-group" style="margin-bottom: 0.9rem;">
+                    
+                    <div id="edit-process-msg-dropzone"
+                        onclick="document.getElementById('edit-process-msg-file-input').click()"
+                        ondragover="event.preventDefault(); this.style.borderColor='var(--color-primary-green)'; this.style.background='rgba(52,211,153,0.06)';"
+                        ondragleave="this.style.borderColor='rgba(255,255,255,0.15)'; this.style.background='transparent';"
+                        ondrop="window.handleMsgFileDrop(event, 'edit-process')"
+                        style="border: 2px dashed rgba(255,255,255,0.15); border-radius: 12px; padding: 12px; text-align: center; cursor: pointer; color: rgba(255,255,255,0.45); font-size: 0.85rem; font-weight: 600; transition: border-color 0.2s, background 0.2s;">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: block; margin: 0 auto 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                        .msg-Datei hierher ziehen oder klicken
                     </div>
+                    <input type="file" id="edit-process-msg-file-input" accept=".msg" style="display:none;" onchange="window.handleMsgFileSelect(event, 'edit-process')">
                 </div>
-                <!-- Angebot am Vorgang (js/processes-ui.js, renderProcessAngebotBlock) — unter der Adresse -->
-                <div id="edit-process-angebot-block" style="margin-bottom: 1.25rem;"></div>
+                </details>
 
                 </div>
                 <div class="proc-add-col">
@@ -499,9 +518,9 @@
                     <label class="form-label-caps">Erinnerung (optional)</label>
                     <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
                         <input type="datetime-local" id="edit-process-remind-input" class="glass-input" style="max-width: 240px;">
-                        <button type="button" class="btn-secondary" onclick="window.setProcessRemindQuick('edit-process', 1)" style="padding: 8px 14px; height: auto; font-size: 0.82rem;">Morgen</button>
-                        <button type="button" class="btn-secondary" onclick="window.setProcessRemindQuick('edit-process', 7)" style="padding: 8px 14px; height: auto; font-size: 0.82rem;">In 1 Woche</button>
-                        <button type="button" class="btn-secondary" onclick="window.setProcessRemindQuick('edit-process', null)" style="padding: 8px 14px; height: auto; font-size: 0.82rem;">Löschen</button>
+                        <button type="button" class="btn-secondary knopf--klein" onclick="window.setProcessRemindQuick('edit-process', 1)">Morgen</button>
+                        <button type="button" class="btn-secondary knopf--klein" onclick="window.setProcessRemindQuick('edit-process', 7)">In 1 Woche</button>
+                        <button type="button" class="btn-secondary knopf--klein" onclick="window.setProcessRemindQuick('edit-process', null)">Löschen</button>
                     </div>
                 </div>
 
@@ -524,8 +543,8 @@
                 </div>
 
                 <div style="display: flex; gap: 15px;">
-                    <button type="button" class="btn-secondary" onclick="window.closeEditProcessModal()" style="flex: 1; height: 44px; font-size: 0.92rem; font-weight: 700;">Abbrechen</button>
-                    <button type="submit" class="btn-primary btn-red-animated" style="flex: 1; height: 44px; font-size: 0.92rem; font-weight: 400;">ÄNDERUNGEN SPEICHERN</button>
+                    <button type="button" class="btn-secondary" onclick="window.closeEditProcessModal()" style="flex: 1;">Abbrechen</button>
+                    <button type="submit" class="btn-primary btn-red-animated" style="flex: 1;">Änderungen speichern</button>
                 </div>
             </form>
         </div>

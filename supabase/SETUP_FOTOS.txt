@@ -3,7 +3,7 @@ FOTO-EINGANG EINRICHTEN (meetra Fotos)
 
 1) TABELLEN ANLEGEN
    https://supabase.com/dashboard/project/rtnpyziwyaqrlfazxkyr/sql/new
-   Inhalt von supabase/supabase_add_foto_eingang.sql einfügen -> Run.
+   Inhalt von supabase/migrationen/supabase_add_foto_eingang.sql einfügen -> Run.
 
 2) FUNCTION AUSROLLEN (Dashboard, ohne CLI)
    https://supabase.com/dashboard/project/rtnpyziwyaqrlfazxkyr/functions

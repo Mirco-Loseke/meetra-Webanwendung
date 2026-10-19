@@ -516,15 +516,11 @@ window.renderAccounting = function () {
                 </td>
                 <td data-label="Aktionen" style="padding: 10px 12px; text-align: center;">
                     <div style="display:flex; justify-content: center; gap: 8px;">
-                        <button onclick="window.editAccountingEntry('${e.id}')" title="Bearbeiten"
-                            style="width:30px; height:30px; border-radius:50%; background: rgba(59,130,246,0.2); border: 1.5px solid rgba(59,130,246,0.5); color: #60a5fa; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;"
-                            onmouseover="this.style.background='rgba(59,130,246,0.4)'" onmouseout="this.style.background='rgba(59,130,246,0.2)'">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                        <button type="button" class="knopf knopf--sekundaer knopf--klein knopf--icon" onclick="window.editAccountingEntry('${e.id}')" title="Bearbeiten" aria-label="Rechnung bearbeiten">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                         </button>
-                        <button onclick="window.deleteAccountingEntry('${e.id}')" title="Löschen"
-                            style="width:30px; height:30px; border-radius:50%; background: rgba(239,68,68,0.2); border: 1.5px solid rgba(239,68,68,0.5); color: #f87171; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;"
-                            onmouseover="this.style.background='rgba(239,68,68,0.4)'" onmouseout="this.style.background='rgba(239,68,68,0.2)'">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                        <button type="button" class="knopf knopf--text knopf--klein knopf--icon" onclick="window.deleteAccountingEntry('${e.id}')" title="Löschen" aria-label="Rechnung löschen" style="margin-left: 12px; border-left: 1px solid rgba(255,255,255,0.14); border-radius: 0 var(--radius-sm) var(--radius-sm) 0;">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                         </button>
                     </div>
                 </td>
@@ -973,10 +969,8 @@ window.addAccountingItemRow = function (data = {}) {
         <div class="form-group" style="margin: 0;">
             <input type="number" step="0.01" class="item-price glass-form-input" placeholder="Preis Netto" value="${data.price_net || 0}" required style="text-align: right; color: var(--color-primary-green); font-weight: 700;" oninput="window.updateAccountingTotalFromItems()">
         </div>
-        <button type="button" title="Position löschen" onclick="this.closest('.item-row').remove(); window.updateAccountingTotalFromItems();" 
-            style="width:42px; height:42px; border-radius:50%; background: rgba(239,68,68,0.2); border: 1.5px solid rgba(239,68,68,0.5); color: #f87171; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;"
-            onmouseover="this.style.background='rgba(239,68,68,0.4)'" onmouseout="this.style.background='rgba(239,68,68,0.2)'">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+        <button type="button" class="knopf knopf--text knopf--icon" title="Position löschen" aria-label="Position löschen" onclick="this.closest('.item-row').remove(); window.updateAccountingTotalFromItems();">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
         </button>
     `;
     row.appendChild(header);
@@ -1553,7 +1547,7 @@ window.editAccountingEntry = async function (id) {
 
 window.deleteAccountingEntry = async function (id) {
     if (typeof window.canDelete === 'function' && !window.canDelete('Buchungen')) return;
-    if (!confirm('Möchten Sie diesen Eintrag wirklich löschen?')) return;
+    if (!await window.appFrage('Möchten Sie diesen Eintrag wirklich löschen?')) return;
 
     try {
         const { error } = await window.supabaseClient.from('accounting').delete().eq('id', id);
@@ -2494,7 +2488,7 @@ window.updateMachineEvaluation = async function () {
         content.innerHTML = `<div style="padding: 2rem; color: #ef4444; text-align: center;">
             <div style="font-weight: 800; margin-bottom: 0.5rem;">Fehler beim Laden</div>
             <div style="font-size: 0.8rem; opacity: 0.7;">${err.message || 'Unbekannter Fehler'}</div>
-            <button onclick="window.updateMachineEvaluation()" class="btn-primary" style="margin-top: 1rem; padding: 5px 15px; font-size: 0.8rem;">Erneut versuchen</button>
+            <button onclick="window.updateMachineEvaluation()" type="button" class="knopf knopf--sekundaer knopf--klein" style="margin-top: 1rem;">Erneut versuchen</button>
         </div>`;
     }
 };
@@ -2620,16 +2614,12 @@ function renderAccountingDetailsContent(id) {
                 <div data-label="Zuordnung" style="padding-left: 1rem; color: var(--color-primary-green); font-weight: 600; font-size: 0.8rem; line-height: 1.2;">${assignmentText}</div>
                 <div data-label="Split" style="text-align: center;">
                     ${isFirstInGroup ? `
-                    <button onclick='window.revertSplit("${id}", ${item._idx})' title="Aufteilung rückgängig machen"
-                        style="width:28px; height:28px; border-radius:8px; background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); color: #f87171; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s; margin: auto;"
-                        onmouseover="this.style.background='rgba(239,68,68,0.3)'" onmouseout="this.style.background='rgba(239,68,68,0.15)'">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3l-3 2.7"/></svg>
+                    <button type="button" class="knopf knopf--text knopf--klein knopf--icon" onclick='window.revertSplit("${id}", ${item._idx})' title="Aufteilung rückgängig machen" aria-label="Aufteilung rückgängig machen" style="margin: auto;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3l-3 2.7"/></svg>
                     </button>
                     ` : (isSplitPart ? '' : (canSplit ? `
-                    <button onclick='window.openSplitDialog("${id}", ${item._idx})' title="Position aufteilen"
-                        style="width:28px; height:28px; border-radius:8px; background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); color: var(--color-primary-green); display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s; margin: auto;"
-                        onmouseover="this.style.background='rgba(16,185,129,0.3)'" onmouseout="this.style.background='rgba(16,185,129,0.15)'">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="3" x2="12" y2="8"/><path d="M12 8 L5 21"/><path d="M12 8 L19 21"/><circle cx="12" cy="3" r="2" fill="currentColor"/></svg>
+                    <button type="button" class="knopf knopf--sekundaer knopf--klein knopf--icon" onclick='window.openSplitDialog("${id}", ${item._idx})' title="Position aufteilen" aria-label="Position aufteilen" style="margin: auto;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="3" x2="12" y2="8"/><path d="M12 8 L5 21"/><path d="M12 8 L19 21"/><circle cx="12" cy="3" r="2" fill="currentColor"/></svg>
                     </button>` : ''))}
                 </div>
             </div>
@@ -2662,7 +2652,7 @@ window.revertSplit = async function(accountingId, itemIdx) {
     const item = items[itemIdx];
     if (!item) return;
 
-    if (!confirm('Möchten Sie die Aufteilung dieser Position wirklich rückgängig machen?\nAlle zusammengehörigen Positionen ("' + item.description + '") werden wieder zu einer einzigen Zeile zusammengefasst.')) return;
+    if (!await window.appFrage('Möchten Sie die Aufteilung dieser Position wirklich rückgängig machen?\nAlle zusammengehörigen Positionen ("' + item.description + '") werden wieder zu einer einzigen Zeile zusammengefasst.')) return;
 
     try {
         // Alle Split-Teile = gleiche Bezeichnung + gleicher Preis im selben Beleg
@@ -2804,8 +2794,8 @@ window.addSplitRow = function(defaults = {}) {
     const btnHTML = `
         <div style="display: flex; flex-direction: column; justify-content: flex-end; height: 100%;">
             <div style="height: 16px;"></div>
-            <button onclick="document.getElementById('${rowId}').remove(); window.updateSplitTotal()" style="height: 38px; background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.3); border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.3)'" onmouseout="this.style.background='rgba(239,68,68,0.15)'">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            <button type="button" class="knopf knopf--text knopf--icon" onclick="document.getElementById('${rowId}').remove(); window.updateSplitTotal()" title="Aufteilung entfernen" aria-label="Aufteilung entfernen">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
         </div>
     `;
@@ -3343,3 +3333,21 @@ window.renderYoYComparison = function () {
         </div>
     `;
 };
+
+
+// Buchhaltung: PDF-/Foto-Upload über die gemeinsame Zone (js/upload-feld.js); die Analyse läuft wie bisher
+// in handleAccountingPDFUpload, #acc-pdf-dropzone ist nur noch die Statusbox.
+(function () {
+    function umbauen() {
+        const box = document.getElementById('acc-upload-feld');
+        if (!box || box.dataset.fertig || typeof window.uploadFeld !== 'function') return;
+        box.dataset.fertig = '1';
+        window.uploadFeld(box, {
+            accept: '.pdf,image/png,image/jpeg,image/webp', multiple: false, kamera: true, nurZone: true, maxMB: 10,
+            text: 'PDF-Rechnung oder Foto hierher ziehen',
+            onFiles: (dateien) => window.handleAccountingPDFUpload({ target: { files: [dateien[0]] } })
+        });
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', umbauen); else umbauen();
+    setTimeout(umbauen, 2000);
+})();

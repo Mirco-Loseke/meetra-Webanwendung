@@ -1,0 +1,138 @@
+<section id="routenplanung" class="view hidden">
+    <div class="view-header-layout" style="margin-bottom: 0.5rem;">
+        <div class="view-header-row-top">
+            <div class="view-header-left">
+                <h1 style="margin: 0; font-size: 1.6rem; display:flex; align-items:center; gap:10px;">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="6" cy="7" r="3"></circle>
+                        <circle cx="18" cy="17" r="3"></circle>
+                        <path d="M8.5 8.5c1.5 2 3 2.5 4.5 2.5s5-1 5.5 3"></path>
+                    </svg>
+                    Routenplanung
+                </h1>
+            </div>
+        </div>
+    </div>
+
+    <div id="rp2-layout">
+        <div id="rp2-panel" class="glass-card">
+            <div id="rp2-hq-info" class="rp2-hq-info">Firmenadresse wird geladen…</div>
+
+            <!-- Suche -->
+            <div class="rp2-section">
+                <label class="rp2-label" for="rp2-search-input">Stopp suchen</label>
+                <div class="rp2-search-wrap">
+                    <input type="text" id="rp2-search-input" class="rp2-input"
+                        placeholder="Kunde, Maschine, PLZ, Ort oder Straße …"
+                        oninput="window.rp2Search()" autocomplete="off">
+                    <div id="rp2-search-results" class="rp2-search-results"></div>
+                </div>
+                <div id="rp2-status" class="rp2-status"></div>
+            </div>
+
+            <!-- Route -->
+            <div class="rp2-section">
+                <label class="rp2-label">
+                    Route
+                    <span class="rp2-label-count" id="rp2-stops-count">0</span>
+                </label>
+                <div id="rp2-route-summary" class="rp2-route-summary"></div>
+                <div class="rp2-route-actions">
+                    <button class="rp2-btn rp2-btn-sm" id="rp2-optimize-btn" data-rp2-action="optimize" disabled
+                        title="Reihenfolge auf kürzeste Strecke ab Start optimieren">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                        </svg>
+                        Optimieren
+                    </button>
+                    <button class="rp2-btn rp2-btn-sm" id="rp2-save-btn" data-rp2-action="save-route" disabled>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                            <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                            <polyline points="7 3 7 8 15 8"></polyline>
+                        </svg>
+                        Speichern
+                    </button>
+                    <!-- Tourenzettel drucken: js/routenplanung.js, druckDialog -->
+                    <button class="rp2-btn rp2-btn-sm" id="rp2-print-btn" data-rp2-action="print-route" disabled>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                            <rect x="6" y="14" width="12" height="8"></rect>
+                        </svg>
+                        Drucken
+                    </button>
+                    <button class="rp2-btn rp2-btn-sm" data-rp2-action="load-route-dialog">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z">
+                            </path>
+                        </svg>
+                        Laden
+                    </button>
+                </div>
+                <div id="rp2-stops-list" class="rp2-scroll-list"></div>
+            </div>
+
+            <!-- Verknüpfte Adressen aus dem Adressbuch -->
+            <div class="rp2-section" id="rp2-linked-section" style="display:none;">
+                <label class="rp2-label">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+                    </svg>
+                    Verknüpfte Adressen
+                </label>
+                <div id="rp2-linked-list" class="rp2-scroll-list"></div>
+            </div>
+
+            <!-- Umkreis -->
+            <div class="rp2-section">
+                <label class="rp2-label">
+                    Adressen <span id="rp2-nearby-mode" class="rp2-label-mode">um den Startpunkt</span>
+                    <span class="rp2-label-count" id="rp2-nearby-count">0</span>
+                </label>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <div style="position:relative; display:inline-flex; align-items:center;">
+                        <input type="number" id="rp2-radius" class="rp2-input" value="50" min="1" max="1000"
+                            style="width:96px; padding-right:26px;" aria-label="Radius in Kilometern" oninput="window.rp2OnRadiusInput()">
+                        <button type="button" id="rp2-radius-clear-btn" onclick="window.rp2ToggleRadiusActive()" title="Radius-Filter ausschalten (alle anzeigen)"
+                            style="position:absolute; right:6px; top:50%; transform:translateY(-50%); background:none; border:none; color:rgba(255,255,255,0.4); cursor:pointer; font-size:14px; font-weight:bold; padding:2px 4px; display:flex; align-items:center; justify-content:center; transition:color 0.2s;">✕</button>
+                    </div>
+                    <span class="rp2-status" style="white-space:nowrap;">km</span>
+                    <button class="rp2-btn rp2-btn-sm" data-rp2-action="nearby" style="flex:1;">Suchen</button>
+                </div>
+                <div class="rp2-filter-row">
+                    <button class="rp2-filter-chip" id="rp2-filter-customers" data-rp2-action="filter-customers"
+                        title="Nur Adressen mit Kundennummer anzeigen">Nur Kunden</button>
+                    <button class="rp2-filter-chip" id="rp2-filter-machines" data-rp2-action="filter-machines"
+                        title="Nur Adressen mit hinterlegten Maschinen anzeigen">Nur mit Maschinen</button>
+                </div>
+                <div class="rp2-filter-row" id="rp2-filter-addresstype-row"></div>
+                <!-- Hersteller-Filter: Adressen, an denen eine Maschine
+                     dieses Herstellers steht (Kategorien > Hersteller) -->
+                <select id="rp2-filter-manufacturer" class="rp2-input"
+                        aria-label="Nach Hersteller filtern" title="Nur Adressen mit Maschinen dieses Herstellers">
+                    <option value="">Alle Hersteller</option>
+                </select>
+                <div id="rp2-nearby-list" class="rp2-scroll-list"></div>
+            </div>
+
+            <!-- Export -->
+            <div class="rp2-section rp2-export-actions" style="flex-direction:row; flex-wrap:wrap;">
+                <button class="rp2-btn rp2-btn-primary" style="flex:1; min-width:150px;"
+                    data-rp2-action="export-google">Google Maps</button>
+                <button class="rp2-btn" style="flex:1; min-width:150px;" data-rp2-action="export-apple">Apple
+                    Maps</button>
+            </div>
+        </div>
+
+        <div id="rp2-map-wrap" class="glass-card">
+            <div id="rp2-map"></div>
+        </div>
+    </div>
+</section>

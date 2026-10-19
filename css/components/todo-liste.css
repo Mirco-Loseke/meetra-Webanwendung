@@ -500,3 +500,125 @@ html:has(body.todo-offen.todo-vollbild) { overflow: hidden; overscroll-behavior:
 .todo-spaeter-badge { font-size: var(--fs-xs, .75rem); color: #c7d2fe; background: rgba(99, 102, 241, 0.18); border-radius: 999px; padding: 1px 7px; }
 .todo-menu-punkt { display: block; width: 100%; text-align: left; background: none; border: 0; color: #fff; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: var(--fs-sm, .85rem); }
 .todo-menu-punkt:hover { background: rgba(255, 255, 255, 0.08); }
+
+/* =========================================================
+   „MEINE LISTE" IN DER KOPFLEISTE (2026-10-17, auf Wunsch)
+   Ersetzt die Glocke und den schwebenden To-do-Knopf: EINE
+   sichtbare Stelle mit EINER Zahl. Knopf entsteht in
+   js/todo-liste.js (kopfKnopfAufbauen) vor .notif-wrapper.
+   Rückgängig: die drei Ausblende-Regeln hier löschen.
+   ========================================================= */
+.notif-wrapper { display: none !important; }        /* Glocke weg — Logik läuft weiter */
+body.todo-an #todo-fab { display: none; }            /* schwebender Knopf weg */
+
+.todo-kopf-wrapper { position: relative; flex-shrink: 0; }
+#todo-kopf-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    height: 44px;
+    padding: 0 var(--space-4) 0 var(--space-3);
+    border-radius: var(--radius-md);
+    background: rgba(16, 185, 129, 0.14);
+    border: 1px solid rgba(16, 185, 129, 0.45);
+    color: #a7f3d0;
+    font-family: var(--font-body);
+    font-size: var(--fs-md);
+    font-weight: var(--fw-bold);
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+#todo-kopf-btn:hover { background: rgba(16, 185, 129, 0.26); color: #fff; }
+body.todo-offen #todo-kopf-btn { background: #10b981; border-color: #10b981; color: #022c22; }
+#todo-kopf-btn svg { flex-shrink: 0; }
+#todo-kopf-btn .todo-fab-zahl {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 5px;
+    border-radius: var(--radius-pill);
+    background: var(--danger);
+    color: #fff;
+    font-size: var(--fs-2xs);
+    font-weight: var(--fw-black);
+    line-height: 20px;
+    text-align: center;
+    border: 2px solid rgba(10, 15, 30, 0.95);
+}
+#todo-kopf-btn .todo-fab-zahl[hidden] { display: none; }
+#todo-kopf-btn.todo-puls { animation: todo-puls 1.2s ease-in-out 3; }
+@media (prefers-reduced-motion: reduce) { #todo-kopf-btn.todo-puls { animation: none; } }
+
+/* Schmal: nur das Symbol, quadratisch — Tippfläche bleibt 44 px */
+@media (max-width: 1100px) {
+    #todo-kopf-btn { width: 44px; padding: 0; justify-content: center; }
+    #todo-kopf-btn .todo-kopf-text { display: none; }
+}
+@media print { .todo-kopf-wrapper { display: none !important; } }
+
+/* =========================================================
+   ÜBERFÄLLIG, NICHT AUF DER LISTE (2026-10-17) — js/todo-liste.js
+   ueberHtml(): live aus der Datenbank, unten an der Liste.
+   Bernstein = bis 7 Tage, Rot = liegengeblieben (eingeklappt).
+   ========================================================= */
+.todo-ueber {
+    margin-top: var(--space-3);
+    border: 1px solid rgba(245, 158, 11, 0.35);
+    border-radius: var(--radius-md);
+    background: rgba(245, 158, 11, 0.06);
+    overflow: hidden;
+}
+.todo-ueber-lang { border-color: rgba(239, 68, 68, 0.35); background: rgba(239, 68, 68, 0.05); }
+.todo-ueber-kopf {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-3);
+    background: none;
+    border: 0;
+    color: var(--text-1);
+    font-family: var(--font-body);
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-bold);
+    text-align: left;
+    cursor: pointer;
+}
+.todo-ueber-kopf:hover { background: rgba(255, 255, 255, 0.04); }
+.todo-ueber-punkt { width: 9px; height: 9px; border-radius: 50%; background: var(--warning); flex-shrink: 0; }
+.todo-ueber-lang .todo-ueber-punkt { background: var(--danger); }
+.todo-ueber-zahl {
+    min-width: 22px; height: 22px; padding: 0 6px; border-radius: var(--radius-pill);
+    display: inline-flex; align-items: center; justify-content: center;
+    background: rgba(245, 158, 11, 0.2); color: var(--warning); font-size: var(--fs-xs); font-weight: var(--fw-black);
+}
+.todo-ueber-lang .todo-ueber-zahl { background: rgba(239, 68, 68, 0.2); color: var(--danger-soft); }
+.todo-ueber-pfeil { margin-left: auto; color: var(--text-3); }
+.todo-ueber-hinweis { padding: 0 var(--space-3) var(--space-2); color: var(--text-3); font-size: var(--fs-xs); line-height: 1.45; }
+.todo-ueber-zeile {
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-2) var(--space-3);
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+.todo-ueber-tage { font-size: var(--fs-xs); font-weight: var(--fw-black); color: var(--warning); white-space: nowrap; }
+.todo-ueber-tage.lang { color: var(--danger-soft); }
+.todo-ueber-text { display: grid; min-width: 0; }
+.todo-ueber-text b { color: var(--text-1); font-size: var(--fs-sm); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.todo-ueber-text small { color: var(--text-3); font-size: var(--fs-xs); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.todo-ueber-knoepfe { display: flex; gap: var(--space-1); }
+.todo-ueber-alle { margin: var(--space-1) var(--space-3) var(--space-3); }
+
+@media (max-width: 768px) {
+    .todo-ueber-zeile { grid-template-columns: minmax(0, 1fr) auto; }
+    .todo-ueber-tage { grid-column: 1 / -1; }
+}
+
+/* Panel deckend: bei 96 % schien die Startseite (weiße Schrift) sichtbar durch */
+#todo-panel { background-color: #0f172a; }

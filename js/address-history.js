@@ -8,7 +8,7 @@
 // und Adresse), damit der Verlauf auf allen Geräten derselbe ist. Läuft das
 // nicht — Tabelle noch nicht angelegt, offline, `file://` —, wird still auf
 // localStorage zurückgefallen; angezeigt wird dann, was dieses Gerät weiß.
-// Migration: supabase/supabase_add_address_history.sql
+// Migration: supabase/migrationen/supabase_add_address_history.sql
 //
 // Die Adressdaten selbst (Name, Ort, Kundennummer) kommen beim Anzeigen aus
 // dem geladenen Adressbuch, nicht aus der Verlaufstabelle — dort stehen nur
@@ -46,7 +46,7 @@
         if ((err && err.code === '42P01') || /address_history/i.test(msg)) {
             remoteOff = true;
             console.warn('Adress-Verlauf: Tabelle address_history fehlt, nur lokaler Verlauf. ' +
-                'Migration: supabase/supabase_add_address_history.sql');
+                'Migration: supabase/migrationen/supabase_add_address_history.sql');
         } else {
             console.warn('Adress-Verlauf (Supabase):', err);
         }
@@ -146,7 +146,7 @@
     };
 
     window.clearAddressHistory = async function () {
-        if (!confirm('Den Adress-Verlauf wirklich leeren?')) return;
+        if (!await window.appFrage('Den Adress-Verlauf wirklich leeren?')) return;
         write([]);
         if (remoteAvailable()) {
             try {

@@ -10,7 +10,7 @@
 // Die Datei bleibt dabei an ihrem Platz in R2 (foto-eingang/…), nur die URL
 // wird eingetragen; die Eingangszeile bekommt zugeordnet_* gesetzt.
 // „Handys": Geräte-Schlüssel anlegen, Einrichtungs-Link teilen, sperren.
-// Migration: supabase/supabase_add_foto_eingang.sql
+// Migration: supabase/migrationen/supabase_add_foto_eingang.sql
 (function () {
     'use strict';
 
@@ -37,7 +37,7 @@
         if (error) {
             S.tabelleFehlt = /foto_eingang/.test(error.message || '');
             liste.innerHTML = '<div class="fe-leer">' + (S.tabelleFehlt
-                ? 'Die Tabelle fehlt noch — bitte <b>supabase/supabase_add_foto_eingang.sql</b> in Supabase ausführen.'
+                ? 'Die Tabelle fehlt noch — bitte <b>supabase/migrationen/supabase_add_foto_eingang.sql</b> in Supabase ausführen.'
                 : 'Fehler beim Laden: ' + esc(error.message)) + '</div>';
             return;
         }
@@ -330,7 +330,7 @@
         hg.addEventListener('input', () => { geaendert = true; });
         hg.addEventListener('click', e => { if (e.target.closest('[data-fe-art], [data-fe-ziel]')) geaendert = true; });
         const zu = () => { hg.remove(); document.removeEventListener('keydown', taste); };
-        const fragen = () => { if (!geaendert || confirm('Wirklich schließen? Deine Eingaben gehen verloren.')) zu(); };
+        const fragen = async () => { if (!geaendert || await window.appFrage('Wirklich schließen? Deine Eingaben gehen verloren.')) zu(); };
         const taste = e => { if (e.key === 'Escape' && hg.isConnected) { e.preventDefault(); fragen(); } };
         hg.addEventListener('click', e => { if (e.target.closest('[data-fe-zu]')) fragen(); });
         document.addEventListener('keydown', taste);
@@ -345,7 +345,8 @@
         { id: 'maschine', label: 'Maschine (Historie)' },
         { id: 'adresse', label: 'Adresse (Historie)' },
         { id: 'servicebericht', label: 'Servicebericht' },
-        { id: 'vorgang', label: 'Vorgang' }
+        { id: 'vorgang', label: 'Vorgang' },
+        { id: 'miet', label: 'Mietvereinbarung' }
     ];
 
     async function quellen(art, text) {
@@ -372,8 +373,22 @@
                 return { id: b.id, titel: (b.title || 'Servicebericht') + (b.is_finalized ? ' 🔒' : ''), sub: [datum ? new Date(datum).toLocaleDateString('de-DE') : '', m ? machineLabel(m) : ''].filter(Boolean).join(' · ') };
             }).filter(x => passt(x.titel + ' ' + x.sub)).slice(0, 60);
         }
+        if (art === 'miet') {
+            if (!S.mieten) {
+                const { data } = await sb().from('rental_agreements').select('id, machine_id, title, created_at, user_id, photos, miete:data->miete').order('created_at', { ascending: false }).limit(300);
+                S.mieten = data || [];
+            }
+            return S.mieten.map(r => {
+                const m = window.machineById ? window.machineById(r.machine_id) : null;
+                const tag = d => d ? new Date(d).toLocaleDateString('de-DE') : '';
+                const mi = r.miete || {};
+                const von = (window.userList || []).find(u => String(u.id) === String(r.user_id));
+                const n = Array.isArray(r.photos) ? r.photos.length : 0;
+                return { id: r.id, titel: r.title || 'Mietvereinbarung', sub: [m ? machineLabel(m) : 'ohne Maschine', 'Miete ' + (tag(mi.beginn) || '?') + ' – ' + (tag(mi.ende) || 'offen'), n + (n === 1 ? ' Foto' : ' Fotos'), 'gespeichert ' + tag(r.created_at) + (von ? ' von ' + von.name : '')].filter(Boolean).join(' · ') };
+            }).filter(x => passt(x.titel + ' ' + x.sub)).slice(0, 60);
+        }
         if (art === 'vorgang') {
-            let procs = (window.eventsState && window.eventsState.processes) || [];
+            let procs =(window.eventsState && window.eventsState.processes) || [];
             if (!procs.length) {
                 const { data } = await sb().from('internal_processes').select('*').order('created_at', { ascending: false }).limit(300);
                 procs = data || [];
@@ -402,6 +417,7 @@
             '<div class="fe-arten">' + ARTEN.map(a => '<button type="button" data-fe-art="' + a.id + '"' + (a.id === art ? ' class="active"' : '') + '>' + a.label + '</button>').join('') + '</div>' +
             '<input type="search" class="fe-feld" id="fe-such" placeholder="Suchen …" autocomplete="off">' +
             '<ul class="fe-treffer" id="fe-treffer"></ul>' +
+            '<div id="fe-miet-plan" hidden></div>' +
             '<div id="fe-text-block"><label class="form-label-caps" for="fe-titel">Titel</label>' +
             '<input class="fe-feld" id="fe-titel" value="' + (nurTon ? 'Sprachnotiz aus der Werkstatt' : hatTon ? 'Fotos und Sprachnotiz aus der Werkstatt' : 'Fotos aus der Werkstatt') + '">' +
             '<label class="form-label-caps" for="fe-datum" style="margin-top:var(--space-2);display:block">Datum</label>' +
@@ -419,8 +435,91 @@
                 : '<li style="cursor:default">Nichts gefunden</li>';
             $('#fe-treffer').__liste = liste;
         }
+        // Mietvereinbarung: Fotos per Ziehen (oder Antippen) auf Positionen verteilen
+        let plan = {};      // 'phase|Position' -> [Zeilen-IDs]; Zusatz-Bilder unter 'phase|+'
+        let aktiv = null;   // angetippte Datei (Tippen statt Ziehen)
+        const PHASEN = [{ id: 'uebergabe', label: 'Übergabe' }, { id: 'ruecknahme', label: 'Rücknahme' }];
+        const bilderZeilen = () => zeilen.filter(z => !istTon(z));
+        const platzVon = id => Object.keys(plan).find(k => plan[k].includes(id)) || null;
+        function okPruefen() { $('#fe-ok').disabled = art === 'miet' ? !Object.keys(plan).length : !ziel; }
+        function platzieren(id, key) {
+            Object.keys(plan).forEach(k => { plan[k] = plan[k].filter(x => x !== id); if (!plan[k].length) delete plan[k]; });
+            if (key) { if (key.endsWith('|+')) (plan[key] = plan[key] || []).push(id); else plan[key] = [id]; }
+            aktiv = null; planZeichnen(); okPruefen();
+        }
+        async function mietPlanZeigen() {
+            const { data: row, error } = await sb().from('rental_agreements').select('id, machine_id, photos, data').eq('id', ziel.id).single();
+            if (error) throw error;
+            const m = window.machineById ? window.machineById(row.machine_id) : null;
+            const vorlage = window.getMietVorlage ? window.getMietVorlage(m ? m.category_id : null) : {};
+            ziel.row = row;
+            ziel.positionen = (Array.isArray(vorlage.fotos) && vorlage.fotos.length) ? vorlage.fotos : ['Gesamtansicht'];
+            plan = {}; aktiv = null;
+            $('#fe-treffer').hidden = true; $('#fe-such').hidden = true;
+            planZeichnen(); okPruefen();
+        }
+        function planZeichnen() {
+            const box = $('#fe-miet-plan');
+            if (!ziel || !ziel.row) { box.hidden = true; return; }
+            box.hidden = false;
+            const bisher = (ph, pos) => (ziel.row.photos || []).find(p => p && p.phase === ph && p.position === pos);
+            const thumbs = bilderZeilen().map(z => {
+                const k = platzVon(z.id);
+                const ort = k ? (k.split('|')[0] === 'uebergabe' ? 'Übergabe' : 'Rücknahme') + ': ' + (k.endsWith('|+') ? 'Zusatz' : k.split('|')[1]) : '';
+                return '<div class="fe-plan-thumb' + (k ? ' fertig' : '') + (aktiv === z.id ? ' aktiv' : '') + '" draggable="true" data-fe-pid="' + esc(z.id) + '"><img src="' + esc(z.url) + '" alt="" draggable="false">' + (ort ? '<span>✓ ' + esc(ort) + '</span>' : '') + '</div>';
+            }).join('');
+            const slots = PHASEN.map(ph => {
+                const einzel = ziel.positionen.map(pos => {
+                    const key = ph.id + '|' + pos;
+                    const neu = (plan[key] || [])[0];
+                    const nz = neu && zeilen.find(z => z.id === neu);
+                    const alt = bisher(ph.id, pos);
+                    const bild = nz ? '<img src="' + esc(nz.url) + '" alt="">' : alt ? '<img class="alt" src="' + esc(alt.url) + '" alt="">' : '<em>hierher ziehen</em>';
+                    return '<div class="fe-plan-slot' + (nz ? ' belegt' : '') + '" data-fe-slot="' + esc(key) + '"><b>' + esc(pos) + '</b><div class="fe-plan-inh">' + bild + '</div>' +
+                        (nz ? '<button type="button" data-fe-leer="' + esc(nz.id) + '" aria-label="Entfernen" title="Entfernen">×</button>' : alt ? '<small>bisheriges Bild</small>' : '') + '</div>';
+                }).join('');
+                const zk = ph.id + '|+';
+                const zus = (plan[zk] || []).map(id => { const z = zeilen.find(x => x.id === id); return z ? '<span class="fe-plan-mini"><img src="' + esc(z.url) + '" alt=""><button type="button" data-fe-leer="' + esc(z.id) + '" aria-label="Entfernen">×</button></span>' : ''; }).join('');
+                return '<section class="fe-plan-phase"><header><h3>' + ph.label + '</h3><button type="button" class="knopf knopf--sekundaer knopf--klein" data-fe-auto="' + ph.id + '">Der Reihe nach füllen</button></header>' +
+                    '<div class="fe-plan-slots">' + einzel +
+                    '<div class="fe-plan-slot zusatz' + (zus ? ' belegt' : '') + '" data-fe-slot="' + zk + '"><b>Zusatz (Schäden, Details)</b><div class="fe-plan-inh">' + (zus || '<em>hierher ziehen</em>') + '</div></div></div></section>';
+            }).join('');
+            box.innerHTML = '<div class="fe-plan-kopf"><b>' + esc(ziel.titel) + '</b> <button type="button" class="knopf knopf--text knopf--klein" data-fe-wechseln>andere wählen</button></div>' +
+                '<div class="fe-plan"><div class="fe-plan-links"><h3>Fotos (' + bilderZeilen().length + ')</h3><div class="fe-plan-thumbs">' + thumbs + '</div></div><div class="fe-plan-rechts">' + slots + '</div></div>';
+        }
+        (function planEreignisse() {
+            const box = $('#fe-miet-plan');
+            box.addEventListener('dragstart', e => {
+                const t = e.target.closest('[data-fe-pid]'); if (!t) return;
+                e.dataTransfer.setData('text/x-fe-pid', t.dataset.fePid); e.dataTransfer.effectAllowed = 'move';
+            });
+            box.addEventListener('dragover', e => { const s = e.target.closest('[data-fe-slot]'); if (s) { e.preventDefault(); s.classList.add('ziel'); } });
+            box.addEventListener('dragleave', e => { const s = e.target.closest('[data-fe-slot]'); if (s && !s.contains(e.relatedTarget)) s.classList.remove('ziel'); });
+            box.addEventListener('drop', e => {
+                const s = e.target.closest('[data-fe-slot]'); if (!s) return;
+                e.preventDefault(); s.classList.remove('ziel');
+                const id = e.dataTransfer.getData('text/x-fe-pid'); if (id) platzieren(id, s.dataset.feSlot);
+            });
+            box.addEventListener('click', e => {
+                const leer = e.target.closest('[data-fe-leer]'); if (leer) { platzieren(leer.dataset.feLeer, null); return; }
+                if (e.target.closest('[data-fe-wechseln]')) { ziel = null; plan = {}; aktiv = null; $('#fe-treffer').hidden = false; $('#fe-such').hidden = false; box.hidden = true; treffer(); okPruefen(); return; }
+                const auto = e.target.closest('[data-fe-auto]');
+                if (auto) {
+                    const ph = auto.dataset.feAuto;
+                    const frei = bilderZeilen().filter(z => !platzVon(z.id));
+                    ziel.positionen.forEach(pos => { const key = ph + '|' + pos; if (!plan[key] && frei.length) plan[key] = [frei.shift().id]; });
+                    planZeichnen(); okPruefen(); return;
+                }
+                const th = e.target.closest('[data-fe-pid]');
+                if (th) { aktiv = aktiv === th.dataset.fePid ? null : th.dataset.fePid; planZeichnen(); return; }
+                const sl = e.target.closest('[data-fe-slot]');
+                if (sl && aktiv) platzieren(aktiv, sl.dataset.feSlot);
+            });
+        })();
         function artSetzen(neu) {
-            art = neu; ziel = null; $('#fe-ok').disabled = true;
+            art = neu; ziel = null; plan = {}; aktiv = null; $('#fe-ok').disabled = true;
+            $('#fe-treffer').hidden = false; $('#fe-such').hidden = false; $('#fe-miet-plan').hidden = true;
+            f.el.querySelector('.fe-fenster').classList.toggle('fe-breit', art === 'miet');
             f.el.querySelectorAll('[data-fe-art]').forEach(b => b.classList.toggle('active', b.dataset.feArt === art));
             const mitTitel = art === 'maschine' || art === 'adresse';
             $('#fe-text-block').style.display = (mitTitel || hatTon) ? '' : 'none';
@@ -430,6 +529,7 @@
                 maschine: 'Neuer Eintrag in der Historie der Maschine, mit allen gewählten Fotos.',
                 adresse: 'Neuer Eintrag im Verlauf der Adresse, mit allen gewählten Fotos.',
                 servicebericht: 'Die Fotos werden an den Bericht angehängt (auch bei abgeschlossenen Berichten).' + (hatTon ? ' Der Text kommt unter Bemerkungen — nicht bei abgeschlossenen Berichten.' : ''),
+                miet: 'Wähle die Mietvereinbarung, dann ziehe die Fotos links auf den Platz rechts (oder tippe Foto, dann Platz). Das PDF der Vereinbarung wird beim nächsten Speichern im Bogen neu erzeugt.',
                 vorgang: 'Die Fotos erscheinen unter den Dokumenten des Vorgangs.' + (hatTon ? ' Der Text wird als neuer Stand eingetragen.' : '')
             }[art] + (hatTon ? ' Die Tonaufnahme wird danach gelöscht — es bleibt nur der Text.' : '');
             treffer();
@@ -442,18 +542,20 @@
             if (!li) return;
             ziel = ($('#fe-treffer').__liste || []).find(x => String(x.id) === li.dataset.feZiel) || null;
             f.el.querySelectorAll('#fe-treffer li').forEach(x => x.classList.toggle('selected', x === li));
-            $('#fe-ok').disabled = !ziel;
+            if (art === 'miet' && ziel) { mietPlanZeigen().catch(err => { toast('Mietvereinbarung nicht geladen: ' + (err.message || err), 'error'); ziel = null; }); return; }
+            okPruefen();
         });
         $('#fe-ok').addEventListener('click', async () => {
             if (!ziel) return;
             const knopf = $('#fe-ok');
             knopf.disabled = true; knopf.textContent = 'Speichert …';
             try {
-                await eintragen(art, ziel, zeilen, $('#fe-titel').value.trim(), $('#fe-text').value.trim(), $('#fe-datum').value);
+                const gesetzt = await eintragen(art, ziel, zeilen, $('#fe-titel').value.trim(), $('#fe-text').value.trim(), $('#fe-datum').value, plan);
                 await tonWegraeumen(zeilen.filter(istTon));
                 f.zu();
-                toast(zeilen.length + (zeilen.length === 1 ? ' Datei' : ' Dateien') + ' zugeordnet: ' + ziel.titel, 'success');
-                zeilen.forEach(z => S.gewaehlt.delete(z.id));
+                const n = art === 'miet' ? (gesetzt || []).length : zeilen.length;
+                toast(n + (n === 1 ? ' Datei' : ' Dateien') + ' zugeordnet: ' + ziel.titel, 'success');
+                (art === 'miet' ? (gesetzt || []) : zeilen.map(z => z.id)).forEach(id => S.gewaehlt.delete(id));
                 laden();
             } catch (e) {
                 console.error('Foto-Eingang: Zuordnen fehlgeschlagen', e);
@@ -465,8 +567,10 @@
         setTimeout(() => $('#fe-such').focus(), 30);
     }
 
-    async function eintragen(art, ziel, zeilen, titel, text, datum) {
+    async function eintragen(art, ziel, zeilen, titel, text, datum, plan) {
         const wer = (window.activeUser && window.activeUser.id) || null;
+        let markieren = zeilen.map(z => z.id);
+        if (art === 'miet') markieren = await mietEintragen(ziel, zeilen, plan || {});
         if (art === 'maschine' || art === 'adresse') {
             const zeile = {
                 type: art === 'maschine' && zeilen.some(z => !istTon(z)) ? 'photo' : 'note',
@@ -534,8 +638,43 @@
             zugeordnet_von: (window.activeUser && (window.activeUser.name || String(window.activeUser.id))) || null,
             zugeordnet_typ: art, zugeordnet_id: String(ziel.id),
             zugeordnet_text: (ARTEN.find(a => a.id === art) || {}).label.split(' (')[0] + ': ' + ziel.titel
-        }).in('id', zeilen.map(z => z.id));
+        }).in('id', markieren);
         if (error) throw error;
+        return markieren;
+    }
+
+    // Mietvereinbarung: Fotos auf Positionen setzen (rental_agreements.photos + data.zusatz).
+    // Ein Bild auf belegtem Platz ersetzt den Verweis; die Datei selbst bleibt unangetastet.
+    async function mietEintragen(ziel, zeilen, plan) {
+        const { data: row, error: e1 } = await sb().from('rental_agreements').select('id, photos, data').eq('id', ziel.id).single();
+        if (e1) throw e1;
+        const photos = Array.isArray(row.photos) ? row.photos.slice() : [];
+        const d = row.data && typeof row.data === 'object' ? Object.assign({}, row.data) : {};
+        const zusatz = { uebergabe: [], ruecknahme: [] };
+        if (d.zusatz) { zusatz.uebergabe = (d.zusatz.uebergabe || []).slice(); zusatz.ruecknahme = (d.zusatz.ruecknahme || []).slice(); }
+        const heuteTag = new Date().toISOString().slice(0, 10);
+        const gesetzt = [];
+        Object.keys(plan).forEach(key => {
+            const [phase, pos] = key.split('|');
+            const wort = phase === 'uebergabe' ? 'Übergabe' : 'Rücknahme';
+            plan[key].forEach((id, i) => {
+                const z = zeilen.find(x => x.id === id); if (!z) return;
+                let position = pos;
+                if (pos === '+') {
+                    position = 'Zusatz ' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5) + i;
+                    zusatz[phase].push({ pos: position, datum: heuteTag, text: '' });
+                } else {
+                    for (let k = photos.length - 1; k >= 0; k--) if (photos[k] && photos[k].phase === phase && photos[k].position === pos) photos.splice(k, 1);
+                }
+                photos.push({ phase, position, url: z.url, path: z.pfad || null, name: (pos === '+' ? 'Zusatz' : pos) + ' (' + wort + ')' });
+                gesetzt.push(z.id);
+            });
+        });
+        d.zusatz = zusatz;
+        const { error } = await sb().from('rental_agreements').update({ photos, data: d }).eq('id', ziel.id);
+        if (error) throw error;
+        document.dispatchEvent(new CustomEvent('mietvereinbarung:gespeichert', { detail: { id: ziel.id } }));
+        return gesetzt;
     }
 
     // ------------------------------------------------------------
@@ -731,7 +870,7 @@
                 return;
             }
             const w = e.target.closest('[data-fe-weg]');
-            if (w && confirm('Dieses Handy entfernen? Es kann danach nichts mehr schicken. Bereits geschickte Fotos bleiben.')) {
+            if (w && await window.appFrage('Dieses Handy entfernen? Es kann danach nichts mehr schicken. Bereits geschickte Fotos bleiben.')) {
                 const { error } = await sb().from('foto_geraete').delete().eq('id', w.dataset.feWeg);
                 if (error) toast(error.message, 'error');
                 $('#fe-neu-link').innerHTML = '';

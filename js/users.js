@@ -565,9 +565,9 @@ document.addEventListener('change', (e) => {
     updatePermCounts();
 });
 
-window.closeEditUserModal = function (ohneFrage) {
+window.closeEditUserModal = async function (ohneFrage) {
     if (ohneFrage !== true && ueZustand() !== ueStartZustand
-        && !confirm('Änderungen an diesem Benutzer verwerfen?')) return;
+        && !await window.appFrage('Änderungen an diesem Benutzer verwerfen?')) return;
     document.getElementById('user-edit-modal').style.display = 'none';
 };
 
@@ -645,7 +645,7 @@ window.deleteUser = async function (id) {
     const user = userList.find(u => String(u.id) === String(id));
     if (!user) return;
 
-    if (!confirm(`Möchten Sie den Benutzer "${user.name}" wirklich unwiderruflich löschen?`)) {
+    if (!await window.appFrage(`Möchten Sie den Benutzer "${user.name}" wirklich unwiderruflich löschen?`)) {
         return;
     }
 
@@ -673,7 +673,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         newBtn.addEventListener('click', async () => {
             if (!supabaseClient) { window.showToast('Datenbank nicht verbunden'); return; }
-            const name = prompt('Name des neuen Benutzers:');
+            const name = await window.appEingabe('Name des neuen Benutzers:');
             if (name) {
                 const initials = name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
                 const newUser = {

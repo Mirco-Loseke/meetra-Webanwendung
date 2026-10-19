@@ -200,3 +200,68 @@
     border-color: rgba(16, 185, 129, 0.45);
     color: var(--color-primary-green);
 }
+
+/* =========================================================
+   Handy: Buchungen als Karten statt 9-spaltiger Tabelle.
+   Vorher war die Tabelle ~1.200 px breit — sichtbar blieben nur
+   Bezahlt-Schalter, Nummer und Datum; Lieferant und Betrag lagen
+   außerhalb. Spalten (js/accounting.js, renderAccounting):
+   1 Details · 2 Bezahlt · 3 Nummer · 4 Datum · 5 Lieferant/Kunde ·
+   6 Netto · 7 MwSt · 8 Brutto · 9 Aktionen
+   ========================================================= */
+@media (max-width: 768px) {
+    #accounting .table-responsive-wrapper {
+        overflow-x: visible;
+    }
+    #accounting .table-responsive-wrapper table.data-table,
+    #accounting .table-responsive-wrapper table.data-table > tbody {
+        display: block;
+        min-width: 0 !important;
+        width: 100% !important;
+    }
+    #accounting .table-responsive-wrapper table.data-table > thead {
+        display: none;
+    }
+    #accounting tr.accounting-month-header,
+    #accounting tr.accounting-month-header > td,
+    #accounting tr[id^="details-"]:not(.hidden),
+    #accounting tr[id^="details-"] > td {
+        display: block;
+    }
+    #accounting tr.accounting-main-row {
+        display: grid;
+        grid-template-columns: 28px minmax(0, 1fr) auto;
+        grid-template-areas:
+            "d e br"
+            "d n dt"
+            "b nt a";
+        align-items: center;
+        gap: var(--space-1) var(--space-2);
+        padding: var(--space-3) var(--space-2);
+    }
+    #accounting tr.accounting-main-row > td {
+        display: block;
+        padding: 0 !important;
+        border: 0;
+        text-align: left !important;
+        min-width: 0;
+    }
+    #accounting tr.accounting-main-row > td:nth-child(1) { grid-area: d; }
+    #accounting tr.accounting-main-row > td:nth-child(2) { grid-area: b; grid-column: 1 / 2; }
+    #accounting tr.accounting-main-row > td:nth-child(3) { grid-area: n; color: var(--text-2); }
+    #accounting tr.accounting-main-row > td:nth-child(4) { grid-area: dt; text-align: right !important; }
+    #accounting tr.accounting-main-row > td:nth-child(5) {
+        grid-area: e;
+        font-size: var(--fs-md) !important;
+        white-space: normal !important;
+    }
+    #accounting tr.accounting-main-row > td:nth-child(6) { grid-area: nt; color: var(--text-2); }
+    #accounting tr.accounting-main-row > td:nth-child(6)::before { content: 'Netto '; }
+    #accounting tr.accounting-main-row > td:nth-child(7) { display: none; }
+    #accounting tr.accounting-main-row > td:nth-child(8) {
+        grid-area: br;
+        text-align: right !important;
+        font-weight: var(--fw-bold, 700);
+    }
+    #accounting tr.accounting-main-row > td:nth-child(9) { grid-area: a; text-align: right !important; }
+}

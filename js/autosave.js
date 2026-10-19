@@ -65,6 +65,15 @@
         let skipOnce = false;
         let statusEl = null;
 
+        // Kleiner Hinweis unten rechts (nur im Browser, keine Datenbank-/Log-Last), höchstens alle 5 s.
+        let letzterHinweis = 0;
+        function hinweis(text, art) {
+            if (cfg.toast === false || typeof window.showToast !== 'function') return;
+            if (art === 'success' && Date.now() - letzterHinweis < 5000) return;
+            letzterHinweis = Date.now();
+            window.showToast(text, art, { duration: art === 'success' ? 1800 : 6000 });
+        }
+
         function setStatus(text, kind) {
             if (!cfg.statusHost) return;
             const host = cfg.statusHost();
@@ -118,6 +127,7 @@
                         last = job.payload;
                         if (cfg.onSaved) cfg.onSaved(res.data);
                         setStatus('Automatisch gespeichert · ' + timeNow(), 'ok');
+                        hinweis('Automatisch gespeichert', 'success');
                         return;
                     }
                     const msg = error.message || '';
@@ -130,6 +140,7 @@
             } catch (err) {
                 console.error('Auto-Speichern (' + cfg.table + ') fehlgeschlagen:', err);
                 setStatus('Nicht gespeichert: ' + (err.message || err), 'error');
+                hinweis('Nicht gespeichert — bitte erneut versuchen', 'error');
             } finally {
                 saving = false;
             }
@@ -209,6 +220,9 @@
             flushOnUnload,
             get id() { return id; }
         };
+
+        // Register aller Auto-Speicherungen: js/nichts-verlieren.js schreibt sie vor jedem Ansichtswechsel weg.
+        (window._autosaves = window._autosaves || []).push(handle);
 
         window.addEventListener('pagehide', flushOnUnload);
         window.addEventListener('beforeunload', flushOnUnload);

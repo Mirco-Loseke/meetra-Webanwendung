@@ -1,0 +1,30 @@
+/* Gemeinsame Upload-Zone (js/upload-feld.js) — .upload-zone tragen auch die bestehenden Ablagefelder */
+.upload-zone {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-1);
+    padding: var(--space-4); text-align: center; cursor: pointer;
+    border: 1.5px dashed rgba(255, 255, 255, 0.22); border-radius: var(--radius-md);
+    color: var(--text-3); font-size: var(--fs-sm);
+    transition: background var(--dur-fast, 0.15s) ease, border-color var(--dur-fast, 0.15s) ease, color var(--dur-fast, 0.15s) ease;
+}
+.upload-zone b { color: var(--text-1); }
+.upload-zone small { color: var(--text-3); font-size: var(--fs-xs); }
+.upload-zone:hover, .upload-zone.ueber, .upload-zone:focus-visible {
+    background: rgba(16, 185, 129, 0.12); border-color: rgba(16, 185, 129, 0.7); color: #6ee7b7; outline: none;
+}
+.upload-kamera { margin-top: var(--space-2); width: 100%; justify-content: center; cursor: pointer; }
+.upload-liste { list-style: none; margin: var(--space-2) 0 0; padding: 0; display: grid; gap: var(--space-1); }
+.upload-eintrag { display: flex; align-items: center; gap: var(--space-2); padding: 6px 10px; border-radius: var(--radius-sm); background: rgba(255, 255, 255, 0.04); font-size: var(--fs-sm); flex-wrap: wrap; }
+.upload-eintrag .upload-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-1); }
+.upload-eintrag em { font-style: normal; color: var(--text-3); font-size: var(--fs-xs); }
+.upload-balken { flex-basis: 100%; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.1); overflow: hidden; }
+.upload-balken i { display: block; height: 100%; width: 40%; background: var(--success, #10b981); animation: upload-lauf 1s ease-in-out infinite; }
+@keyframes upload-lauf { 0% { margin-left: -40%; } 100% { margin-left: 100%; } }
+.upload-fehler { color: var(--danger, #f87171); font-size: var(--fs-xs); }
+.upload-ok { color: var(--success, #10b981); font-weight: 800; }
+.upload-eintrag .knopf-x { width: 28px; height: 28px; font-size: 0.8rem; }
+@media (prefers-reduced-motion: reduce) { .upload-balken i { animation: none; width: 100%; } }
+
+.upload-hinweis { color: var(--danger, #f87171); font-size: var(--fs-xs); margin-top: var(--space-1); }
+.upload-hinweis:empty { display: none; }
+
+#acc-pdf-dropzone:empty { display: none; }

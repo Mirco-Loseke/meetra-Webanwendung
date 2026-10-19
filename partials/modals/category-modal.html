@@ -1,0 +1,108 @@
+<div id="category-modal" class="modal-backdrop hidden">
+    <div class="modal-content" style="max-width: 540px; padding: 25px; border-radius: 20px;">
+        <div class="modal-header" style="margin-bottom: 20px;">
+            <h2 id="cat-modal-title" style="margin:0;">Neue Kategorie</h2>
+        </div>
+        <input type="hidden" id="cat-modal-id">
+
+        <div class="form-group" style="margin-bottom: 1.25rem;">
+            <label for="cat-name-input">Name der Kategorie</label>
+            <input type="text" id="cat-name-input" class="glass-form-input" placeholder="z.B. Trommelsiebe oder Lieferant" required>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 1.25rem;">
+            <label>Zuordnung (Typ)</label>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 6px;">
+                <label class="radio-label" style="display: flex; align-items: center; gap: 8px; font-size: 0.88rem; cursor: pointer; color: #fff;">
+                    <input type="radio" name="cat-type" value="machine" checked> Maschinenkategorie
+                </label>
+                <label class="radio-label" style="display: flex; align-items: center; gap: 8px; font-size: 0.88rem; cursor: pointer; color: #fff;">
+                    <input type="radio" name="cat-type" value="service"> Servicekategorie
+                </label>
+                <label class="radio-label" style="display: flex; align-items: center; gap: 8px; font-size: 0.88rem; cursor: pointer; color: #fff;">
+                    <input type="radio" name="cat-type" value="contact"> Art des Kontaktes
+                </label>
+                <label class="radio-label" style="display: flex; align-items: center; gap: 8px; font-size: 0.88rem; cursor: pointer; color: #fff;">
+                    <input type="radio" name="cat-type" value="address_type"> Adresstyp
+                </label>
+                <label class="radio-label" style="display: flex; align-items: center; gap: 8px; font-size: 0.88rem; cursor: pointer; color: #fff;">
+                    <input type="radio" name="cat-type" value="link"> Art der Verknüpfung
+                </label>
+                <label class="radio-label" style="display: flex; align-items: center; gap: 8px; font-size: 0.88rem; cursor: pointer; color: #fff;">
+                    <input type="radio" name="cat-type" value="document"> Dokumententyp
+                </label>
+                <label class="radio-label" style="display: flex; align-items: center; gap: 8px; font-size: 0.88rem; cursor: pointer; color: #fff;">
+                    <input type="radio" name="cat-type" value="manufacturer"> Hersteller
+                </label>
+                <label class="radio-label" style="display: flex; align-items: center; gap: 8px; font-size: 0.88rem; cursor: pointer; color: #fff;">
+                    <input type="radio" name="cat-type" value="series"> Maschinenserie
+                </label>
+                <label class="radio-label" style="display: flex; align-items: center; gap: 8px; font-size: 0.88rem; cursor: pointer; color: #fff;">
+                    <input type="radio" name="cat-type" value="equipment"> Zusatzausrüstung
+                </label>
+                <label class="radio-label" style="display: flex; align-items: center; gap: 8px; font-size: 0.88rem; cursor: pointer; color: #fff;">
+                    <input type="radio" name="cat-type" value="status"> Angebots-Status
+                </label>
+                <label class="radio-label" style="display: flex; align-items: center; gap: 8px; font-size: 0.88rem; cursor: pointer; color: #fff;">
+                    <input type="radio" name="cat-type" value="area"> Buchhaltungs-Bereich
+                </label>
+            </div>
+        </div>
+
+        <!-- Intervall nur fuer Maschinenkategorien -->
+        <div id="cat-interval-group" class="form-group" style="margin-bottom: 1.25rem;">
+            <label for="cat-interval-input">Standard-Wartungsintervall (Monate)</label>
+            <input type="number" id="cat-interval-input" class="glass-form-input" min="1" max="120" value="12">
+        </div>
+
+        <!-- Felder fuer Maschinenserie -->
+        <div id="cat-series-group" class="form-group" style="margin-bottom: 1.25rem; display: none;">
+            <div style="margin-bottom: 1rem;">
+                <label for="cat-series-manufacturer">Hersteller</label>
+                <input type="text" id="cat-series-manufacturer" class="glass-form-input" placeholder="z.B. Komptech" list="cat-series-manufacturer-options">
+                <datalist id="cat-series-manufacturer-options"></datalist>
+            </div>
+            <div>
+                <label>Zugeordnete Maschinenkategorie(n)</label>
+                <div class="custom-filter-dropdown" id="cat-series-machine-cat-dropdown" onclick="window.toggleCatSeriesMachineCatDropdown(event)" style="width: 100%; height: 44px; box-sizing: border-box;">
+                    <span class="filter-label" id="cat-series-machine-cat-label">Maschinenkategorie wählen...</span>
+                    <svg class="filter-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    <div class="custom-filter-menu">
+                        <ul class="dropdown-options" id="cat-series-machine-cat-options"></ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bemerkung fuer Zusatzausruestung -->
+        <div id="cat-equipment-group" class="form-group" style="margin-bottom: 1.25rem; display: none;">
+            <label for="cat-equipment-remark">Bemerkung / Hinweis</label>
+            <input type="text" id="cat-equipment-remark" class="glass-form-input" placeholder="z.B. Optional bei Neukauf">
+        </div>
+
+        <!-- Akzentfarbe -->
+        <div class="form-group" style="margin-bottom: 1.5rem;">
+            <label>Akzentfarbe</label>
+            <div style="display: flex; align-items: center; gap: 12px; margin-top: 6px;">
+                <div id="cat-color-preview" style="width: 36px; height: 36px; border-radius: 10px; background: #10b981; border: 2px solid rgba(255,255,255,0.2); flex-shrink: 0; box-shadow: 0 0 12px #10b981;"></div>
+                <input type="hidden" id="cat-color-value" value="#10b981">
+                <div id="cat-color-swatches" style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <div onclick="selectCatColor('#10b981')" style="background:#10b981; width:28px; height:28px; border-radius:8px; cursor:pointer; border:2px solid white;"></div>
+                    <div onclick="selectCatColor('#e67e22')" style="background:#e67e22; width:28px; height:28px; border-radius:8px; cursor:pointer; border:2px solid transparent;"></div>
+                    <div onclick="selectCatColor('#2980b9')" style="background:#2980b9; width:28px; height:28px; border-radius:8px; cursor:pointer; border:2px solid transparent;"></div>
+                    <div onclick="selectCatColor('#9b59b6')" style="background:#9b59b6; width:28px; height:28px; border-radius:8px; cursor:pointer; border:2px solid transparent;"></div>
+                    <div onclick="selectCatColor('#f97316')" style="background:#f97316; width:28px; height:28px; border-radius:8px; cursor:pointer; border:2px solid transparent;"></div>
+                    <div onclick="selectCatColor('#06b6d4')" style="background:#06b6d4; width:28px; height:28px; border-radius:8px; cursor:pointer; border:2px solid transparent;"></div>
+                    <div onclick="selectCatColor('#3b82f6')" style="background:#3b82f6; width:28px; height:28px; border-radius:8px; cursor:pointer; border:2px solid transparent;"></div>
+                    <div onclick="selectCatColor('#ef4444')" style="background:#ef4444; width:28px; height:28px; border-radius:8px; cursor:pointer; border:2px solid transparent;"></div>
+                </div>
+                <input type="color" id="cat-color-custom" onchange="selectCatColor(this.value)" style="width: 32px; height: 32px; border: none; background: transparent; cursor: pointer; padding: 0;">
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 12px; justify-content: flex-end;">
+            <button type="button" id="cancel-cat-btn" class="btn-secondary">Abbrechen</button>
+            <button type="button" id="save-cat-btn" class="btn-primary">Speichern</button>
+        </div>
+    </div>
+</div>

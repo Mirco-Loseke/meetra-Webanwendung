@@ -583,7 +583,7 @@
     };
 
     window.editSupergroupTemplate = async function (id, currentName) {
-        const newName = prompt('Übergruppe umbenennen:', currentName);
+        const newName = await window.appEingabe('Übergruppe umbenennen:', currentName);
         if (!newName || newName === currentName) return;
         try {
             const { error } = await window.supabaseClient
@@ -624,7 +624,7 @@
     };
 
     window.deleteSupergroupTemplate = async function (id) {
-        if (!confirm('Übergruppe wirklich löschen?')) return;
+        if (!await window.appFrage('Übergruppe wirklich löschen?')) return;
         try {
             const { error } = await window.supabaseClient
                 .from('task_supergroups_templates')
@@ -660,7 +660,7 @@
     };
 
     window.editSubtaskTemplate = async function (id, currentTitle) {
-        const newTitle = prompt('Baustein umbenennen:', currentTitle);
+        const newTitle = await window.appEingabe('Baustein umbenennen:', currentTitle);
         if (!newTitle || newTitle === currentTitle) return;
         try {
             const { error } = await window.supabaseClient
@@ -676,7 +676,7 @@
     };
 
     window.deleteSubtaskTemplate = async function (id) {
-        if (!confirm('Baustein wirklich löschen?')) return;
+        if (!await window.appFrage('Baustein wirklich löschen?')) return;
         try {
             const { error } = await window.supabaseClient
                 .from('task_subtask_templates')
@@ -952,7 +952,7 @@
             const existing = quickTemplates.find(t => t.name === name);
             let res;
             if (existing) {
-                if (!confirm('Eine Vorlage mit diesem Namen existiert bereits. Möchtest du sie überschreiben?')) return;
+                if (!await window.appFrage('Eine Vorlage mit diesem Namen existiert bereits. Möchtest du sie überschreiben?')) return;
                 res = await window.supabaseClient
                     .from('task_quick_templates')
                     .update({ structure })
@@ -975,7 +975,7 @@
     };
 
     window.deleteQuickTemplate = async function(id) {
-        if (!confirm('Schnellvorlage wirklich löschen?')) return;
+        if (!await window.appFrage('Schnellvorlage wirklich löschen?')) return;
         try {
             const { error } = await window.supabaseClient.from('task_quick_templates').delete().eq('id', id);
             if (error) throw error;
@@ -1046,11 +1046,11 @@
         `;
     }
 
-    window.applyQuickTemplate = function(id) {
+    window.applyQuickTemplate = async function(id) {
         const qt = quickTemplates.find(t => t.id === id);
         if (!qt) return;
         
-        if (modalGroups.some(g => g.subtasks.length > 0) && !confirm('Bestehende Unteraufgaben werden beibehalten, neue Gruppen werden hinzugefügt. Fortfahren?')) return;
+        if (modalGroups.some(g => g.subtasks.length > 0) && !await window.appFrage('Bestehende Unteraufgaben werden beibehalten, neue Gruppen werden hinzugefügt. Fortfahren?')) return;
         
         qt.structure.forEach(stGroup => {
             let existing = modalGroups.find(mg => mg.name === stGroup.name);
@@ -1159,7 +1159,7 @@
     // ==========================================
     // Geschrieben wird in subtasks.assigned_to / start_date / end_date —
     // dieselben Spalten, die die Timeline liest und beim Verschieben setzt.
-    // Nötige Migration: supabase/supabase_add_subtask_planung.sql.
+    // Nötige Migration: supabase/migrationen/supabase_add_subtask_planung.sql.
     //
     // Wichtig: diese drei Felder lösen ABSICHTLICH kein renderModalGroups()
     // aus. Sonst würde die Liste unter dem Finger neu gebaut und das Feld
@@ -1242,8 +1242,8 @@
         if (typeof window.subtaskPlanungGeaendert === 'function') window.subtaskPlanungGeaendert();
     };
 
-    window.addNewSupergroupToTask = function() {
-        const name = prompt('Name der neuen Übergruppe:');
+    window.addNewSupergroupToTask = async function() {
+        const name = await window.appEingabe('Name der neuen Übergruppe:');
         if (!name) return;
         modalGroups.push({ name, subtasks: [], collapsed: false });
         renderModalGroups();

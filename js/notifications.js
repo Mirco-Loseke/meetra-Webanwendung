@@ -125,7 +125,7 @@
     // die gemeinsame Ablage — beim Start wird von dort geholt, bei jeder
     // Änderung dorthin geschrieben (verzögert, damit das Tippen in einem
     // Zahlenfeld nicht jede Ziffer einzeln schickt).
-    // Migration: supabase/supabase_add_notification_prefs.sql
+    // Migration: supabase/migrationen/supabase_add_notification_prefs.sql
     const PREFS_TABLE = 'notification_preferences';
     let schreibTimer = null;
     let prefsTabelleFehlt = false;

@@ -30,6 +30,16 @@ body {
     position: relative;
 }
 
+/* Formular-Elemente erben die Schrift nicht von selbst — ohne diese Regel
+   standen Knoepfe in Arial (Browser-Vorgabe), waehrend der Rest Inter ist.
+   Nur die Familie, nicht die Groesse: die Groessen setzen die Klassen. */
+button,
+input,
+select,
+textarea {
+    font-family: inherit;
+}
+
 .hidden {
     display: none !important;
 }

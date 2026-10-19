@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eine Liste – Entwurf</title>
+    <!-- Entwurf zur Vereinheitlichung von Glocke, To-do, Startseite und Vorgänge-Erinnerungen (2026-10-16). Lädt die App-Stylesheets wie index.html. -->
+    <link rel="stylesheet" href="../css/base/variables.css?v=1">
+    <link rel="stylesheet" href="../css/base/tokens.css?v=2">
+    <link rel="stylesheet" href="../css/base/reset.css?v=3">
+    <link rel="stylesheet" href="../css/base/brand-accents.css?v=1">
+    <link rel="stylesheet" href="../css/components/navigation.css?v=1">
+    <link rel="stylesheet" href="../css/components/modals.css?v=13">
+    <link rel="stylesheet" href="../css/components/ai-capture.css?v=2">
+    <link rel="stylesheet" href="../css/components/process-attachments.css?v=2">
+    <link rel="stylesheet" href="../css/components/buttons.css?v=3">
+    <link rel="stylesheet" href="../css/components/forms.css?v=6">
+    <link rel="stylesheet" href="../css/components/notifications.css?v=8">
+    <link rel="stylesheet" href="../css/components/reminder-alarm.css?v=10">
+    <link rel="stylesheet" href="../css/components/calendar.css?v=1">
+    <link rel="stylesheet" href="../css/components/calendar-widget.css?v=7">
+    <link rel="stylesheet" href="../css/components/dropdowns.css?v=4">
+    <link rel="stylesheet" href="../css/components/focus-mode.css?v=3">
+    <link rel="stylesheet" href="../css/components/elements.css?v=1">
+    <link rel="stylesheet" href="../css/components/appointments.css?v=1">
+    <link rel="stylesheet" href="../css/components/notification-settings.css?v=2">
+    <link rel="stylesheet" href="../css/components/sprachwahl.css?v=1">
+    <link rel="stylesheet" href="../css/views/documents.css?v=2">
+    <link rel="stylesheet" href="../css/views/protocols.css?v=2">
+    <link rel="stylesheet" href="../css/views/tasks.css?v=6">
+    <link rel="stylesheet" href="../css/views/service-reports.css?v=8">
+    <link rel="stylesheet" href="../css/views/machines.css?v=1">
+    <link rel="stylesheet" href="../css/views/timeline.css?v=55">
+    <link rel="stylesheet" href="../css/views/procurement.css?v=1">
+    <link rel="stylesheet" href="../css/views/settings.css?v=7">
+    <link rel="stylesheet" href="../css/views/user-edit.css?v=2">
+    <link rel="stylesheet" href="../css/views/accounting.css?v=2">
+    <link rel="stylesheet" href="../css/views/ausgangsrechnungen.css?v=2">
+    <link rel="stylesheet" href="../css/views/workshop.css?v=1">
+    <link rel="stylesheet" href="../css/views/workshop-tasks.css?v=4">
+    <link rel="stylesheet" href="../css/views/rechnungsliste.css?v=3">
+    <link rel="stylesheet" href="../css/components/ki-chat.css?v=7">
+    <link rel="stylesheet" href="../css/components/todo-liste.css?v=22">
+    <link rel="stylesheet" href="../css/components/entwurf-sicher.css?v=1">
+    <link rel="stylesheet" href="../css/components/cockpit.css?v=6">
+    <link rel="stylesheet" href="../css/components/globale-suche.css?v=4">
+    <link rel="stylesheet" href="../css/views/tasks-print.css?v=5">
+    <link rel="stylesheet" href="../css/views/dashboard.css?v=1">
+    <link rel="stylesheet" href="../css/views/listen.css?v=5">
+    <link rel="stylesheet" href="../css/views/addressbook.css?v=36">
+    <link rel="stylesheet" href="../css/components/medien-ablage.css?v=1">
+    <link rel="stylesheet" href="../css/views/routenplanung.css?v=8">
+    <link rel="stylesheet" href="../css/views/mail.css?v=26">
+    <link rel="stylesheet" href="../css/views/foto-eingang.css?v=4">
+    <link rel="stylesheet" href="../css/views/datenschutz.css?v=2">
+    <link rel="stylesheet" href="../css/base/responsive.css?v=35">
+    <link rel="stylesheet" href="../css/views/login.css?v=2">
+    <link rel="stylesheet" href="../css/views/history.css?v=9">
+    <link rel="stylesheet" href="../css/base/landscape.css?v=2">
+    <link rel="stylesheet" href="../css/components/voice-dictation.css?v=3">
+    <link rel="stylesheet" href="../css/views/machine-modal.css?v=6">
+    <link rel="stylesheet" href="../css/views/uvv-protokoll.css?v=5">
+    <link rel="stylesheet" href="../css/base/handy-kompakt.css?v=19">
+    <link rel="stylesheet" href="../css/base/utilities.css?v=5">
+    <link rel="stylesheet" href="../css/components/dropdown-look.css?v=5">
+    <link rel="stylesheet" href="../css/views/mietvereinbarung.css?v=76">
+    <link rel="stylesheet" href="../css/views/einstellungen.css?v=18">
+    <link rel="stylesheet" href="../css/views/accounting-modal.css?v=2">
+    <link rel="stylesheet" href="../css/views/accounting-toggle.css?v=2">
+    <link rel="stylesheet" href="../css/views/accounting-finance-cards.css?v=2">
+    <link rel="stylesheet" href="../css/components/knopf.css?v=3">
+    <style>
+        /* Nur für diese Vorschauseite */
+        body { padding: var(--space-8) var(--space-6); min-height: 100vh; }
+        .el-wrap { max-width: 1180px; margin: 0 auto; display: grid; gap: var(--space-6); }
+        .el-h1 { font-family: var(--font-heading); font-size: var(--fs-2xl); color: var(--text-1); }
+        .el-sub { color: var(--text-3); font-size: var(--fs-md); margin-top: var(--space-1); max-width: 820px; line-height: 1.5; }
+        .el-karte { background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-lg); padding: var(--space-6); }
+        .el-karte > h2 { font-family: var(--font-heading); font-size: var(--fs-lg); color: var(--text-1); margin-bottom: var(--space-4); }
+        .el-label { color: var(--text-3); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: var(--ls-caps); font-weight: 700; margin-bottom: var(--space-2); }
+
+        /* Vorher */
+        .el-vorher { display: grid; grid-template-columns: repeat(7, 1fr); gap: var(--space-3); }
+        .el-stelle { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-md); padding: var(--space-3); }
+        .el-stelle b { display: block; font-size: var(--fs-2xl); font-family: var(--font-heading); line-height: 1.1; }
+        .el-stelle span { display: block; color: var(--text-1); font-size: var(--fs-sm); font-weight: 700; margin-top: 4px; }
+        .el-stelle small { display: block; color: var(--text-3); font-size: var(--fs-xs); margin-top: 4px; line-height: 1.35; }
+        .el-rot { color: var(--danger-soft); } .el-gelb { color: var(--warning); } .el-blau { color: var(--info); } .el-grau { color: var(--text-3); } .el-gruen { color: var(--success-soft); }
+        .el-fazit { margin-top: var(--space-4); color: var(--text-2); font-size: var(--fs-md); line-height: 1.5; }
+        .el-fazit b { color: var(--text-1); }
+
+        /* Nachher */
+        .el-nachher { display: grid; grid-template-columns: 1fr 400px; gap: var(--space-6); align-items: start; }
+        .el-kopfleiste { display: flex; align-items: center; justify-content: flex-end; gap: var(--space-3); padding: var(--space-2) 0 var(--space-4); border-bottom: 1px solid rgba(255,255,255,0.06); margin-bottom: var(--space-4); }
+        .el-rund { width: 36px; height: 36px; border-radius: var(--radius-sm); background: rgba(255,255,255,0.05); display: inline-flex; align-items: center; justify-content: center; color: var(--text-2); }
+        .el-rund svg { width: 18px; height: 18px; }
+        .el-avatar { width: 36px; height: 36px; border-radius: 50%; background: #4338ca; color: #fff; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: var(--fs-sm); }
+        .el-durch { position: relative; opacity: .45; }
+        .el-durch::after { content: ''; position: absolute; left: -3px; right: -3px; top: 50%; height: 2px; background: var(--danger); transform: rotate(-35deg); }
+        .el-gruss { font-family: var(--font-heading); font-size: var(--fs-xl); color: var(--text-1); }
+        .el-gruss-sub { color: var(--text-3); font-size: var(--fs-sm); margin: 4px 0 var(--space-4); }
+        .el-gruss-sub b { color: var(--danger-soft); }
+
+        .el-liste { background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-lg); overflow: hidden; }
+        .el-liste-kopf { display: flex; align-items: center; justify-content: space-between; padding: var(--space-4); border-bottom: 1px solid rgba(255,255,255,0.06); }
+        .el-liste-kopf h3 { font-family: var(--font-heading); color: var(--text-1); font-size: var(--fs-lg); }
+        .el-abschnitt { padding: var(--space-3) var(--space-4) var(--space-1); display: flex; align-items: center; gap: var(--space-2); color: var(--text-2); font-size: var(--fs-xs); font-weight: 800; text-transform: uppercase; letter-spacing: var(--ls-caps); }
+        .el-zahl { min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; font-size: var(--fs-xs); font-weight: 800; }
+        .el-zahl.rot { background: var(--danger); color: #fff; } .el-zahl.grau { background: rgba(255,255,255,0.1); color: var(--text-2); } .el-zahl.gelb { background: rgba(251,191,36,0.18); color: var(--warning); }
+        .el-zeile { display: grid; grid-template-columns: 22px 1fr auto; gap: var(--space-3); align-items: center; padding: var(--space-3) var(--space-4); border-top: 1px solid rgba(255,255,255,0.04); }
+        .el-haken { width: 20px; height: 20px; border-radius: 6px; border: 2px solid rgba(255,255,255,0.25); }
+        .el-zeile-t { color: var(--text-1); font-size: var(--fs-md); font-weight: 600; line-height: 1.3; }
+        .el-zeile-s { color: var(--text-3); font-size: var(--fs-xs); margin-top: 2px; }
+        .el-wann { font-size: var(--fs-xs); font-weight: 800; white-space: nowrap; text-align: right; }
+        .el-neu { display: inline-block; font-size: 10px; font-weight: 800; color: #052e16; background: var(--success-soft); border-radius: 4px; padding: 1px 5px; margin-right: 6px; vertical-align: 1px; }
+        .el-zu { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); padding: var(--space-3) var(--space-4); border-top: 1px solid rgba(255,255,255,0.06); color: var(--text-2); font-size: var(--fs-sm); }
+        .el-zu .el-pfeil { color: var(--text-3); }
+        .el-hinweis { margin: var(--space-2) var(--space-4) var(--space-4); padding: var(--space-3); border-radius: var(--radius-md); background: rgba(251,191,36,0.08); border: 1px solid rgba(251,191,36,0.3); color: var(--text-2); font-size: var(--fs-sm); line-height: 1.45; }
+        .el-hinweis b { color: var(--warning); }
+        .el-hinweis .el-reihe { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-top: var(--space-2); }
+
+        .el-start { background: rgba(15, 23, 42, 0.55); border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-lg); }
+        .el-start .el-liste-kopf { padding: var(--space-3) var(--space-4); }
+        .el-start .el-liste-kopf h3 { font-size: var(--fs-md); display: flex; align-items: center; gap: var(--space-2); }
+        .el-start-fuss { padding: var(--space-3) var(--space-4); border-top: 1px solid rgba(255,255,255,0.06); }
+
+        .el-regeln { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4); }
+        .el-regel { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-md); padding: var(--space-4); }
+        .el-regel h4 { color: var(--text-1); font-size: var(--fs-md); margin-bottom: var(--space-2); }
+        .el-regel p, .el-regel li { color: var(--text-2); font-size: var(--fs-sm); line-height: 1.5; }
+        .el-regel ol, .el-regel ul { padding-left: 18px; }
+
+        .el-tabelle { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
+        .el-tabelle td, .el-tabelle th { text-align: left; padding: var(--space-2) var(--space-3); border-top: 1px solid rgba(255,255,255,0.06); color: var(--text-2); vertical-align: top; }
+        .el-tabelle th { color: var(--text-3); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: var(--ls-caps); border-top: 0; }
+        .el-tabelle td:first-child { color: var(--text-1); font-weight: 700; white-space: nowrap; }
+
+        @media (max-width: 768px) {
+            body { padding: var(--space-4) 14px; }
+            .el-vorher { grid-template-columns: repeat(2, 1fr); }
+            .el-nachher, .el-regeln { grid-template-columns: 1fr; }
+            .el-karte { padding: var(--space-4); }
+            .el-nur-desktop { display: none; }
+            .el-tabelle td:first-child { white-space: normal; }
+        }
+    </style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+    <symbol id="i-such" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+    <symbol id="i-kal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></symbol>
+    <symbol id="i-glocke" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+    <symbol id="i-druck" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/></symbol>
+    <symbol id="i-kal-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 10h18M12 13v5M9.5 15.5h5"/></symbol>
+</svg>
+
+<div class="el-wrap">
+    <div>
+        <div class="el-h1">Eine Liste statt sieben Stellen — Entwurf</div>
+        <div class="el-sub">Alles, was du tun musst, kommt aus <b>einer</b> Berechnung, steht in <b>einer</b> Reihenfolge und hat <b>eine</b> Zahl. Startseite und Liste zeigen dasselbe. Nichts geht verloren: Liegengebliebenes wird nicht versteckt, sondern zum Aufräumen gesammelt. Zahlen unten = dein Konto heute (16.10.).</div>
+    </div>
+
+    <!-- VORHER -->
+    <section class="el-karte">
+        <h2>Heute: 7 Stellen, 6 verschiedene Zahlen</h2>
+        <div class="el-vorher">
+            <div class="el-stelle"><b class="el-grau">0</b><span>Glocke oben</span><small>„Alles erledigt" — alle Kategorien seit 29.09. ausgeschaltet</small></div>
+            <div class="el-stelle"><b class="el-rot">12</b><span>Startseite</span><small>„12 Dinge brauchen dich" — die 12 <i>ältesten</i> (22–28 Tage)</small></div>
+            <div class="el-stelle"><b class="el-rot">9</b><span>To-do-Knopf</span><small>„Jetzt dran 3" — ganz <i>andere</i> Einträge (seit 14.10.)</small></div>
+            <div class="el-stelle"><b class="el-gelb">25</b><span>Vorgänge · Erinnerungen</span><small>24 überfällig, nach Datum, eigener „Für mich"-Schalter</small></div>
+            <div class="el-stelle"><b class="el-gelb">25</b><span>Vorgänge · Kacheln</span><small>„&gt; 7 Tage offen" — andere Bedeutung, gleiche Zahl</small></div>
+            <div class="el-stelle"><b class="el-rot">35</b><span>Listen · 2. Glocke</span><small>Angebots-Erinnerungen, eigenes Fenster</small></div>
+            <div class="el-stelle"><b class="el-blau">+2</b><span>Wecker &amp; Quittung</span><small>Karten, die sich darüberlegen</small></div>
+        </div>
+        <div class="el-fazit">Jede Stelle rechnet <b>selbst</b> (3× fast dieselbe Abfrage), mit eigener Regel, eigener Reihenfolge und eigenem „gelesen/erledigt". Ergebnis: Startseite und To-do haben heute <b>keinen einzigen gemeinsamen Eintrag</b> — und die Glocke sagt „alles erledigt".</div>
+    </section>
+
+    <!-- NACHHER -->
+    <section class="el-karte">
+        <h2>Neu: Startseite und „Meine Liste" zeigen dasselbe</h2>
+        <div class="el-nachher">
+            <div>
+                <div class="el-kopfleiste el-nur-desktop">
+                    <span class="el-rund"><svg><use href="#i-such"/></svg></span>
+                    <span class="el-rund"><svg><use href="#i-kal"/></svg></span>
+                    <span class="el-rund el-durch" title="Glocke entfällt"><svg><use href="#i-glocke"/></svg></span>
+                    <span style="color:var(--text-1); font-weight:700; font-size:var(--fs-sm);">Mirco Loseke</span>
+                    <span class="el-avatar">ML</span>
+                </div>
+                <div class="el-gruss">Guten Abend, Mirco</div>
+                <div class="el-gruss-sub">Freitag, 16. Oktober · <b>11 Sachen jetzt</b> · 13 liegen geblieben</div>
+
+                <div class="el-start">
+                    <div class="el-liste-kopf"><h3><span class="el-zahl rot">11</span> Jetzt dran</h3><button class="knopf knopf--text knopf--klein">Ganze Liste</button></div>
+                    <div class="el-zeile"><span class="el-haken"></span><div><div class="el-zeile-t">Übergabe Mietmaschine EYS MTS620</div><div class="el-zeile-s">Termin heute · Deeken Containerdienst</div></div><div class="el-wann el-blau">heute</div></div>
+                    <div class="el-zeile"><span class="el-haken"></span><div><div class="el-zeile-t">Servicebericht EYS MTS620</div><div class="el-zeile-s">Termin heute · #25EYS609001</div></div><div class="el-wann el-blau">heute</div></div>
+                    <div class="el-zeile"><span class="el-haken"></span><div><div class="el-zeile-t">Angebot 30182 – EP 5500 Shark 5</div><div class="el-zeile-s">Wiedervorlage · Torf- und Erdenwerk Wessels</div></div><div class="el-wann el-gelb">heute</div></div>
+                    <div class="el-zeile"><span class="el-haken"></span><div><div class="el-zeile-t">Angebot 30164 – ARJES IMPAKTOR 350 EVO II</div><div class="el-zeile-s">Wiedervorlage</div></div><div class="el-wann el-rot">seit 7 Tagen</div></div>
+                    <div class="el-zeile"><span class="el-haken"></span><div><div class="el-zeile-t">Angebot 30126 – SieboTec Siebo 5000 DH</div><div class="el-zeile-s">Wiedervorlage</div></div><div class="el-wann el-rot">seit 7 Tagen</div></div>
+                    <div class="el-start-fuss"><button class="knopf knopf--text knopf--klein">+ 6 weitere · Liste öffnen</button></div>
+                </div>
+            </div>
+
+            <div class="el-liste">
+                <div class="el-liste-kopf"><h3>Meine Liste <span class="el-zahl rot">11</span></h3><button class="knopf knopf--sekundaer knopf--klein"><svg><use href="#i-druck"/></svg>Drucken</button></div>
+                <div class="el-abschnitt"><span class="el-zahl rot">11</span> Jetzt</div>
+                <div class="el-zeile"><span class="el-haken"></span><div><div class="el-zeile-t">Übergabe Mietmaschine EYS MTS620</div><div class="el-zeile-s">Termin · Deeken Containerdienst</div></div><div class="el-wann el-blau">heute</div></div>
+                <div class="el-zeile"><span class="el-haken"></span><div><div class="el-zeile-t">Servicebericht EYS MTS620</div><div class="el-zeile-s">Termin · #25EYS609001</div></div><div class="el-wann el-blau">heute</div></div>
+                <div class="el-zeile"><span class="el-haken"></span><div><div class="el-zeile-t">Angebot 30182 nachfassen</div><div class="el-zeile-s">Wiedervorlage · Wessels</div></div><div class="el-wann el-gelb">heute</div></div>
+                <div class="el-zeile"><span class="el-haken"></span><div><div class="el-zeile-t">Angebot 30164 – ARJES 350</div><div class="el-zeile-s">Wiedervorlage</div></div><div class="el-wann el-rot">7 T</div></div>
+                <div class="el-zeile"><span class="el-haken"></span><div><div class="el-zeile-t">Angebot 30126 – SieboTec 5000</div><div class="el-zeile-s">Wiedervorlage</div></div><div class="el-wann el-rot">7 T</div></div>
+                <div class="el-zu"><span>+ 6 weitere in „Jetzt" (seit 2–7 Tagen)</span><span class="el-pfeil">▾</span></div>
+                <div class="el-zu"><span>Diese Woche <span class="el-zahl grau">4</span></span><span class="el-pfeil">▾</span></div>
+                <div class="el-zu"><span>Liegengeblieben (&gt; 7 Tage) <span class="el-zahl gelb">13</span></span><span class="el-pfeil">▾</span></div>
+                <div class="el-hinweis"><b>13 Wiedervorlagen</b> sind seit über einer Woche fällig. Zählen nicht mehr in die rote Zahl — aber bleiben hier, bis du sie aufräumst:
+                    <div class="el-reihe">
+                        <button class="knopf knopf--sekundaer knopf--klein"><svg><use href="#i-kal-plus"/></svg>Neues Datum</button>
+                        <button class="knopf knopf--sekundaer knopf--klein"><svg><use href="#i-check"/></svg>Erledigt</button>
+                        <button class="knopf knopf--text knopf--klein">Abgeben</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- REGELN -->
+    <section class="el-karte">
+        <h2>Die Regeln dahinter</h2>
+        <div class="el-regeln">
+            <div class="el-regel"><h4>1 · Was ist „Jetzt"?</h4><ol>
+                <li>Termine heute (mit Uhrzeit, der Reihe nach)</li>
+                <li>heute fällig</li>
+                <li>überfällig bis 7 Tage (älteste zuerst)</li>
+                <li>neu zugewiesen, noch nicht geöffnet</li></ol>
+                <p style="margin-top:8px">Nur das zählt in die <b>rote Zahl</b>. Älter als 7 Tage → „Liegengeblieben", nicht weg.</p></div>
+            <div class="el-regel"><h4>2 · Wo steht die Zahl?</h4><ul>
+                <li><b>Ein</b> Knopf „Meine Liste" (heute: To-do-Knopf, Handy: Leiste unten)</li>
+                <li>Startseite zeigt die ersten 5 davon — gleiche Einträge, gleiche Reihenfolge</li>
+                <li>Glocke oben entfällt; Zuweisungen/Einladungen stehen als <span class="el-neu">NEU</span> in der Liste</li></ul></div>
+            <div class="el-regel"><h4>3 · Wann ist etwas weg?</h4><ul>
+                <li>nur wenn es <b>wirklich</b> erledigt ist (Schritt abgehakt, Vorgang erledigt, Datum verschoben)</li>
+                <li>kein „gelesen" pro Browser mehr — was auf dem PC erledigt ist, ist auch auf dem Handy weg</li>
+                <li>eigene Notizen bleiben, bis du sie abhakst</li>
+                <li><b>Drucken</b>: ganze Liste aufs Blatt (alle Abschnitte, Kästchen zum Abhaken, Platz für Notizen) — zum Arbeiten per Hand</li></ul></div>
+        </div>
+    </section>
+
+    <section class="el-karte">
+        <h2>Was aus den heutigen Stellen wird</h2>
+        <table class="el-tabelle">
+            <tr><th>Heute</th><th>Neu</th></tr>
+            <tr><td>Glocke oben</td><td>entfällt. Zuweisungen, Termin-Einladungen, „X hat erhalten" → als NEU in die Liste</td></tr>
+            <tr><td>Startseite „Jetzt zuerst"</td><td>zeigt die ersten 5 der Liste (gleiche Zahl). „Demnächst 7 Tage" bleibt als Kalender-Vorschau, ohne Zahl</td></tr>
+            <tr><td>To-do-Knopf</td><td>wird „Meine Liste" — der <b>einzige</b> Ort mit roter Zahl</td></tr>
+            <tr><td>Vorgänge · Erinnerungen-Block</td><td>entfällt. Dafür Filter „Fällig für mich" in der Vorgangsliste (gleiche Regel)</td></tr>
+            <tr><td>Vorgänge · Kacheln</td><td>bleiben als Team-Übersicht (Offen / In Arbeit / Erledigt), ohne Rot</td></tr>
+            <tr><td>Listen · 2. Glocke</td><td>entfällt. Eigene Angebots-Erinnerungen → Liste; „Nachfassen rot/orange" bleibt als Auswertung</td></tr>
+            <tr><td>Pop-up-Meldungen (Wecker)</td><td><b>bleiben</b> — sie zeigen dieselben Einträge wie die Liste. Wann/wie oft sie aufgehen: wird noch gesondert festgelegt</td></tr>
+            <tr><td>Übergabe-Quittung</td><td>bleibt (einmal beim Zuweisen), danach steht der Vorgang als NEU in der Liste</td></tr>
+        </table>
+    </section>
+</div>
+</body>
+</html>

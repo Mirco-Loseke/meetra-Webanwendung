@@ -342,11 +342,11 @@
 [id^="settings-"] select,
 [id^="settings-"] textarea,
 .glass-form-input {
-    background: rgba(255, 255, 255, 0.05) !important;
-    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    background: var(--feld-bg) !important;
+    border: 1px solid var(--feld-rand) !important;
     color: #fff !important;
-    border-radius: var(--radius-md) !important;
-    padding: 10px 16px !important;
+    border-radius: var(--feld-radius) !important;
+    padding: var(--feld-pad) !important;
     font-family: var(--font-body) !important;
     font-size: var(--fs-md) !important;
     outline: none !important;
@@ -359,9 +359,9 @@
 [id^="settings-"] select:focus,
 [id^="settings-"] textarea:focus,
 .glass-form-input:focus {
-    background: rgba(255, 255, 255, 0.08) !important;
-    border-color: rgba(239, 68, 68, 0.6) !important;
-    box-shadow: 0 0 15px rgba(239, 68, 68, 0.2) !important;
+    background: var(--feld-fokus-bg) !important;
+    border-color: var(--feld-fokus-rand) !important;
+    box-shadow: var(--feld-fokus-ring) !important;
 }
 
 [id^="settings-"] input::placeholder,

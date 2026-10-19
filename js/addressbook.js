@@ -1747,7 +1747,7 @@
             { key: 'links', label: 'Verknüpfungen', count: totalLinksCount },
             { key: 'tasks', label: 'Vorgänge', count: tasksList.length },
             { key: 'appointments', label: 'Termine', count: (state.detail.appointments || []).length },
-            { key: 'mails', label: 'Mails' },
+            { key: 'mails', label: 'Mails', count: gemerkteMails(a) },
             { key: 'history', label: 'Historie', count: historyCount },
             { key: 'ablage', label: 'Ablage', count: window.adressAblageAnzahl ? window.adressAblageAnzahl(state.detail) : undefined }
         ];
@@ -2240,7 +2240,6 @@
                 </div>
                 <div class="ab-sub-card-actions-column">
                     <button class="ab-icon-btn" data-ab-action="machine-open" data-ab-id="${esc(m.id)}" title="Maschine bearbeiten / öffnen" style="background: rgba(59, 130, 246, 0.15); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.3);">${ic('edit', 15)}</button>
-                    <button class="ab-icon-btn" data-ab-action="machine-history" data-ab-id="${esc(m.id)}" title="Historie der Maschine" style="background: rgba(59, 130, 246, 0.15); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.3);">${ic('history', 15)}</button>
                 </div>
             </div>
             <div class="ab-sub-card-body">
@@ -2393,11 +2392,20 @@
 
     // Mails aus Outlook zu dieser Adresse — gezeichnet von js/mail-view.js
     // (window.addressMailsRender), sobald der Platzhalter im DOM steht.
-    function renderMailsTab(a) {
+    // Mail-Adressen der Adresse (Firma, weitere, Ansprechpartner) — Grundlage für Reiter und Zähler
+    function mailAdressenVon(a) {
         const adressen = [a.email].concat(Array.isArray(a.emails_extra) ? a.emails_extra : [])
             .concat((state.detail.contacts || []).map(c => c.email))
             .map(e => (e || '').trim().toLowerCase()).filter(Boolean);
-        const eindeutig = Array.from(new Set(adressen));
+        return Array.from(new Set(adressen));
+    }
+    // Zuletzt ermittelte Mailzahl (Outlook-Suche läuft erst beim Öffnen des Reiters, deshalb gemerkt)
+    function gemerkteMails(a) {
+        try { const m = JSON.parse(localStorage.getItem('meetra_adr_mails') || '{}'); const e = m[mailAdressenVon(a).sort().join(',')]; return e && typeof e.n === 'number' ? e.n : undefined; } catch (e) { return undefined; }
+    }
+
+    function renderMailsTab(a) {
+        const eindeutig = mailAdressenVon(a);
         setTimeout(() => {
             const el = document.getElementById('ab-mails-tab');
             if (el && typeof window.addressMailsRender === 'function') window.addressMailsRender(el, eindeutig, a.name || '');
@@ -2444,7 +2452,7 @@
         } catch (e) {
             const fehlt = /rechnungen/.test(e.message || '') && /exist|find/.test(e.message || '');
             belegeCache.set(customerId, { zeilen: [], fehler: fehlt
-                ? 'Die Tabelle fehlt noch — supabase/supabase_add_rechnungen.sql in Supabase ausführen.'
+                ? 'Die Tabelle fehlt noch — supabase/migrationen/supabase_add_rechnungen.sql in Supabase ausführen.'
                 : (e.message || String(e)) });
         }
         if (state.currentId === customerId && state.detailTab === 'belege') renderDetail();
@@ -2844,11 +2852,12 @@
 
             if (imageUrls.length > 0) {
                 const jsonFiles = JSON.stringify(imageUrls).replace(/"/g, '&quot;');
+                const capJson = JSON.stringify({ titel: [mh.title || config.label, item.dateStr].filter(Boolean).join(' · '), namen: [] }).replace(/"/g, '&quot;');
                 filesHtml = `
                     <div style="display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; align-items: center;">
                         ${imageUrls.slice(0, 6).map((imgUrl, idx) => `
                             <img src="${esc(imgUrl)}" 
-                                 onclick="event.stopPropagation(); window.openPhotosLightbox && window.openPhotosLightbox(${jsonFiles}, ${idx})" 
+                                 onclick="event.stopPropagation(); window.openPhotosLightbox && window.openPhotosLightbox(${jsonFiles}, ${idx}, ${capJson})" 
                                  style="width: 56px; height: 56px; object-fit: cover; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); cursor: pointer; transition: transform 0.2s;" 
                                  onmouseover="this.style.transform='scale(1.06)'" 
                                  onmouseout="this.style.transform='scale(1)'" 
@@ -3187,7 +3196,7 @@
         const angebote = state.detail.angeboteListeByProcess || {};
         const angAlle = alle.flatMap(p => angebote[String(p.id)] || []);
         const frage = `${alle.length} Vorgänge zu einem zusammenführen?\n\nBleibt: „${ziel.title || 'Unbenannter Vorgang'}“\nGehen darin auf: ${quellen.map(q => '„' + (q.title || 'Unbenannter Vorgang') + '“').join(', ')}\n\nSchritte, Stände, Dokumente, Zuständige und Texte werden zusammengelegt${angAlle.length ? `, ${angAlle.length} Angebot(e) hängen danach an dem einen Vorgang` : ''}. Die anderen Vorgänge werden gelöscht. Das lässt sich nicht rückgängig machen.`;
-        if (!confirm(frage)) return;
+        if (!await window.appFrage(frage)) return;
 
         const ohneDoppel = (listen, key) => {
             const gesehen = new Set();
@@ -3972,8 +3981,8 @@
     // Schließen mit Rückfrage — nur für Abbrechen/Klick daneben, damit man die
     // Kontakt-Vorschau nicht versehentlich verwirft. Die Aktions-Knöpfe
     // (Übernehmen/Ergänzen) schließen weiterhin direkt über closeAbOverlay().
-    function closeAbOverlayAsk() {
-        if (!confirm('Kontakt-Vorschau wirklich schließen? Noch nicht übernommene Daten gehen verloren.')) return;
+    async function closeAbOverlayAsk() {
+        if (!await window.appFrage('Kontakt-Vorschau wirklich schließen? Noch nicht übernommene Daten gehen verloren.')) return;
         closeAbOverlay();
     }
 
@@ -4831,7 +4840,7 @@
         }
         msg += '\nDieser Vorgang kann nicht rückgängig gemacht werden.';
 
-        if (!confirm(msg)) return;
+        if (!await window.appFrage(msg)) return;
 
         try {
             // Maschinenzuordnung vorher lösen, damit das Löschen nicht an der
@@ -4915,7 +4924,7 @@
         if (typeof window.canDelete === 'function' && !window.canDelete('Ansprechpartnern')) return;
         const c = state.detail.contacts.find(x => String(x.id) === String(contactId));
         if (!c) return;
-        if (!confirm(`Ansprechpartner "${c.name}" endgültig löschen?`)) return;
+        if (!await window.appFrage(`Ansprechpartner "${c.name}" endgültig löschen?`)) return;
         try {
             const { error } = await sb().from('customer_contacts').delete().eq('id', c.id);
             if (error) throw error;
@@ -5116,7 +5125,7 @@
 
     async function deleteLink(linkId) {
         if (typeof window.canDelete === 'function' && !window.canDelete('Verknüpfungen')) return;
-        if (!confirm('Verknüpfung entfernen?')) return;
+        if (!await window.appFrage('Verknüpfung entfernen?')) return;
         try {
             const { error } = await sb().from('customer_links').delete().eq('id', linkId);
             if (error) throw error;
@@ -5274,7 +5283,7 @@
         const m = state.detail.machines.find(x => String(x.id) === String(machineId));
         if (!m) return;
         const label = [m.manufacturer, m.name].filter(Boolean).join(' ') || 'Maschine';
-        if (!confirm(`Verknüpfung zu "${label}" lösen?\n\nDie Maschine selbst bleibt erhalten.`)) return;
+        if (!await window.appFrage(`Verknüpfung zu "${label}" lösen?\n\nDie Maschine selbst bleibt erhalten.`)) return;
         try {
             const payload = { customer_id: null };
 
@@ -5380,9 +5389,9 @@
         });
     }
 
-    function deleteCustomMachine(customId) {
+    async function deleteCustomMachine(customId) {
         if (typeof window.canDelete === 'function' && !window.canDelete('Maschinen')) return;
-        if (!confirm('Diese manuelle Maschine von der Adresse entfernen?')) return;
+        if (!await window.appFrage('Diese manuelle Maschine von der Adresse entfernen?')) return;
         const currentList = getAddressCustomMachines(state.currentId);
         const newList = currentList.filter(x => String(x.id) !== String(customId));
         saveAddressCustomMachines(state.currentId, newList);
@@ -5460,7 +5469,7 @@
         // Eigener Bereich: das ist der Verlauf AN EINER ADRESSE
         // (customer_notes) — nicht die Maschinen-Historie in js/history-modal.js.
         if (typeof window.canDelete === 'function' && !window.canDelete('Adress-Einträgen')) return;
-        if (!confirm('Historien-Eintrag löschen?')) return;
+        if (!await window.appFrage('Historien-Eintrag löschen?')) return;
         try {
             const { error } = await sb().from('customer_notes').delete().eq('id', noteId);
             if (error) throw error;
@@ -5932,12 +5941,12 @@
                     }
                 } catch (pErr) {
                     console.warn('Teilnehmer nicht speicherbar:', pErr.message);
-                    window.showToast('Termin gespeichert, aber die Einladung der Kollegen nicht.\n\nDazu muss supabase/supabase_add_event_participants.sql in Supabase laufen.');
+                    window.showToast('Termin gespeichert, aber die Einladung der Kollegen nicht.\n\nDazu muss supabase/migrationen/supabase_add_event_participants.sql in Supabase laufen.');
                 }
             }
 
             if (weggelassen.includes('customer_id')) {
-                window.showToast('Termin gespeichert, aber OHNE Adressbezug — er taucht deshalb nicht unter „Termine" bei der Adresse auf.\n\nIn Supabase fehlt die Spalte maintenance_events.customer_id als uuid. Bitte supabase/supabase_add_event_customer.sql im SQL-Editor ausführen, dann klappt auch die Zuordnung.');
+                window.showToast('Termin gespeichert, aber OHNE Adressbezug — er taucht deshalb nicht unter „Termine" bei der Adresse auf.\n\nIn Supabase fehlt die Spalte maintenance_events.customer_id als uuid. Bitte supabase/migrationen/supabase_add_event_customer.sql im SQL-Editor ausführen, dann klappt auch die Zuordnung.');
             } else if (weggelassen.length) {
                 window.showToast('Termin gespeichert, aber ohne: ' + weggelassen.join(', ') + '.\n\nDazu fehlt eine Spalte in der Datenbank.');
             } else {
@@ -5959,7 +5968,7 @@
         // Kalendertermine (maintenance_events) — deshalb dieselbe Berechtigung.
         if (typeof window.canDelete === 'function' && !window.canDelete('Terminen')) return;
         if (!id) return;
-        if (!confirm('Diesen Termin wirklich löschen?')) return;
+        if (!await window.appFrage('Diesen Termin wirklich löschen?')) return;
         try {
             const { error } = await sb().from('maintenance_events').delete().eq('id', id);
             if (error) throw error;

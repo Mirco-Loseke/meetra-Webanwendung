@@ -124,6 +124,15 @@
     /* ----------------------------------------------------- */
     /* Radien — nach Elementgroesse, nicht nach Gefuehl       */
     /* ----------------------------------------------------- */
+    /* Eingabefelder: EIN Look für .glass-input, .glass-form-input, Auswahlfelder und Maschinen-Fenster (UI-07) */
+    --feld-radius: var(--radius-md);
+    --feld-pad: 11px 14px;
+    --feld-bg: rgba(255, 255, 255, 0.05);
+    --feld-rand: rgba(255, 255, 255, 0.12);
+    --feld-fokus-rand: rgba(52, 211, 153, 0.65);
+    --feld-fokus-bg: rgba(52, 211, 153, 0.06);
+    --feld-fokus-ring: 0 0 0 3px rgba(52, 211, 153, 0.16);
+
     --radius-xs: 6px;     /* Badges, Tags                    */
     --radius-sm: 10px;    /* Buttons, Inputs                 */
     --radius-md: 14px;    /* Listenzeilen, kleine Karten     */
@@ -170,6 +179,19 @@
     --danger-soft: #f87171;
     --warning: #fbbf24;
     --info: #60a5fa;
+
+    /* ----------------------------------------------------- */
+    /* Knöpfe (css/components/knopf.css)                      */
+    /* ----------------------------------------------------- */
+    --knopf-h: 40px;          /* Standardhöhe Desktop             */
+    --knopf-h-klein: 32px;    /* Filter, Karten-Aktionen          */
+    --tippflaeche: 44px;      /* Mindestgröße Handy (Apple/Google) */
+    --knopf-primaer: #16a34a;        /* Grün; mit weißer Schrift 3,3:1 — reicht bei fett */
+    --knopf-primaer-hover: #15803d;
+    --knopf-ki: #8b5cf6;             /* Lila = KI, wie bisher     */
+    --knopf-flaeche: rgba(255, 255, 255, 0.06);
+    --knopf-flaeche-hover: rgba(255, 255, 255, 0.12);
+    --knopf-rand: rgba(255, 255, 255, 0.14);
 
     /* ----------------------------------------------------- */
     /* Breakpoints (dokumentiert — @media kann keine Variablen */

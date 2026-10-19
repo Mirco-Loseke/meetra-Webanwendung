@@ -125,6 +125,7 @@
         { i: '➕', l: 'Unteraufgaben ergänzen', text: 'Zur Aufgabe … folgende Unteraufgaben hinzufügen: ' },
         { i: '📷', l: 'Foto einer Maschine zuordnen', text: 'Foto zur Maschine ', foto: true },
         { i: '⚠️', l: 'Schadensbericht aufnehmen', text: 'Schadensbericht: Maschine … — Schaden: ' },
+        { i: '🏷️', l: 'Typenschild → Maschine anlegen', text: 'Bitte lege aus dem Typenschild eine neue Maschine an. ', foto: true },
         { i: '🔍', l: 'Bild analysieren', text: 'Was ist auf dem Bild zu sehen?', foto: true },
         { i: '✍️', l: 'Handschrift abschreiben', text: 'Bitte den handschriftlichen Zettel abschreiben und als Eintrag ablegen bei ', foto: true },
         { i: '📊', l: 'Service-Statistik', text: 'Wie sieht unsere Service-Statistik der letzten 12 Monate aus? Welche Maschinen waren am häufigsten dran?' },
@@ -525,6 +526,7 @@
             z.push(`${r} = ${b.title || 'Servicebericht'}${d ? ' vom ' + new Date(d).toLocaleDateString('de-DE') : ''} (Maschine m${b.machine_id})${b.is_finalized ? ' [abgeschlossen]' : ''}`);
         });
         if (!berichte.length) z.push('(keiner zu den genannten Maschinen)');
+        z.push('KATEGORIEN: ' + (window.categoryList || []).map(c => c.name).filter(Boolean).join(', '));
         z.push('MITARBEITER: ' + (window.userList || []).map(u => u.name).filter(Boolean).join(', '));
         return z.join('\n');
     }
@@ -542,6 +544,7 @@ Mögliche Aktionen:
 {"art":"foto","maschine":"mID|null","bilder":[Bildnummern],"titel":"kurz","notiz":"was zu sehen ist"}
 {"art":"handschrift","adresse":"adrN|null","maschine":"mID|null","titel":"kurz, worum es geht","text":"vollständige wörtliche Abschrift","bilder":[Bildnummern],"unsicher":["schwer lesbare Wörter/Zahlen"]}
 {"art":"servicebericht","bericht":"sN|null","maschine":"mID|null","bilder":[Bildnummern],"text":"Ergänzung/Bemerkung oder leer"}
+{"art":"maschine_neu","hersteller":"","typ":"Typbezeichnung/Modell","serie":"","seriennummer":"","baujahr":"","motortyp":"","motornummer":"","leistung":"z. B. 132 kW","kategorie":"Name aus KATEGORIEN oder leer","adresse":"adrN|null","typenschild":[Bildnummern des Typenschilds],"maschinenbild":Bildnummer|null,"notiz":"weitere Angaben vom Schild (Gewicht, Spannung, Baumuster …) oder leer"}
 {"art":"schaden","maschine":"mID|null","titel":"kurz, z. B. Hydraulikschlauch geplatzt","schaden":"was ist beschädigt/defekt, wie sieht es aus","bauteil":"betroffenes Bauteil","ursache":"vermutete Ursache oder leer","schwere":"gering|mittel|hoch","betriebsbereit":"ja|eingeschränkt|nein","massnahme":"empfohlene Reparatur/Sofortmaßnahme","bilder":[Bildnummern]}
 Jede Aktion mit Maschinenbezug bekommt zusätzlich "erkannt":{"seriennummer":"","hersteller":"","typ":"","baujahr":"","kunde":""} — genau so, wie es im Text oder auf dem Bild (Typenschild!) steht, Ziffern exakt abschreiben, Unbekanntes leer. Damit ordnet die App die Maschine auch zu, wenn sie nicht in der Liste steht.
 Regeln:
@@ -550,6 +553,9 @@ Regeln:
 - Ist keine passende Maschine in der Liste, "maschine": null lassen — aber "erkannt" immer ausfüllen.
 - Bilder: kurz beschreiben, was zu sehen ist. Typenschild → Seriennummer/Hersteller lesen und die Maschine aus der Liste zuordnen. Will der Nutzer das Foto ablegen oder zuordnen → Aktion "foto".
 - "Schaden", "Schadensbericht", "kaputt", "beschädigt" oder ein Schaden auf dem Foto → Aktion "schaden" (die App legt auf Wunsch selbst den Reparatur-Vorgang dazu an, also NICHT zusätzlich "vorgang"). Fehlt Wichtiges, trotzdem die Aktion liefern und in "antwort" kurz nachfragen.
+- TYPENSCHILD + Wunsch, eine Maschine anzulegen ("anlegen", "neue Maschine", "hinzufügen") — oder ein Typenschild, dessen Maschine NICHT in der LISTE steht und der Nutzer nichts anderes verlangt → Aktion "maschine_neu": ALLE Angaben des Schildes exakt abschreiben (Hersteller, Typ/Modell, Seriennummer, Baujahr, Motor-/Leistungsdaten); Unbekanntes leer lassen, nichts erfinden. Schickt der Nutzer zusätzlich ein Foto der ganzen Maschine (oder schreibt "das ist das Maschinenbild"), dessen Nummer in "maschinenbild" setzen und das Typenschild-Foto in "typenschild". Ist die Maschine schon in der LISTE (gleiche Seriennummer), KEIN maschine_neu — dann ggf. "foto".
+- ZETTEL MIT MEHREREN ABSCHNITTEN (z. B. ein Absatz für Kunde A, ein anderer für Kunde B oder eine Maschine): liefere für JEDEN Abschnitt eine eigene Aktion "handschrift" mit nur dessen Text. Ordne jeden Abschnitt allein nach seinem Inhalt zu (Firmenname, Ort, Maschine, Seriennummer im Abschnitt) — der Nutzertext gilt nicht für alle. Betrifft ein Abschnitt eine bestimmte Maschine, "maschine" setzen (und "erkannt" ausfüllen), betrifft er allgemein den Kunden, nur "adresse"/"erkannt":{"kunde":"…"} setzen. Lies Firmen-/Ortsnamen im Abschnitt exakt in "erkannt.kunde", auch wenn die LISTE sie nicht enthält.
+- GEDRUCKTE LISTE (Vorgangs-/To-do-Liste mit handschriftlichen Notizen daneben): für jeden Eintrag, bei dem etwas handschriftlich dazugeschrieben wurde, eine Aktion "handschrift": "erkannt.kunde" = Firma/Ort des gedruckten Eintrags, "titel" = "Notiz zur Liste: <Firma>", "text" = nur die handschriftliche Ergänzung (mit dem gedruckten Eintrag als erste Zeile in Klammern). Einträge ohne Handschrift auslassen.
 - Handschriftlicher Zettel, Notiz, Aufmaß, Formular oder Liste auf dem Foto → Aktion "handschrift": den Text VOLLSTÄNDIG und WÖRTLICH abschreiben (Zeilenumbrüche als \n, Zahlen, Maße, Seriennummern und Telefonnummern exakt, Abkürzungen nicht auflösen), unleserliche Stellen als [?] markieren und in "unsicher" nennen. Adresse/Maschine aus Text oder Zettel zuordnen. Nicht zusammenfassen — die Zusammenfassung gehört höchstens in "titel".
 - "Servicebericht", "Bericht", "Einsatz", "beim Bericht", "zum Bericht hinzufügen/ergänzen/nachtragen/anhängen" → Aktion "servicebericht": der Nutzer will etwas an einem VORHANDENEN Servicebericht ablegen (Bilder anhängen und/oder Text ergänzen). Bericht aus SERVICEBERICHTE wählen (passende Maschine, sonst der neueste); "letzter"/"heutiger" = neuester. Ist keiner eindeutig: "bericht": null, aber "maschine" setzen. Bilder dann NICHT zusätzlich als "foto" vorschlagen.
 - Sonstige Defekte → gerne Vorgang (typ repair) oder Aufgabe vorschlagen.
@@ -618,7 +624,7 @@ ${kontext}`;
         if (nutzer.bilder.length) {
             messages.push({ role: 'user', content: nutzer.bilder.flatMap(nr => [{ type: 'text', text: 'Bild ' + nr + ':' }, { type: 'image_url', image_url: { url: alleBilder[nr].url } }]) });
         }
-        const payload = { model: nutzer.bilder.length ? VISION_MODEL : textModel(), messages, temperature: 0.2, max_tokens: 2048, response_format: { type: 'json_object' } };
+        const payload = { model: nutzer.bilder.length ? VISION_MODEL : textModel(), messages, temperature: 0.2, max_tokens: nutzer.bilder.length ? 4096 : 2048, response_format: { type: 'json_object' } };
         const holen = window.kiPseudonym ? window.kiPseudonym.fetchMaskiert : window.groqFetch;
         let resp = await holen(payload);
         if (resp.status === 400 && nutzer.bilder.length === 0) {
@@ -676,19 +682,47 @@ ${kontext}`;
         }
         if (!o) return { antwort: s, aktionen: [] };
         const r = refs || { adr: {}, m: {}, t: {}, v: {} };
+        const mehrere = (Array.isArray(o.aktionen) ? o.aktionen : []).filter(a => a && a.art === 'handschrift').length > 1;
         const liste = (Array.isArray(o.aktionen) ? o.aktionen : []).map(a => {
             const x = Object.assign({}, a);
+            if (a.art === 'maschine_neu') {
+                // Neue Maschine: keine Maschinenzuordnung, nur Adresse + Doppelt-Prüfung über die Seriennummer
+                x.erkannt = a.erkannt || null;
+                x.adresse = a.adresse && r.adr[a.adresse] ? r.adr[a.adresse] : null;
+                if (!x.adresse && E) {
+                    const al = E.adressen([a.erkannt && a.erkannt.kunde, nutzerText].filter(Boolean).join(' '));
+                    const as = E.eindeutig(al, 4);
+                    if (as) { x.adresse = as.k; x.adrTreffer = 'erkannt über ' + as.grund; }
+                }
+                const sn = String(a.seriennummer || '').replace(/[^a-z0-9]/gi, '').toLowerCase();
+                x.doppelt = sn.length >= 4 ? (window.machineList || []).find(m => String(m.serial || m.serial_number || '').replace(/[^a-z0-9]/gi, '').toLowerCase() === sn) || null : null;
+                return x;
+            }
+            const eigen = a.art === 'handschrift' && mehrere;   // Abschnitt eines Zettels: nur der eigene Text zählt
             x.maschine = a.maschine && r.m[a.maschine] ? r.m[a.maschine] : null;
             x.erkannt = a.erkannt || o.erkannt || null;
-            const f = ausText || (x.erkannt ? maschineFinden(x.erkannt) : null);
+            const f = eigen ? (x.erkannt ? maschineFinden(x.erkannt) : null) : (ausText || (x.erkannt ? maschineFinden(x.erkannt) : null));
             // Sicher gelesene Seriennummer schlägt die Wahl der KI
             if (f && (!x.maschine || (f.sicher && f.m.id !== x.maschine.id))) x.maschine = f.m;
             x.treffer = f ? (f.m === x.maschine ? f.grund : '') : '';
             x.adresse = a.adresse && r.adr[a.adresse] ? r.adr[a.adresse] : null;
             // Adresse: eindeutig im Text erkannt → setzen (bzw. KI-Wahl korrigieren,
             // wenn die KI eine andere als die klar genannte nimmt)
-            if (adrSicher && (!x.adresse || String(x.adresse.id) !== String(adrSicher.k.id))) {
+            if (!eigen && adrSicher && (!x.adresse || String(x.adresse.id) !== String(adrSicher.k.id))) {
                 x.adresse = adrSicher.k; x.adrTreffer = 'erkannt über ' + adrSicher.grund;
+            }
+            // Handschrift: Adresse/Maschine aus dem Text des Abschnitts selbst erkennen
+            // (bei Fotos kennt die KI keine passende Liste, weil im Nutzertext kein Name steht)
+            if (a.art === 'handschrift' && E) {
+                const sek = [a.titel, a.text, x.erkannt && x.erkannt.kunde, x.erkannt && x.erkannt.typ].filter(Boolean).join(' ');
+                const al = E.adressen(sek);
+                const as = E.eindeutig(al, 4);
+                if (as && (!x.adresse || (eigen && String(x.adresse.id) !== String(as.k.id)))) { x.adresse = as.k; x.adrTreffer = 'erkannt im Abschnitt über ' + as.grund; }
+                if (!x.maschine) {
+                    const ms2 = E.eindeutig(E.maschinen(sek, al), 5);
+                    if (ms2) { x.maschine = ms2.m; x.treffer = ms2.grund; }
+                }
+                if (mehrere) x.fotoMit = false;
             }
             // Keine Adresse, aber Maschine mit Kundenverknüpfung → deren Kunde
             if (!x.adresse && x.maschine && x.maschine.customer_id) {
@@ -712,7 +746,7 @@ ${kontext}`;
             }
             x.kand = { t: Object.values(r.t), v: Object.values(r.v), s: Object.values(r.s || {}) };
             return x;
-        }).filter(a => ['vorgang', 'vorgang_stand', 'aufgabe', 'unteraufgaben', 'foto', 'schaden', 'handschrift', 'servicebericht'].includes(a.art));
+        }).filter(a => ['vorgang', 'vorgang_stand', 'aufgabe', 'unteraufgaben', 'foto', 'schaden', 'handschrift', 'servicebericht', 'maschine_neu'].includes(a.art));
         return { antwort: String(o.antwort || ''), aktionen: liste };
     }
 
@@ -798,7 +832,7 @@ ${kontext}`;
         const id = `data-m="${mi}" data-a="${ai}"`;
         if (a.status === 'verworfen') return `<div class="kic-karte kic-verworfen" ${id}>Verworfen: ${esc(a.titel || a.art)}</div>`;
         if (a.status === 'fertig') {
-            const link = (a.art === 'schaden' && a.zielId) || (a.art === 'servicebericht' && a.zielId) || a.art === 'vorgang' || a.art === 'vorgang_stand' || a.art === 'aufgabe' || a.art === 'unteraufgaben';
+            const link = (a.art === 'maschine_neu' && a.zielId) || (a.art === 'schaden' && a.zielId) || (a.art === 'servicebericht' && a.zielId) || a.art === 'vorgang' || a.art === 'vorgang_stand' || a.art === 'aufgabe' || a.art === 'unteraufgaben';
             return `<div class="kic-karte kic-fertig" ${id}><span>✓ ${esc(a.fertigText || 'Erledigt')}</span>${link ? '<button type="button" class="kic-link" data-kic="oeffnen">Öffnen →</button>' : ''}</div>`;
         }
         let kopf = '', body = '', knopf = '';
@@ -874,6 +908,33 @@ ${kontext}`;
                 + feld('', 'Ergänzung / Bemerkung (optional)', `<textarea class="kic-f-text" rows="2" placeholder="wird an die Bemerkungen angehängt">${esc(a.text)}</textarea>`)
                 + '<div class="kic-zust">Bilder kommen zu den Anhängen des Berichts. Text wird an die Bemerkungen angehängt — bei abgeschlossenen Berichten (🔒) nur Bilder, das unterschriebene PDF bleibt unverändert.</div>';
             knopf = nrs.length ? 'Zum Bericht hinzufügen' : 'Ergänzung speichern';
+        } else if (a.art === 'maschine_neu') {
+            const ts = (Array.isArray(a.typenschild) ? a.typenschild : []).map(Number);
+            const mb = Number(a.maschinenbild);
+            const nrs = Array.from(new Set(ts.concat(isFinite(mb) && mb ? [mb] : []))).filter(n => alleBilder[n]);
+            if (!nrs.length) Object.keys(alleBilder).slice(-2).forEach(n => nrs.push(+n));
+            a.bilder = nrs;
+            a.typNrs = ts.filter(n => alleBilder[n]);
+            const vorBild = isFinite(mb) && mb && alleBilder[mb] ? mb : 0;
+            const kats = window.categoryList || [];
+            const gesuchtK = String(a.kategorie || '').trim().toLowerCase();
+            const wahlK = (kats.find(c => String(c.name || '').toLowerCase() === gesuchtK) || kats.find(c => gesuchtK && String(c.name || '').toLowerCase().includes(gesuchtK)) || {}).id;
+            const fe = (cls, label, v) => feld('', label, '<input class="' + cls + '" value="' + esc(v || '') + '">');
+            const rname = 'kic-mb-' + mi + '-' + ai;
+            kopf = '🏷️ Neue Maschine aus Typenschild';
+            body = '<div class="kic-msg-bilder kic-mb-wahl">' + nrs.map(nr => '<label class="kic-mb"><img src="' + alleBilder[nr].url + '" alt="Bild ' + nr + '" data-kic="bild" data-nr="' + nr + '"><span><input type="radio" name="' + rname + '" class="kic-f-mb" value="' + nr + '"' + (vorBild === nr ? ' checked' : '') + '> Maschinenbild</span></label>').join('') + '</div>'
+                + '<label class="kic-check"><input type="radio" name="' + rname + '" class="kic-f-mb" value=""' + (vorBild ? '' : ' checked') + '> kein Maschinenbild festlegen</label>'
+                + (a.doppelt ? '<div class="kic-unsicher">⚠️ Es gibt schon eine Maschine mit dieser Seriennummer: ' + esc(machineLabel(a.doppelt)) + '. <label class="kic-check"><input type="checkbox" class="kic-f-trotzdem"> Trotzdem neu anlegen</label></div>' : '')
+                + '<div class="kic-zwei">' + fe('kic-f-her', 'Hersteller', a.hersteller) + fe('kic-f-typ2', 'Typ / Modell', a.typ) + '</div>'
+                + '<div class="kic-zwei">' + fe('kic-f-sn', 'Seriennummer', a.seriennummer) + fe('kic-f-bj', 'Baujahr', a.baujahr) + '</div>'
+                + '<div class="kic-zwei">' + fe('kic-f-serie', 'Serie', a.serie) + feld('', 'Kategorie', '<select class="kic-f-kat"><option value="">— wählen —</option>' + kats.map(c => '<option value="' + c.id + '"' + (String(c.id) === String(wahlK) ? ' selected' : '') + '>' + esc(c.name) + '</option>').join('') + '</select>') + '</div>'
+                + '<div class="kic-zwei">' + fe('kic-f-mt', 'Motortyp', a.motortyp) + fe('kic-f-mn', 'Motornummer', a.motornummer) + '</div>'
+                + fe('kic-f-pw', 'Leistung', a.leistung)
+                + feld('', 'Adresse (Betreiber)', '<input class="kic-f-adr" list="kic-dl-adr" value="' + (a.adresse ? esc(aLabel(a.adresse)) : '') + '" placeholder="— keine —">')
+                + (a.adrTreffer ? '<div class="kic-zust">🏢 Adresse ' + esc(a.adrTreffer) + '</div>' : '')
+                + feld('', 'Weitere Angaben vom Schild', '<textarea class="kic-f-text" rows="2">' + esc(a.notiz) + '</textarea>')
+                + '<div class="kic-zust">Alle Fotos werden an der Maschine gespeichert. Bitte die Schild-Daten kurz prüfen — Zahlen exakt wie auf dem Schild.</div>';
+            knopf = 'Maschine anlegen';
         } else if (a.art === 'handschrift') {
             const nrs = (Array.isArray(a.bilder) ? a.bilder : []).map(Number).filter(n => alleBilder[n]);
             if (!nrs.length) Object.keys(alleBilder).slice(-1).forEach(n => nrs.push(+n));
@@ -888,7 +949,7 @@ ${kontext}`;
                 + feld('', 'Titel', `<input class="kic-f-titel" value="${esc(a.titel || 'Handschriftliche Notiz')}">`)
                 + feld('', 'Abschrift — bitte prüfen und korrigieren', `<textarea class="kic-f-text kic-f-abschrift" rows="8">${esc(a.text)}</textarea>`)
                 + (unsicher.length ? `<div class="kic-unsicher">⚠️ Schwer lesbar: ${unsicher.map(esc).join(', ')} — im Text mit [?] markiert</div>` : '')
-                + (nrs.length ? '<label class="kic-check"><input type="checkbox" class="kic-f-foto" checked> Foto mit ablegen</label>' : '')
+                + (nrs.length ? '<label class="kic-check"><input type="checkbox" class="kic-f-foto"' + (a.fotoMit === false ? '' : ' checked') + '> Foto mit ablegen</label>' : '')
                 + '<div class="kic-zust">Landet in der Historie der Adresse und/oder Maschine. Mindestens eins von beiden wählen.</div>';
             knopf = 'Eintrag speichern';
         }
@@ -1062,6 +1123,56 @@ ${kontext}`;
                 if (typeof window.fetchServiceEntries === 'function') { try { window.fetchServiceEntries(); } catch (e) { /* Liste lädt beim nächsten Öffnen */ } }
                 a.zielId = id;
                 a.fertigText = [neu.length ? neu.length + ' Bild' + (neu.length > 1 ? 'er' : '') + ' angehängt' : '', textMit ? 'Bemerkung ergänzt' : '', text && !textMit ? '(Text nicht übernommen — Bericht abgeschlossen)' : ''].filter(Boolean).join(', ');
+            } else if (a.art === 'maschine_neu') {
+                const typ = wert('.kic-f-typ2'), her = wert('.kic-f-her'), sn = wert('.kic-f-sn');
+                if (!typ && !her) throw new Error('Bitte mindestens Hersteller oder Typ eintragen.');
+                const kat = wert('.kic-f-kat');
+                if (!kat) throw new Error('Bitte eine Kategorie wählen.');
+                if (a.doppelt && !k.querySelector('.kic-f-trotzdem')?.checked) throw new Error('Diese Seriennummer gibt es schon — Haken „Trotzdem neu anlegen" setzen oder verwerfen.');
+                const kd = wert('.kic-f-adr') ? adresseAusFeld(wert('.kic-f-adr')) : null;
+                if (wert('.kic-f-adr') && !kd) throw new Error('Adresse nicht gefunden — bitte aus der Liste wählen oder leeren.');
+                const jahr = parseInt(wert('.kic-f-bj'), 10);
+                const zeile = {
+                    name: typ || her, manufacturer: her || null, machine_series: wert('.kic-f-serie') || null, serial: sn || null,
+                    year: isFinite(jahr) ? jahr : null, motor_type: wert('.kic-f-mt') || null, motor_serial: wert('.kic-f-mn') || null, power: wert('.kic-f-pw') || null,
+                    category_id: parseInt(kat, 10), contact_type: [], contact_persons: [], equipment_category_ids: [], files: [], image_url: null,
+                    status: 'Betriebsbereit', in_workshop: false
+                };
+                if (kd) { zeile.customer_id = kd.id; zeile.company = kd.name; zeile.customer_number = kd.customer_number || null; }
+                const { data: neu, error: eIns } = await sb.from('machines').insert([zeile]).select('id');
+                if (eIns) throw eIns;
+                const mid = neu && neu[0] && neu[0].id;
+                if (!mid) throw new Error('Maschine angelegt, aber keine ID erhalten.');
+                a.zielId = mid;
+                a.status = 'fertig';
+                a.fertigText = 'Maschine „' + [her, typ].filter(Boolean).join(' ') + '" angelegt' + (kd ? ' bei ' + kd.name : '');
+                // Fotos hochladen: Maschinenbild + Typenschild
+                const gewaehlt = k.querySelector('.kic-f-mb:checked');
+                const mbNr = gewaehlt && gewaehlt.value ? Number(gewaehlt.value) : 0;
+                const nrs = (a.bilder || []).filter(n => alleBilder[n] && alleBilder[n].file);
+                if (nrs.length) {
+                    try {
+                        const ordner = window.getMachineFolderName ? window.getMachineFolderName(mid, her, typ || her, sn, isFinite(jahr) ? jahr : null) : 'Maschinen/' + mid;
+                        const erg = await window.FileUploadService.uploadFiles(nrs.map(n => alleBilder[n].file), (f, i) => ordner + '/Maschine/' + Date.now() + '-' + i + '.' + (f.name.split('.').pop() || 'jpg').toLowerCase(), { bucket: 'dateien', compress: true, concurrency: 4, provider: 'cloudflare-r2' });
+                        const files = [], urlVon = {};
+                        (erg || []).forEach((r, i) => {
+                            if (!r || !r.url) return;
+                            const nr = nrs[i];
+                            urlVon[nr] = r.url;
+                            files.push({ name: (a.typNrs || []).includes(nr) ? 'Typenschild' : (nr === mbNr ? 'Maschinenbild' : (alleBilder[nr].file.name || 'Foto')), type: alleBilder[nr].file.type || 'image/jpeg', url: r.url });
+                        });
+                        const upd = { files };
+                        if (mbNr && urlVon[mbNr]) upd.image_url = urlVon[mbNr];
+                        const { error: eUp } = await sb.from('machines').update(upd).eq('id', mid);
+                        if (eUp) throw eUp;
+                        a.fertigText += ' (' + files.length + ' Foto' + (files.length === 1 ? '' : 's') + (upd.image_url ? ', Maschinenbild gesetzt' : '') + ')';
+                    } catch (eFoto) {
+                        console.warn('KI-Chat: Fotos der neuen Maschine nicht gespeichert', eFoto);
+                        a.fertigText += ' — Fotos konnten nicht gespeichert werden (' + (eFoto.message || eFoto) + ')';
+                    }
+                }
+                if (typeof window.fetchMachines === 'function') { try { await window.fetchMachines(); } catch (e) { /* Liste lädt beim nächsten Öffnen */ } }
+                document.dispatchEvent(new CustomEvent('addressbook:changed'));
             } else if (a.art === 'handschrift') {
                 const m = wert('.kic-f-m') ? maschineAusFeld(wert('.kic-f-m')) : null;
                 const kd = wert('.kic-f-adr') ? adresseAusFeld(wert('.kic-f-adr')) : null;
@@ -1106,6 +1217,7 @@ ${kontext}`;
         const wert = sel => (k.querySelector(sel)?.value || '').trim();
         let art = null, id = null, titel = '';
         if (a.art === 'servicebericht') { art = 'servicebericht'; id = a.zielId; titel = 'Bericht'; }
+        else if (a.art === 'maschine_neu') { art = 'maschine'; id = a.zielId; titel = [wert('.kic-f-her'), wert('.kic-f-typ2')].filter(Boolean).join(' '); }
         else if (a.art === 'foto' || a.art === 'schaden' || a.art === 'handschrift') {
             const m = wert('.kic-f-m') ? maschineAusFeld(wert('.kic-f-m')) : null;
             const kd = !m && a.art === 'handschrift' && wert('.kic-f-adr') ? adresseAusFeld(wert('.kic-f-adr')) : null;
@@ -1120,6 +1232,7 @@ ${kontext}`;
         if (window.innerWidth <= 768) schliessen();
         if (a.art === 'aufgabe' || a.art === 'unteraufgaben') { if (window.navigateToTask) window.navigateToTask(a.zielId); }
         else if (a.art === 'servicebericht') { if (window.openEditServicebericht) window.openEditServicebericht(a.zielId); }
+        else if (a.art === 'maschine_neu') { if (window.openMachineDetails) window.openMachineDetails(a.zielId); }
         else if (window.navigateToProcess) window.navigateToProcess(a.zielId);
     }
 

@@ -108,3 +108,53 @@
     width: 100%;
     box-sizing: border-box;
 }
+
+/* Tabellenkopf bleibt beim Scrollen stehen (UX-15): die Tabelle scrollt in
+   ihrem Rahmen, der Kopf klebt am oberen Rand dieses Rahmens. */
+@media (min-width: 901px) {
+    .angebote-table-wrap { max-height: calc(100vh - 280px); overflow-y: auto; }
+    .angebote-table-wrap thead th {
+        position: sticky; top: 0; z-index: 2;
+        background: #161e30;
+    }
+}
+
+/* Spalten-Pfeile der Angebotstabelle: unten mittig statt rechts —
+   rechts unten sitzen To-do- und KI-Knopf (gleicher z-index). */
+#angebote-scroll-pfeile {
+    position: fixed;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: calc(env(safe-area-inset-bottom, 0px) + var(--space-6));
+    z-index: 9000;
+}
+
+@media (max-width: 768px) {
+    #angebote-scroll-pfeile {
+        bottom: calc(env(safe-area-inset-bottom, 0px) + var(--kic-nav-h, 62px) + var(--space-3));
+    }
+}
+
+/* Handy: Kennzahlen der Angebote untereinander. Zu zweit nebeneinander
+   brachen die Betraege mitten in der Zahl um („11.6 / 34.8 / 09 €"). */
+@media (max-width: 768px) {
+    #listen-tab-content-angebote .maint-kpi-grid {
+        grid-template-columns: minmax(0, 1fr) !important;
+    }
+    #listen-tab-content-angebote .maint-kpi-value {
+        white-space: nowrap;
+    }
+    #listen-tab-content-angebote .maint-kpi-tile > div:first-child {
+        gap: var(--space-2);
+    }
+}
+
+/* Filter-Chip „N ohne Adresse" (knopf--sekundaer knopf--klein):
+   Warnsymbol gelb, gedrückt = Filter aktiv. */
+.angebote-ohne-adresse svg {
+    color: var(--warning);
+}
+.angebote-ohne-adresse[aria-pressed="true"] {
+    border-color: var(--warning);
+    background: rgba(245, 158, 11, 0.18);
+}

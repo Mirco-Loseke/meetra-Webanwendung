@@ -1,0 +1,36 @@
+/* Rückfrage-/Eingabefenster (js/app-dialog.js) — ersetzt confirm()/prompt() */
+.app-dialog-hg {
+    position: fixed; inset: 0; z-index: 1000000;
+    display: flex; align-items: center; justify-content: center;
+    padding: var(--space-4);
+    background: rgba(0, 0, 0, 0.62);
+    backdrop-filter: blur(var(--blur-overlay, 8px));
+}
+.app-dialog {
+    width: min(420px, 100%);
+    padding: var(--space-6);
+    border-radius: var(--radius-lg);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.98), rgba(15, 23, 42, 0.99));
+    box-shadow: var(--shadow-3);
+    color: var(--text-1);
+    text-align: left;
+}
+.app-dialog h3 { margin: 0 0 var(--space-2); font-size: var(--fs-lg, 1.1rem); font-weight: 800; }
+.app-dialog p { margin: 0 0 var(--space-4); color: var(--text-2, var(--text-3)); font-size: var(--fs-md); line-height: 1.5; }
+.app-dialog-feld { width: 100%; margin-bottom: var(--space-4); box-sizing: border-box; }
+.app-dialog-fuss { display: flex; justify-content: flex-end; gap: var(--space-2); }
+@media (max-width: 768px) {
+    .app-dialog-fuss { flex-direction: column-reverse; }
+    .app-dialog-fuss .knopf { width: 100%; }
+}
+
+/* Ungespeichert-Dialog (showUnsavedDialog in js/app-core.js) */
+.app-dialog--ungespeichert { width: min(380px, 100%); }
+.app-dialog-fuss--drei { justify-content: space-between; align-items: center; }
+.app-dialog-fuss-rechts { display: flex; gap: var(--space-2); }
+.knopf.knopf--gefahr-text { color: var(--danger-soft, #f87171); }
+@media (max-width: 768px) {
+    .app-dialog-fuss--drei { flex-direction: column-reverse; align-items: stretch; }
+    .app-dialog-fuss-rechts { flex-direction: column-reverse; }
+}

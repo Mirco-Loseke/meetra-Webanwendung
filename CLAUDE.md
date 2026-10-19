@@ -1,7 +1,7 @@
 # meetra Webapp — Kontext für Claude
 
 > Zweck: Alles hier steht schon im Kontext. **Nicht neu erkunden.**
-> Fachliche Regeln (Design, PDF, DB-Schema) stehen in `CODING_GUIDELINES.md` — nur bei Bedarf,
+> Fachliche Regeln (Design, PDF, DB-Schema) stehen in `docs/CODING_GUIDELINES.md` — nur bei Bedarf,
 > und dann gezielt der passende Abschnitt.
 
 ## Stack
@@ -15,15 +15,17 @@ Die App muss auch per Doppelklick über `file://` laufen — deshalb klassische
 - `js/` — 54 Module, ein Thema pro Datei
 - `css/` — `base/`, `components/`, `views/`, plus `style.css` (bündelt per `@import`)
 - `partials/` — `views/`, `settings/`, `modals/`, `components/sidebar.html`
+  **Seit 2026-10-19 liegt praktisch alles Markup in partials/** (alle Ansichten, Einstellungen, Fenster); `index.html` ist nur noch Kopf (Styles/Skripte) + von `build.js` eingesetzte Bausteine. Fenster nach Thema: `modals/service-modals.html` (Servicebericht), `machine-add-modal`, `machine-details-modal`, `machine-history-modal`, `task-modal`, `accounting-modals`, `signature-modals` …. **Fallstrick:** `category-modal` gibt es zweimal mit gleicher ID (`category-modal.html` = wirksame Fassung, weil getElementById die erste nimmt; `category-modal-doppelt.html` = verdeckte zweite mit Farbwahl) — vor Änderungen klären, welche gemeint ist.
 - `assets/data/` — Base64-Blobs. **Nie lesen**, riesig.
 - `lib/` — Vendor-Minified. **Nie lesen.**
 - `sw.js` — Service Worker: `CACHE_NAME` + `PRECACHE`-Liste
-- `supabase/` — **alle** `.sql`-Migrationen und die Edge Functions.
+- `supabase/` — **alle** `.sql`-Migrationen (`supabase/migrationen/`) und die Edge Functions.
   Was wofür da ist und was ausgeführt werden muss, steht in
   `supabase/MIGRATIONEN.md` — neue SQL-Datei ⇒ dort eintragen.
 - `tools/` — Werkzeuge, die **nicht** zur App gehören: `karte.js` (erzeugt
   `ARCHITEKTUR.md`/`FUNKTIONEN.txt`) und `mietvereinbarung-vorschau.html`
   (öffnet den Mietbogen mit Beispieldaten, ohne Anmeldung und Datenbank).
+- `docs/` — Pläne, Audit, Coding-Regeln (`archiv/` = Erledigtes). `tools/_alt/` = alte Einmal-Werkzeuge (Diagnose, Tests). `supabase/einmalig/` = einmalige Reparatur-/Aufräum-SQL, **nicht** Teil der Migrationsreihe.
 - `backup/` — das DB-Backup-Skript, kein App-Code. (`_backups/` mit Altständen am 2026-09-29 gelöscht.)
 
 ## Ladereihenfolge (wichtig)
@@ -72,12 +74,20 @@ Reihenfolge der ausgelagerten Module:
 | Mail: Einstellungen → Outlook (Anwendungs-ID, Anmelden) | `js/outlook-settings.js`, `partials/settings/outlook.html` |
 | Einstellungen → Datenschutz (Verarbeitungsverzeichnis, Dienstleister) | `partials/settings/datenschutz.html`, `css/views/datenschutz.css` |
 | Einstellungen: Übersicht (Gruppen, Suche) + einheitlicher Kopf aller Unterseiten + Mietvorlagen-Liste/-Editor | `partials/settings/settings.html`, `css/views/einstellungen.css`, `js/einstellungen.js` |
+| Knöpfe: einheitliches System (Primär/Sekundär/Gefahr/Text/KI, klein, Symbol, Schließen-X, Fensterkopf/-fuß) + Angleichung der alten `.btn-*`-Klassen | `css/components/knopf.css`, Vorschau `tools/knopf-vorschau.html` |
+| Fenster öffnen immer oben (Scroll-Position zurücksetzen, zentral per MutationObserver) | `js/ui-modals.js` |
+| Maschinen-Zentrale (PROBE 2026-10-17): Klick auf Maschinenkarte → ein Fenster mit Kopf („Anlegen“-Menü, „✨ Zusammenfassung“), Reitern **im Fenster** (Übersicht, Verlauf als Zeitleiste in den Farben der alten Historie (`FARBE`) mit Monatsüberschriften, Betriebsstunden groß im Kopf (jüngster Wert aus Stunden-Einträgen/Berichten), Dokumente (Ablage-Feld → Formular Titel/Datum/Notiz → R2 `maschinen/<id>/dokumente/` + `manual_history_entries`, dazu Berichte, Eingangs-/Abnahme aus `intake_protocols`/`acceptance_protocols`), Fotos nach Eintrag, Miete, Daten). Anlegen/Öffnen/Bearbeiten eines Eintrags nutzt weiter die vorhandenen Fenster (Historie-Formular, Berichtsformular, Protokolle, Mietbogen). Hängt sich um `openMachineDetails`, Original = `openMachineDetailsKlassisch`. **Rückgängig je Browser:** Knopf „Klassische Ansicht“ unten (`meetra_mz_aus`), zurück über „Neue Ansicht“ oben im alten Fenster; **ganz:** 2 Zeilen index.html + 2 in sw.js. Entwurf `tools/maschinen-zentrale-vorschau.html` | `js/maschinen-zentrale.js`, `css/components/maschinen-zentrale.css` |
+| To-do: Bereich „Überfällig, nicht auf der Liste“ + „Liegengeblieben (> 7 T)“ unten, live (`ueberfaelligLaden`, 2 min Puffer), „+ Liste“ holt Entferntes zurück | `js/todo-liste.js`, Ende `css/components/todo-liste.css` |
 | Adressen zusammenführen (Dubletten; Sage-Adresse mit address_number bleibt, Verweise umhängen, dann Quelle löschen; Liste VERWEISE pflegen bei neuer customer_id-Spalte) | `js/adressen-zusammenfuehren.js`, Hinweis im Detail-Kopf (`addressbook.js`) |
 | Suche über alles (Lupe in der Kopfleiste, Strg+K; Adressen/Maschinen/Vorgänge/Berichte/Angebote/Aufgaben, im Browser, „Zuletzt geöffnet" in localStorage). **Eigenständig — entfernen = 2 Zeilen in index.html + 2 in sw.js** | `js/globale-suche.js`, `css/components/globale-suche.css` |
-| Foto-Eingang: Werkstatt-Handys ohne Anmeldung schicken Fotos (`fotos/` = eigene Startbildschirm-App „meetra Fotos“, Android-Teilen über `sw.js`), Zuordnen an Maschine/Adresse/Bericht/Vorgang, „📱 Handys“ = Schlüssel je Gerät. Function `foto-eingang` (`--no-verify-jwt`), Migration `supabase_add_foto_eingang.sql` | `js/foto-eingang.js`, `partials/views/foto-eingang.html`, `css/views/foto-eingang.css`, `fotos/index.html` |
+| Foto-Eingang: Werkstatt-Handys ohne Anmeldung schicken Fotos (`fotos/` = eigene Startbildschirm-App „meetra Fotos“, Android-Teilen über `sw.js`), Zuordnen an Maschine/Adresse/Bericht/Vorgang/**Mietvereinbarung** (Fotos links auf Plätze rechts ziehen: Übergabe/Rücknahme je Vorlagen-Position + Zusatz → `rental_agreements.photos` + `data.zusatz`; PDF entsteht erst beim nächsten Speichern im Bogen neu), „📱 Handys“ = Schlüssel je Gerät. Function `foto-eingang` (`--no-verify-jwt`), Migration `supabase_add_foto_eingang.sql` | `js/foto-eingang.js`, `partials/views/foto-eingang.html`, `css/views/foto-eingang.css`, `fotos/index.html` |
 | Startseite-Cockpit (Favoriten, Jetzt zuerst, Demnächst 7 Tage, Kennzahlen; alte Startseite unter „Mehr anzeigen“). Rückgängig je Browser: Knopf „Klassische Startseite“ (`meetra_cockpit_aus`); ganz: 2 Zeilen index.html + 2 in sw.js | `js/cockpit.js`, `css/components/cockpit.css` |
 | Entwürfe in allen Fenstern (localStorage, Leiste „Wiederherstellen/Verwerfen“); Vorgänge: Stand/Schritte automatisch speichern | `js/entwurf-sicher.js`, `css/components/entwurf-sicher.css`, `js/vorgang-sicher.js` |
 | Video-Vorschau (Standbild + Dauer, `videoKachelHtml`, `medienArt`, Abspiel-Overlay) + Adress-Reiter „Ablage“ (Dokumente/Fotos/Videos nach Datum + Überschrift, Hochladen → `manual_history_entries` mit `customer_id`, R2 `adressen/<id>/ablage/`) | `js/medien-ablage.js`, `css/components/medien-ablage.css` |
+| Nichts verlieren (2026-10-18): Ansichtswechsel/Zurück-Taste/Tabwechsel schreiben vorher alle Auto-Speicherungen weg (`window._autosaves`); Rückfragen (`showUnsavedDialog` = Speichern/Entwurf/Verwerfen, `hasUnsavedChanges`) kommen nur bei echter Änderung (Vorher/Nachher-Vergleich ab dem ersten Bedienen; Fotos/Unterschriften/contenteditable). Neues Auto-Speichern ⇒ `createAutosave` nutzen (trägt sich ein). Entfernen = 1 Zeile index.html + 1 sw.js | `js/nichts-verlieren.js` |
+| **Mehrere Stundenzähler je Maschine** (z. B. „Maschine“ + „Generator“, einmal einrichten: Zentrale → Anlegen → Stundenzähler einrichten, im Servicebericht „＋ 2. Stundenzähler hinzufügen“): Namen in `app_settings` Schlüssel `maschinen_zaehler` ({ "<Maschinen-ID>": [Namen] }); Servicebericht: Zähler 1 = `operating_hours`, weitere in `checklist_payload.zaehler`; Historie: `hours`-Eintrag (title/content + sender/recipient); PDF/Ausdruck druckt je Zähler eine Zeile "Betriebsstunden <Name>:" (`window.zaehlerBerichtWerte`). Nicht umgestellt: Protokolle (`protocol-operating-hours`), Mietvereinbarung. | `js/zaehler.js` |
+| **Einträge anlegen/bearbeiten (Ersatz der alten Historie, seit 2026-10-19):** Zentrale → Anlegen → Telefon, Bemerkung, Fotos, Betriebsstunden, **Manuelle Wartung / Reparatur** (EIN Eintrag: Art, Firma, Betriebsstunden → zusätzlicher `hours`-Eintrag, Notiz, Original `{original:true}`, Fotos; Reparatur/ohne Haken = `[ohne Termin]`); Bearbeiten/Löschen vorhandener `manual_history_entries` im selben Fenster. `window.openHistoryModal` ist auf die Zentrale (Reiter Verlauf) umgeleitet; `js/history-modal.js` + `partials/modals/machine-history-modal.html` sind damit **tot** (nur noch Hilfsfunktionen anderer Module) — Löschen später prüfen. | `js/eintrag-anlegen.js`, `css/components/eintrag-anlegen.css`, Einhängen in `js/maschinen-zentrale.js` |
+| Wartungen nachtragen (Sammel-Import alter Wartungen + Originalberichte je Maschine; Knopf im Schnelleintrag „Wartung“; Nachweise liegen in `manual_history_entries.files`) | `js/wartung-import.js`, `css/components/wartung-import.css`, Upload-Feld in `js/history-modal.js` |
 | Benutzer bearbeiten (Reiter, Schalter, „Rechte übernehmen von") | `partials/modals/user-edit-modal.html`, `css/views/user-edit.css`, `js/users.js` |
 
 ## Zuerst hier nachschlagen (spart das Durchsuchen)
@@ -228,6 +238,7 @@ Neue Regeln deshalb immer in den passenden Baustein, nicht in den Kopf.
 Ein Chat-Assistent unten rechts (`js/ki-assistent.js`, Strg+K) existierte bis
 2026-08-05 und wurde **auf Wunsch komplett entfernt**.
 **Auswertungen im KI-Chat (2026-10-02):** `js/ki-auswertung.js` (`window.kiAuswertung`, Katalog von 13 Abfragen: Service je Maschine/Kunde/Hersteller/Monat/Techniker, häufige Probleme, Maschinen-/Kunden-Verlauf, Vorgänge, Angebote inkl. Quote, Wartung, Bestand, Aufgaben). KI antwortet erst `{"abfragen":[…]}`, die App rechnet im Browser (schmale Spalten, 5 min Puffer), zweiter Aufruf mit ERGEBNISSEN → Antwort mit Zahlen (Markdown: Listen, Tabellen; `mdKlein`). Nur Ergebnisse gehen raus, über `fetchMaskiert`. Neue Statistik ⇒ Funktion in `A` + Zeile im `KATALOG`. **Handschrift (2026-10-02):** Aktion `handschrift` im Chat — wörtliche Abschrift (unleserlich = [?], Liste `unsicher`), Karte mit Adresse + Maschine, Text editierbar, „Foto mit ablegen" → R2 + `manual_history_entries` (type note, `customer_id` und/oder `machine_id`).
+**KI-Chat: Typenschild, Zettel, Listen (2026-10-17).** Aktion `maschine_neu` (Typenschild-Foto → editierbare Karte mit Hersteller/Typ/SN/Baujahr/Motor/Leistung/Kategorie/Adresse, Radio „Maschinenbild" je Foto, Doppelt-Warnung über Seriennummer, legt `machines` an + lädt alle Fotos nach R2, `image_url` = gewähltes Maschinenbild). Zettel mit mehreren Abschnitten und gedruckte Listen mit Handschrift → je Abschnitt/Eintrag eine eigene `handschrift`-Aktion; `auswerten` ordnet jeden Abschnitt allein über `kiErkennung` am eigenen Text zu (Nutzertext überschreibt dann nicht mehr), „Foto mit ablegen" ist bei mehreren standardmäßig aus.
 **Neu seit 2026-10-01 (auf Wunsch):** `js/ki-chat.js` + `css/components/ki-chat.css` — KI-Chat (Knopf unten rechts am PC/iPad, auf dem Handy rechts in der Schnellzugriff-Leiste `#kic-nav` unten). Diktieren, Fotos, Antwort als JSON-Aktionen (vorgang, vorgang_stand, aufgabe, unteraufgaben, foto→`manual_history_entries`, servicebericht→Bilder an `service_entries.files` + Text an `remarks` eines vorhandenen Berichts, Liste SERVICEBERICHTE sN im Kontext, abgeschlossene nur Bilder), jede per Klick bestätigt. Text über `fetchMaskiert`, Referenzen als Kürzel adrN/mID/tN/vN. `window.openKiChat(text?)`. **Erkennung (2026-10-01):** `js/ki-erkennung.js` (`kiErkennung.adressen/maschinen/eindeutig`) — Punkte nach Seltenheit (IDF), Tippfehler, Umlaute, Ort/PLZ/Nr., Typ ohne Punkt, Kundenverknüpfung; Technikwörter (öl, lager, walze …) zählen nicht. Eindeutige Treffer setzt der Chat selbst, Adresse sonst von der Maschine. Neue Fehltreffer ⇒ Wort in `FUELL` ergänzen. **Handy-Leiste je Benutzer:** `permissions.schnellzugriff` (Array von Ansichts-IDs, max. 5, `mehr` = Menü; fehlt = Standard Start/Aufgaben/Vorgänge/Adressen/Menü), KI immer rechts. Einstellbar in Benutzerverwaltung → Ansichten → „Handy-Leiste unten" (`szZeichnen` in `js/users.js`); muss in `saveUserEdit` ausdrücklich mitgespeichert werden, weil dort sonst nur die Häkchen eingesammelt werden.
 
 ## Die Aufgaben-Ansicht läuft auf dem Fernseher
@@ -240,9 +251,11 @@ Daraus folgt eine **bewusste Entscheidung (2026-08-15): Aufgaben bekommen kein
 Annehmen/Ablehnen.** Wer sie abarbeitet, steht vor dem Fernseher und hat kein
 Gerät, auf dem er zustimmen könnte. Zusagen/Absagen gibt es nur für **Termine**
 (existiert: `event_participants`) und künftig **Vorgänge** — siehe
-`PLAN_BENACHRICHTIGUNGEN.md`. Nicht „nachrüsten", ohne vorher zu fragen.
+`docs/PLAN_BENACHRICHTIGUNGEN.md`. Nicht „nachrüsten", ohne vorher zu fragen.
 
 ## Was bewusst noch offen ist
+**„Eine Liste“ (2026-10-16, Entwurf freigegeben, noch nicht gebaut):** Glocke, To-do, Startseite, Vorgänge-Erinnerungen und Angebots-Glocke werden zu einer Liste mit einer Zahl zusammengeführt; Drucken und Pop-ups bleiben. Entscheidungen, offene Fragen (Pop-ups im Detail) und Reihenfolge: `docs/PLAN_EINE_LISTE.md`. Vor dem Bauen dort lesen.
+
 `js/app-init.js` (3.249 Zeilen) ist ein einziger `DOMContentLoaded`-Handler.
 Die zwei in sich geschlossenen Themen (UVV-Pläne, Maschinen-Detailansicht) sind
 heraus. Der Rest ist **nicht gefahrlos zerschneidbar**: `map` (52 Verwendungen),
@@ -282,17 +295,56 @@ aufklappt — Filter, Auswahl, Benutzermenü, Autocomplete — nutzt dieselbe Ba
 Neues Menü: `<div class="menu-panel"><ul class="menu-list"><li>…` , bei
 formfüllenden Feldern zusätzlich `.menu-block`. Ausgewählter Eintrag: `.selected`.
 
+**Knöpfe — verbindlich seit 2026-10-16** (`css/components/knopf.css`, Vorschau
+`tools/knopf-vorschau.html`, mit dem Nutzer abgestimmt). Jeder **neue** Knopf:
+`<button class="knopf knopf--ART">` mit genau einer Art:
+| Art | Wofür |
+|---|---|
+| `knopf--primaer` (grün) | Speichern, Anlegen, Senden — **höchstens einer** je Fenster/Bereich |
+| `knopf--sekundaer` | Abbrechen, Zurück, Vorschau, Drucken, Export |
+| `knopf--bearbeiten` (**blau**, seit 2026-10-17) | Bearbeiten, Ändern — auch als Symbol-Knopf |
+| `knopf--gefahr` (**rot**) | Löschen, Entfernen, Verwerfen — nie direkt neben Speichern |
+| `knopf--pdf` (**rot gefüllt**, seit 2026-10-17) | alles mit PDF: öffnen, erstellen, speichern — Löschen bleibt rot *umrandet* |
+| `knopf--text` | leise Nebenaktion („Adresse öffnen", „Mehr anzeigen") |
+| `knopf--ki` (lila) | alles, was die KI auslöst |
+Dazu `knopf--klein` (32 px: Filter, Karten, Chips) und `knopf--icon` (quadratisch,
+**immer** `title` + `aria-label`). Schließen-X: `<button class="knopf-x" aria-label="Schließen">`
+mit SVG, im Kopf `.fenster-kopf` (Titel links, X rechts, kein `position:absolute`).
+Fensterfuß: `.fenster-fuss` → `[Löschen] … [Abbrechen] [Speichern]`, Primär immer rechts.
+Symbol links vom Text, SVG statt Emoji. Beschriftung in normaler Schreibweise
+(„Vorgang speichern", nie „VORGANG SPEICHERN"). **Keine Inline-Stile** an Knöpfen
+außer Layout (`flex`, `width`, `margin`). Handy: alles automatisch ≥ 44 px.
+**Alte Klassen** (`.btn-primary`, `.btn-secondary`, `.btn-modal-*`, `.btn-add-bg`,
+`.btn-close*`, `.ab-btn*`, `.rp2-btn*` …) bekommen über die Angleichungsschicht
+unten in `knopf.css` dasselbe Aussehen (Spezifität per `:not(#_)` angehoben, Mail
+ausgenommen) — **nicht mehr neu verwenden**, beim Anfassen einer Stelle auf `.knopf`
+umstellen. KI-/Lösch-/Druck-Knöpfe mit alten Klassen erkennt sie am `onclick`
+(`openAi…`, `…elete…`, `…rint…`). **Bearbeiten immer blau, Löschen immer rot (Wunsch Nutzer):** `js/knopf-farben.js` markiert auch klassenlose Knöpfe an Text/Titel/onclick (`.knopf-farbe-bearbeiten`/`-loeschen`/`-pdf`; PDF = „PDF“ im Text/Titel oder reiner Symbol-Knopf mit PDF-Funktion), Farben am Ende von `knopf.css`; Ausnahme setzen mit `data-knopf-farbe="aus"`. Offen: klassenlose Knöpfe mit reinen
+Inline-Stilen in JS-Vorlagen (u. a. Listen, Serviceberichte-Karten) — beim
+nächsten Anfassen umstellen.
+
 ⚠️ **Inline-`style="… !important"` schlägt jede Stylesheet-Regel — auch eine mit
 `!important`.** Genau das war bei den Menüs der Fall: die Regeln in
 `dropdowns.css` waren für diese Elemente wirkungslos, Änderungen am CSS
 „wirkten nicht". Wenn eine CSS-Änderung nicht greift: zuerst im Markup nach
 einem Inline-`style` suchen.
 
+## Rückfragen, Pflichtfelder, Esc, kompakte Listen, Upload (2026-10-17)
+- **`confirm()`/`prompt()` gibt es nicht mehr** — `await window.appFrage(text, {gefahr, ja, nein})` → true/false und `await window.appEingabe(text, vorgabe)` → Text|null (`js/app-dialog.js`, `css/components/app-dialog.css`). Löschen-Wörter färben den Knopf rot. **Immer mit `await`** — die umgebende Funktion muss `async` sein. In HTML-Attributen: `window.appFrage('…').then(ja => {…})`.
+- **Esc schließt jedes Fenster** (`js/ui-modals.js`): merkt sich das oberste offene Fenster und drückt nach den anderen Handlern dessen Schließen-Knopf — wenn sonst niemand reagiert hat. Eigenes Esc-Verhalten in einem Modul bleibt unberührt.
+- **Pflichtfelder markieren** (`js/feld-fehler.js`): `showToast('Bitte …')` umhüllt — das passende leere Feld im obersten Fenster wird rot umrandet, fokussiert und beschriftet (Treffer über Wörter in Label/Platzhalter/Name). Neue Prüfung: Toast mit „Bitte …" genügt; sonst `window.feldFehler(el, text)`.
+- **Kompakte Listen** (`js/kompakt-liste.js`, Knopf links in der Kopfleiste, `body.liste-kompakt`): Maschinen-, Serviceberichte-, Vorgangs-Karten als schlanke Zeilen. Neue Kartenart ⇒ Selektoren in `css/components/kompakt-liste.css` ergänzen.
+- **Upload-Komponente** `window.uploadFeld(container, {accept, multiple, maxMB, kamera, upload, onChange})` (`js/upload-feld.js`): Zone + Dateiliste mit Größe, Fortschritt, Fehler, ✕. Option `nurZone:true, onFiles` = nur die Zone (Vorschau macht der Aufrufer). Umgestellt: Dokument hochladen (`documents-r2.js`, mit Liste), Servicebericht-Akkordeon und Maschine anlegen (`app-init.js`, nurZone, Vorschau/Dubletten-Prüfung unverändert). Ebenfalls umgestellt: Vorgang anlegen (Anhänge), Dokumente-Popup am Vorgang, Buchhaltung (`#acc-pdf-dropzone` ist nur noch Statusbox der Analyse), und **per Übernahme** (`UEBERNAHME`-Liste am Ende von `upload-feld.js`: altes Feld wird versteckt, Dateien gehen ins alte `<input>` + `change`) Etiketten-/Adress-/Angebote-Import und Werkstatt-Fotos — neues Feld dieser Art ⇒ Eintrag in `UEBERNAHME`. Bewusst NICHT umgestellt: Mietbogen (Kamera-Kacheln je Fotoposition), KI-Chat (Büroklammer), Historie-Fotos (`#manual-photos`), Protokoll-Fotos, Mail-Anhänge, Timeline-Dokumente, Ordner-Cover. Für **neue** Upload-Stellen immer diese Komponente nehmen.
+- **Icon-Knöpfe ohne Text** bekommen `aria-label` + `title` automatisch (`js/a11y-labels.js`, Beobachter; leitet aus title/onclick/Klasse ab, überschreibt nie). Neuer Icon-Knopf trotzdem selbst beschriften. Löschen-Knopf steht bei Berichten/Buchhaltung mit Trennlinie abgesetzt von „Bearbeiten". Die Angebots-Glocke in „Listen" heißt jetzt „Nachfassen".
+- **Felder:** ein Look für `.glass-input`, `.glass-form-input`, Auswahlfelder (`.glass-select`, `select.glass-*`) und das Maschinen-Fenster über die Tokens `--feld-*` in `tokens.css` (Radius 14 px, Padding 11/14, grüner Fokus). Filter-Leisten (`.custom-filter-dropdown`, `.ab-select`) bleiben Pillen. Neue Feldfarben/-radien nur dort ändern.
+- **Zähler:** Kopfleiste zeigt nur „Meine Liste" (offene Einträge, Tooltip); Start sagt „N Punkte unter Jetzt zuerst"; „Nachfassen" in Listen = Angebots-Erinnerungen. Reiter „Mails" an Adressen zeigt die zuletzt ermittelte Zahl (`localStorage meetra_adr_mails`, gesetzt in `addressMailsRender`).
+- **Vorgang anlegen/bearbeiten:** Adresse steht oben in der linken Spalte, der .msg-Import ist eingeklappt (`details.proc-msg-details`) am Ende. Adress-Reiter auf dem Handy umbrechen (alle sichtbar).
+
 ## App-Symbol / Installieren
 `manifest.json` + `assets/icons/app-icon-{192,512}.png`, `-maskable-*` (Pfeile auf 60 % für Androids Zuschnitt), `apple-touch-icon.png` (180, iPhone-Home-Bildschirm), `favicon-32.png` — alle aus `meetra_arrows_icon.png` erzeugt (weißer Grund). `display_override: minimal-ui` = Zurück- und Aktualisieren-Knopf im installierten App-Fenster (Chrome/Edge); iPhone ignoriert das und bleibt Vollbild. Neues Logo ⇒ alle neu erzeugen und in `PRECACHE` lassen.
 
 ## Aktueller Stand
-`sw.js` CACHE_NAME: v971 (Stand 2026-10-02) — bei jeder Änderung hochzählen.
+`sw.js` CACHE_NAME: v1064 (Stand 2026-10-02) — bei jeder Änderung hochzählen.
 
 **To-do-Liste (2026-10-02).** Vollbild per Knopf/Doppelklick auf den Kopf (`body.todo-vollbild`, je Browser gemerkt), Diktieren an Stand, Notiz, eigenem Punkt (`micButtonHtml`). `js/todo-liste.js` + `css/components/todo-liste.css`: Knopf links neben dem KI-Knopf (Handy: über der Leiste), Panel mit Einträgen je Stufe, aufklappbar — Vorgang (Schritte abhaken, Stand eintragen), Termin, Adresse (Tel/Mail/Route), Notiz. Gefüllt aus dem Briefing über „✅ Als To-do übernehmen" (`kiAuswahl` in `ai-briefing.js`, gleiche KI-Auswahl wie der Druck) → `window.todoUebernehmen(liste)`. Ablage `todo_listen` (eine Zeile je Benutzer, Migration `supabase_add_todo_listen.sql`), ohne Tabelle Rückfall localStorage.
 **Angebote im Briefing + Mail aus der To-do-Liste (2026-10-02).** Briefing lädt zusätzlich offene Angebote der letzten 6 Monate (`angebotOffen` = Regex wie `classifyAngebotStatus`, „Nur meine" über `assigned_users` des Angebots-Vorgangs), eigener KI-Abschnitt „Angebote" und darunter eine echte Liste mit 📄 PDF / ✉ Mail / ＋ To-do (`window.todoAktion.pdf/mail`). To-do-Eintrag Angebot/Vorgang zeigt Status, Alter, Betrag, PDFs (`attachments` des Vorgangs ohne `step_id`), Ansprechpartner (`customer_contacts`). „✉ Mail" → Auswahl Empfänger (Adresse + Ansprechpartner, Vorschlag über `contact_name`) + Anhänge → `window.mailSchreiben(an, betreff, html, dateien)` — 4. Parameter neu, lädt `[{name,url,type}]` als Anhang. Gesendet wird nie automatisch.
@@ -307,6 +359,9 @@ dieselbe Aktion wie auf der Karte. Karte weg ⇒ Windows-Meldung zu (MutationObs
 `#alarm-stack`); Aktion in Windows ⇒ Karte weg + aus der Schlange. App geschlossen ⇒
 `index.html?meldung=…&aktion=…`. **Neue Meldung ⇒ über `meldungsTakt`, nie direkt.**
 Je Gerät stumm: `localStorage['meetra_geraet_stumm']` (Einstellungen → Benachrichtigungen, erster Schalter) — `einreihen`/`system`/`notificationsPushEnabled` melden dann nichts, keine Berechtigungs-Karte; `body.geraet-stumm` blendet `#alarm-stack`, Glocken-Zähler und Pulsieren aus (2026-10-07: auf Wunsch „absolut nichts auf dem Bildschirm“). Ab 1 Karte oben Leiste „Jetzt nicht" + Dauer (15 Min–4 Std, gemerkt in `meetra_meldung_pause_min`): blendet `#alarm-stack` aus, hält Schlange und Windows-Meldungen an; Ende in `localStorage[meetra_meldung_pause]` (überlebt Neuladen, gilt für alle Tabs), geprüft per 20-s-Intervall + Sichtbarkeit statt langem setTimeout.
+**Meldungs-Arten (2026-10-17, auf Wunsch).** Jede Karte hat eine Art, erkannt am Schlüssel in `artVon(key)` (`meldungs-takt.js`): `proc:`/`step:` = **faellig** (Bernstein, „Erinnerung"), `event:` = **termin** (Bernstein, „Termin"), `handoff:` = **fuerdich** (Blau, „Für dich"), `handoff-ack:` = **info** (Grün, „Info", kleiner, schließt nach 20 s über ihren OK-Knopf; Maus darauf hält die Uhr an). Der MutationObserver auf `#alarm-stack` setzt `.meldung .meldung--ART` + Schild `.meldung-art` — die Module bauen ihre Karten unverändert. Abschaltbar je Art: prefs `popup_ART` (über `notification_preferences`, geräteübergreifend), geprüft in `einreihen` und `naechste`; `meldungsTakt.artSetzen(art, an)` räumt Wartendes/Sichtbares sofort ab. Einstellen: **Zahnrad** (blau, pulsiert bis zum ersten Öffnen, `meetra_meldung_zahnrad_gesehen`) neben „Jetzt nicht" → Klappe `.meldung-einstellen`; dieselben Schalter oben in Einstellungen → Benachrichtigungen („Pop-ups auf dem Bildschirm"), erreichbar über die neue Kachel **Einstellungen → Für dich → Benachrichtigungen**. „Probemeldung" zeigt je Art eine Musterkarte. **Neue Kartenquelle ⇒ Schlüssel-Präfix in `artVon` eintragen**, sonst ungefärbt und nicht abschaltbar. Styles: Abschnitt „MELDUNGS-ARTEN" in `css/components/reminder-alarm.css`.
+**Glocke weg, „Meine Liste“ oben (2026-10-17, auf Wunsch).** Die Glocke (`.notif-wrapper`) und der schwebende `#todo-fab` sind per CSS ausgeblendet (Ende von `css/components/todo-liste.css`, rückgängig = die zwei Regeln löschen); `js/notifications.js` läuft weiter (Windows-Meldungen, `collectImportantItems`). Statt dessen baut `kopfKnopfAufbauen()` in `js/todo-liste.js` `#todo-kopf-btn` in `.topbar-right` (vor der Glocke): grün, Text „Meine Liste“ ab 1101 px, darunter nur Symbol 44 px, rote Zahl = offene Einträge (`zaehlerSetzen` füllt beide Zähler), pulsiert bei neuen Auto-Einträgen. Klick = Klick auf `#todo-fab`. Briefing erreicht man im Listen-Kopf („✨ Briefing“), Einstellungen über Einstellungen → Für dich → Benachrichtigungen.
+**To-do-Druck kompakt (2026-10-17).** `js/kalender-todo-druck.js` (auch Kalender-Druck): durchlaufende Nr., großes Kästchen je Eintrag, „Nächster Schritt" fett mit kleinem eigenem Kästchen (+ Fälligkeit, Zuständiger falls nicht man selbst), „seit X T" rot, Stand einzeilig, Adresse zwei Zeilen (Mail nur ohne Telefon), Notizspalte 33 % mit Linien, Seitenzahlen. Ziel: ~16 Einträge/A4, 30 Vorgänge = 2 Blatt (gemessen mit Musterdaten).
 
 **Mietvereinbarung (Stand 2026-08-25).** Der Bogen wird gespeichert: PDF per
 html2canvas je `.miet-page` + jsPDF, Ablage in R2 unter
@@ -315,7 +370,7 @@ html2canvas je `.miet-page` + jsPDF, Ablage in R2 unter
 Übersicht je Maschine: Maschine → Aktionen → **Ansehen → Mietvereinbarung**
 (`js/mietvereinbarung-liste.js`), von dort „Bearbeiten" →
 `openMietvereinbarung(machineId, agreementId)`. Löschen entfernt PDF und Fotos
-endgültig aus R2. **Nötige Migration: `supabase/supabase_mietvereinbarung_komplett.sql`.**
+endgültig aus R2. **Nötige Migration: `supabase/migrationen/supabase_mietvereinbarung_komplett.sql`.**
 Der Vertragstext bildet den **Schluss** des Bogens: zweispaltig, umbricht an seinen
 eigenen Absätzen auf mehrere Blätter und wird per `--miet-recht-f` nur so weit
 verkleinert, bis **zwei** Blätter reichen (`verteileRechtstext`, Untergrenze 0,62 ≈ 7 px
@@ -399,7 +454,7 @@ steht in `manual_history_entries` (Typ `miete`: Zeitraum, Kunde, Stunden bei
 Rücknahme, damit der Zählerstand der Maschine weiterläuft). Pflege:
 `historieAbgleichen()` in `js/mietvereinbarung.js`, eindeutig über
 `rental_agreement_id` + `rental_phase`. **Migration
-`supabase/supabase_add_rental_history.sql` MUSS laufen.**
+`supabase/migrationen/supabase_add_rental_history.sql` MUSS laufen.**
 
 **Timeline-Zoom (2026-09-16):** nur **Strg/⌘ + Mausrad** über der Bühne, je Schritt ±1 Woche (Wochenraster ±4), Tag unter dem Zeiger bleibt stehen; `S.zoomFest` schaltet die Auto-Verbreiterung in `zeichne()` ab, Zeitraum-Menü und „Heute" heben es auf.
 

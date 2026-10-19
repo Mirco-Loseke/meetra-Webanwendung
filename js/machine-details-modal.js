@@ -166,19 +166,20 @@ window.initMachineDetailsModal = function () {
 
                 const subtitleEl = document.getElementById('machine-details-subtitle');
                 if (subtitleEl) {
-                    const serialStr = machine.serial ? `#${machine.serial}` : '/';
-                    const yearStr = machine.year ? machine.year : '/';
-                    subtitleEl.textContent = `Seriennummer: ${serialStr} | Baujahr: ${yearStr}`;
+                    subtitleEl.textContent = [
+                        machine.serial ? `Seriennummer: #${machine.serial}` : '',
+                        machine.year ? `Baujahr: ${machine.year}` : ''
+                    ].filter(Boolean).join(' | ');
                 }
 
                 const motorLineEl = document.getElementById('machine-details-motor-line');
                 if (motorLineEl) {
                     if (machine.motor_type || machine.motor_serial || machine.power) {
-                        const motorTypeStr = machine.motor_type || '/';
-                        const motorSerialStr = machine.motor_serial ? `#${machine.motor_serial}` : '/';
-                        let text = `Motortyp: ${motorTypeStr} | Motornummer: ${motorSerialStr}`;
-                        if (machine.power) text += ` | Leistung: ${machine.power}`;
-                        motorLineEl.textContent = text;
+                        motorLineEl.textContent = [
+                            machine.motor_type ? `Motortyp: ${machine.motor_type}` : '',
+                            machine.motor_serial ? `Motornummer: #${machine.motor_serial}` : '',
+                            machine.power ? `Leistung: ${machine.power}` : ''
+                        ].filter(Boolean).join(' | ');
                         motorLineEl.style.display = 'block';
                     } else {
                         motorLineEl.style.display = 'none';

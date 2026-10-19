@@ -1,4 +1,4 @@
-﻿const CACHE_NAME = 'meetra-app-v971';
+﻿const CACHE_NAME = 'meetra-app-v1064';
 
 // App shell — lokal gecachte Dateien beim ersten Besuch
 const PRECACHE = [
@@ -7,6 +7,7 @@ const PRECACHE = [
     // und müssen deshalb nicht einzeln gecacht werden.
     'css/style.css',
     'css/components/elements.css',
+    'css/components/knopf.css',
     'css/components/calendar-widget.css',
     'js/calendar-widget.js',
     'js/kalender-todo-druck.js',
@@ -54,6 +55,10 @@ const PRECACHE = [
     'css/components/ki-chat.css',
     'css/components/todo-liste.css',
     'css/components/entwurf-sicher.css',
+    'css/components/app-dialog.css',
+    'css/components/feld-fehler.css',
+    'css/components/kompakt-liste.css',
+    'css/components/upload-feld.css',
     'css/components/cockpit.css',
     'css/views/datenschutz.css',
     'css/views/tasks-print.css',
@@ -183,10 +188,24 @@ const PRECACHE = [
     'js/ki-chat.js',
     'js/todo-liste.js',
     'js/entwurf-sicher.js',
+    'js/nichts-verlieren.js',
+    'js/app-dialog.js',
+    'js/feld-fehler.js',
+    'js/kompakt-liste.js',
+    'js/upload-feld.js',
+    'js/a11y-labels.js',
     'js/cockpit.js',
+    'js/maschinen-zentrale.js',
+    'js/knopf-farben.js',
+    'css/components/maschinen-zentrale.css',
     'js/ai-task-extend.js',
     'js/photo-lightbox.js',
     'js/medien-ablage.js',
+    'js/wartung-import.js',
+    'js/eintrag-anlegen.js',
+    'js/zaehler.js',
+    'css/components/eintrag-anlegen.css',
+    'css/components/wartung-import.css',
     'css/components/medien-ablage.css',
     'js/documents-modal.js',
     'js/workshop-photos-modal.js',

@@ -17,6 +17,18 @@
                     </div>
 
                     <div class="est-gruppe">
+                        <h2 class="est-gruppe-titel">Für dich</h2>
+                        <div class="settings-grid est-raster">
+                            <!-- Öffnet das Fenster aus js/notification-settings.js (keine eigene Ansicht, darum ohne data-target) -->
+                            <div class="settings-card est-karte" onclick="window.openNotificationSettings && window.openNotificationSettings(event)" style="--ic:#60a5fa">
+                                <div class="est-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></div>
+                                <div class="est-text"><h2>Benachrichtigungen</h2><p class="settings-card-desc">Welche Pop-ups auf den Bildschirm kommen, Windows-/Handy-Meldungen, dieses Gerät stumm</p></div>
+                                <svg class="est-pfeil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 6 15 12 9 18"/></svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="est-gruppe">
                         <h2 class="est-gruppe-titel">Team &amp; Zugriff</h2>
                         <div class="settings-grid est-raster">
                             <div class="settings-card est-karte" data-target="users" style="--ic:#34d399">

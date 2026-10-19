@@ -1134,7 +1134,7 @@
 
         window.deleteEvent = async function(id) {
             if (typeof window.canDelete === 'function' && !window.canDelete('Terminen')) return;
-            if (!confirm('Dieses Ereignis wirklich löschen?')) return;
+            if (!await window.appFrage('Dieses Ereignis wirklich löschen?')) return;
             if (!supabaseClient) return;
 
             const { error } = await supabaseClient

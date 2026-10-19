@@ -1,0 +1,18 @@
+/* Pflichtfeld-Markierung (js/feld-fehler.js) */
+.feld-fehler {
+    border-color: var(--danger, #ef4444) !important;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.25) !important;
+    animation: feld-fehler-wackeln 0.35s ease-in-out 1;
+}
+.feld-fehler-text {
+    margin-top: var(--space-1);
+    color: var(--danger, #f87171);
+    font-size: var(--fs-xs);
+    font-weight: 600;
+}
+@keyframes feld-fehler-wackeln {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-4px); }
+    75% { transform: translateX(4px); }
+}
+@media (prefers-reduced-motion: reduce) { .feld-fehler { animation: none; } }

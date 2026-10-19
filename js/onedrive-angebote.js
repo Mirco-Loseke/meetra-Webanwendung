@@ -29,7 +29,7 @@
     const SCOPES = ['Files.ReadWrite'];
     const ZIEL = 'zugeordnet';
     const TAKT_MS = 5 * 60 * 1000;
-    const MAX_BYTES = 8 * 1024 * 1024;           // wie process-attachments.js
+    const MAX_BYTES = 10 * 1024 * 1024;           // wie process-attachments.js
 
     let laeuft = false;
     let letzterLauf = null;
@@ -166,7 +166,7 @@
                     if (!passend.length) grund = 'Keine bekannte Angebotsnummer gefunden';
                     else if (passend.length > 1) grund = 'Mehrere Angebote passen: ' + passend.map(a => a.belegnummer).join(', ');
                     else if (!passend[0].process_id) grund = 'Angebot ' + passend[0].belegnummer + ' hat keinen Vorgang';
-                    else if (item.size > MAX_BYTES) grund = 'Größer als 8 MB';
+                    else if (item.size > MAX_BYTES) grund = 'Größer als 10 MB';
                     if (grund) {
                         merker[item.id] = { name: item.name, grund, geaendert: item.lastModifiedDateTime };
                         erg.offen++;

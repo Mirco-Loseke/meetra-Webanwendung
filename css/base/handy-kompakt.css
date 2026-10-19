@@ -199,7 +199,7 @@
     #machines .machine-info-grid { padding: 8px 10px !important; margin: 0 -10px !important; gap: 8px !important; }
     #main-content .card-actions { padding: 8px 10px 8px !important; margin: 0 -10px !important; gap: 6px !important; flex-wrap: nowrap !important; justify-content: space-between; }
     #main-content .card-actions button { height: 34px !important; min-height: 34px !important; font-size: .76rem !important; padding: 0 8px !important; gap: 5px !important; }
-    #main-content .card-actions .btn-ki-card, #main-content .card-actions .btn-edit-card, #main-content .card-actions .btn-delete-card { width: 34px !important; min-width: 34px !important; padding: 0 !important; flex-shrink: 0; }
+    #main-content .card-actions .knopf--icon { width: 34px !important; min-width: 34px !important; padding: 0 !important; flex-shrink: 0; }
     #main-content .card-actions button svg { width: 15px !important; height: 15px !important; }
 
     /* --- Maschinen-Detailansicht: Raster darf nicht breiter als das Fenster werden --- */

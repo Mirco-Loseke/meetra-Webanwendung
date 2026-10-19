@@ -210,7 +210,7 @@
     };
 
     window.deleteLabelArticle = async function (id) {
-        if (!confirm('Diesen Artikel wirklich löschen?')) return;
+        if (!await window.appFrage('Diesen Artikel wirklich löschen?')) return;
         try {
             const { error } = await window.supabaseClient.from('label_articles').delete().eq('id', id);
             if (error) throw error;

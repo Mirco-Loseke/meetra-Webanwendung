@@ -411,7 +411,7 @@ window.rescueServiceReportData = async function () {
         toast('Lokale Kopie gefunden, aber sie enthält keine zusätzlichen Daten (evtl. auf diesem Gerät bereits überschrieben).');
         return;
     }
-    if (!confirm('Aus lokaler Kopie wiederherstellbar:\n\n• ' + restored.join('\n• ') +
+    if (!await window.appFrage('Aus lokaler Kopie wiederherstellbar:\n\n• ' + restored.join('\n• ') +
         '\n\nJetzt ins Formular übernehmen? Gespeichert wird erst, wenn du danach auf „Speichern" klickst.')) return;
 
     window.closeServiceberichtModal(true);
@@ -472,6 +472,8 @@ window.openServiceberichtModal = function (editData = null) {
 
             const operatingHours = document.getElementById('service-operating-hours');
             if (operatingHours) operatingHours.value = '';
+            window._zaehlerGeladen = null;
+            document.querySelectorAll('[data-zaehler-i]').forEach(el => { el.value = ''; });
             const serviceYearDigit = document.getElementById('service-workshop-year-digit');
             if (serviceYearDigit) {
                 const curYear = String(new Date().getFullYear());
@@ -651,7 +653,7 @@ window.renderServiceEntries = function () {
             const emptyState = `
 <div class="empty-state" style="grid-column: 1 / -1; text-align: center; padding: 4rem 2rem; background: rgba(255,255,255,0.02); border-radius: 24px; border: 1px dashed rgba(255,255,255,0.1);">
     <p style="color: rgba(255,255,255,0.4); font-size: 1.1rem;">${message}</p>
-    ${showResetBtn ? `<button onclick="window.activeServiceCategoryFilters=['all']; const si=document.getElementById('service-search-input'); if(si) si.value=''; window.renderServiceEntries();" style="margin-top:1rem; padding:8px 18px; border-radius:10px; background:rgba(59,130,246,0.15); color:#60a5fa; border:1px solid rgba(59,130,246,0.3); cursor:pointer; font-weight:700;">Filter zurücksetzen</button>` : ''}
+    ${showResetBtn ? `<button type="button" class="knopf knopf--sekundaer" onclick="window.activeServiceCategoryFilters=['all']; const si=document.getElementById('service-search-input'); if(si) si.value=''; window.renderServiceEntries();" style="margin-top:1rem;">Filter zurücksetzen</button>` : ''}
 </div>`;
             list.innerHTML = emptyState;
             return;
@@ -671,10 +673,8 @@ window.renderServiceEntries = function () {
             if (!linkedId) return '';
             const title = entry.previous_report_id ? 'Folgebericht — zum vorherigen Bericht springen' : 'Hat einen Folgebericht — springen';
             return `
-                <button class="service-link-badge" onclick="event.stopPropagation(); window.jumpToServicebericht(${linkedId})" title="${title}"
-                    style="position: absolute; ${position} z-index: 12; width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid rgba(16,185,129,0.5); background: rgba(15,23,42,0.75); backdrop-filter: blur(6px); color: var(--color-primary-green); display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;"
-                    onmouseover="this.style.background='rgba(16,185,129,0.85)'; this.style.color='#fff'" onmouseout="this.style.background='rgba(15,23,42,0.75)'; this.style.color='var(--color-primary-green)'">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                <button type="button" class="knopf knopf--sekundaer knopf--klein knopf--icon service-link-badge" onclick="event.stopPropagation(); window.jumpToServicebericht(${linkedId})" title="${title}" aria-label="${title}" style="${position}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
                 </button>`;
         };
 
@@ -782,9 +782,9 @@ window.renderServiceEntries = function () {
                             }).join('')}
                         </div>
 
-                        <button class="service-quickinfo-btn" onclick="event.stopPropagation(); window.showServiceQuickInfo(${e.id})" title="Stundenübersicht anzeigen"
-                            style="position: absolute; top: 8px; right: 8px; z-index: 12; width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.35); background: rgba(15,23,42,0.75); backdrop-filter: blur(6px); color: rgba(255,255,255,0.85); font-size: 0.78rem; font-weight: 700; font-style: italic; font-family: Georgia, serif; line-height: 1; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;"
-                            onmouseover="this.style.background='rgba(59,130,246,0.85)'; this.style.borderColor='rgba(147,197,253,0.9)'" onmouseout="this.style.background='rgba(15,23,42,0.75)'; this.style.borderColor='rgba(255,255,255,0.35)'">i</button>
+                        <button type="button" class="knopf knopf--sekundaer knopf--klein knopf--icon service-quickinfo-btn" onclick="event.stopPropagation(); window.showServiceQuickInfo(${e.id})" title="Stundenübersicht anzeigen" aria-label="Stundenübersicht anzeigen">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                        </button>
                         ${renderServiceLinkBadge(e, 'top: 8px; left: 8px;')}
 
                         <div style="position: relative; width: 100%; height: var(--machine-image-height, 300px); overflow: hidden; background: linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));">
@@ -804,8 +804,9 @@ window.renderServiceEntries = function () {
                                 </div>
                             </div>` : `
                             <div style="display: flex; justify-content: center; margin-bottom: 0.25rem; width: 100%;">
-                                <button onclick="event.stopPropagation(); window.editServiceOrderNumber(${e.id})" title="Auftragsnummer / Werkstattauftragsnummer nachtragen" style="height: 32px; padding: 0 16px; background: rgba(255,255,255,0.04); border: 1.5px dashed rgba(255,255,255,0.25); border-radius: 16px; color: rgba(255,255,255,0.5); font-size: 0.8rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 6px; letter-spacing: 0.5px; cursor: pointer; font-family: 'Inter', sans-serif; text-transform: uppercase;">
-                                    + Auftragsnummer
+                                <button type="button" class="knopf knopf--text knopf--klein" onclick="event.stopPropagation(); window.editServiceOrderNumber(${e.id})" title="Auftragsnummer / Werkstattauftragsnummer nachtragen">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                    Auftragsnummer
                                 </button>
                             </div>`}
 
@@ -846,9 +847,8 @@ window.renderServiceEntries = function () {
 
                         <div class="service-card-actions" style="margin-top: auto; display: flex; align-items: center; justify-content: center; gap: 10px; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.06); margin-left: -0.25rem; margin-right: -0.25rem; padding-left: 1.25rem; padding-right: 1.25rem;">
                             ${!e.is_finalized ? `
-                            <button class="btn-primary" onclick="openEditServicebericht(${e.id})" title="Bearbeiten"
-                                style="flex: 1; height: 44px; background: rgba(59, 130, 246, 0.85); color: #ffffff; border: 2.5px solid rgba(147, 197, 253, 0.8); border-radius: 20px; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; box-shadow: 0 4px 18px rgba(59, 130, 246, 0.6); backdrop-filter: blur(12px); padding: 0 16px; font-weight: 700; font-family: 'Inter', sans-serif;">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                            <button type="button" class="knopf knopf--sekundaer" onclick="openEditServicebericht(${e.id})" title="Bearbeiten" style="flex: 1;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                                 Bearbeiten
                             </button>
                             ` : `
@@ -859,28 +859,19 @@ window.renderServiceEntries = function () {
                             `}
                             ${(images.length > 0 || docs.length > 0 || e.is_finalized) ? `
                             <div style="position: relative; flex: none;">
-                                <button onclick="event.stopPropagation(); window.openServiceAttachments(window._sf${e.id}, ${e.id}, ${e.machine_id || 'null'})" title="${e.is_finalized ? 'Anhänge öffnen / Fotos & Dokumente hinzufügen' : 'Anhänge öffnen'}"
-                                    style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: rgba(139,92,246,0.85); border: 2.5px solid rgba(196,181,253,0.8); color: #ffffff; border-radius: 50%; cursor: pointer; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); box-shadow: 0 4px 18px rgba(139,92,246,0.6); backdrop-filter: blur(12px); padding: 0;">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+                                <button type="button" class="knopf knopf--lila knopf--icon" onclick="event.stopPropagation(); window.openServiceAttachments(window._sf${e.id}, ${e.id}, ${e.machine_id || 'null'})" title="${e.is_finalized ? 'Anhänge öffnen / Fotos & Dokumente hinzufügen' : 'Anhänge öffnen'}" aria-label="Anhänge öffnen">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
                                 </button>
                                 ${(images.length + docs.length) > 0 ? `<span style="position: absolute; top: -4px; left: -4px; background: #ffffff; color: #7c3aed; font-size: 0.6rem; font-weight: 800; border-radius: 999px; min-width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; padding: 0 3px; line-height: 1; pointer-events: none;">${images.length + docs.length}</span>` : ''}
                                 ${docs.length > 0 ? `<span title="${docs.length} Dokument${docs.length === 1 ? '' : 'e'} (kein Foto)" style="position: absolute; bottom: -4px; right: -6px; background: #3b82f6; color: #ffffff; font-size: 0.6rem; font-weight: 800; border-radius: 999px; height: 16px; display: flex; align-items: center; gap: 1px; padding: 0 4px; line-height: 1; border: 1.5px solid #ffffff; pointer-events: none;">📄${docs.length}</span>` : ''}
                             </div>` : ''}
                             ${e.pdf_url ? `
-                            <button onclick="event.stopPropagation(); window.previewDocument('${e.pdf_url}', 'Servicebericht', 'application/pdf')" title="PDF öffnen"
-                                style="flex: none; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: rgba(16, 185, 129, 0.85); border: 2.5px solid rgba(167, 243, 208, 0.8); color: #ffffff; border-radius: 50%; cursor: pointer; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); box-shadow: 0 4px 18px rgba(16, 185, 129, 0.6); backdrop-filter: blur(12px); padding: 0;">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                    <polyline points="14 2 14 8 20 8"></polyline>
-                                </svg>
+                            <button type="button" class="knopf knopf--sekundaer knopf--icon" onclick="event.stopPropagation(); window.previewDocument('${e.pdf_url}', 'Servicebericht', 'application/pdf')" title="PDF öffnen" aria-label="PDF öffnen" style="flex: none;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
                             </button>
                             ` : ''}
-                            <button class="btn-icon-circular delete delete-permission-required" data-del-area="historie" onclick="deleteServiceEntry(${e.id})" title="Löschen"
-                                style="flex: none; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: rgba(239, 68, 68, 0.85); border: 2.5px solid rgba(252, 165, 165, 0.8); color: #ffffff; border-radius: 50%; cursor: pointer; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); box-shadow: 0 4px 18px rgba(239, 68, 68, 0.6); backdrop-filter: blur(12px); padding: 0;">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M3 6h18"></path>
-                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2-2v2"></path>
-                                </svg>
+                            <button type="button" class="knopf knopf--text knopf--icon delete-permission-required" data-del-area="historie" onclick="deleteServiceEntry(${e.id})" title="Bericht löschen" aria-label="Bericht löschen" style="flex: none; margin-left: 12px; padding-left: 12px; border-left: 1px solid rgba(255,255,255,0.14); border-radius: 0 var(--radius-sm) var(--radius-sm) 0;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                             </button>
                         </div>
                     </div>`;
@@ -910,7 +901,7 @@ window.renderServiceEntries = function () {
         if (hasMore) {
             boardHtml += `
                 <div style="grid-column: 1 / -1; display: flex; justify-content: center; margin-top: 2rem; margin-bottom: 2rem; width: 100%;">
-                    <button id="service-entries-more" onclick="window.loadMoreServiceEntries()" class="btn-premium" style="padding: 12px 30px; border-radius: 14px; background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: white; font-weight: 700; border: none; cursor: pointer; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4); transition: transform 0.2s;">
+                    <button type="button" id="service-entries-more" class="knopf knopf--text" onclick="window.loadMoreServiceEntries()">
                         Mehr Berichte laden (${totalEntriesCount - window.serviceEntriesLimit} verbleibend)
                     </button>
                 </div>`;
@@ -1067,8 +1058,8 @@ window.editServiceOrderNumber = function (entryId) {
             <p class="text-muted-sm" style="margin: 0 0 1rem 0;">Werkstatt-/Auftragsnummer für diesen Servicebericht. Leer lassen entfernt sie.</p>
             <input type="text" id="service-order-number-input" class="glass-form-input" placeholder="z.B. 2026-40123" style="width: 100%; box-sizing: border-box; height: 46px; padding: 0 14px; font-size: 16px; color: #fff; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.18); border-radius: 12px;">
             <div style="display: flex; gap: 10px; margin-top: 1.25rem;">
-                <button class="btn-secondary" style="flex: 1;" onclick="document.getElementById('service-order-number-modal').remove()">Abbrechen</button>
-                <button class="btn-primary" style="flex: 1;" onclick="window.saveServiceOrderNumber(${entryId})">Speichern</button>
+                <button type="button" class="knopf knopf--sekundaer" style="flex: 1;" onclick="document.getElementById('service-order-number-modal').remove()">Abbrechen</button>
+                <button type="button" class="knopf knopf--primaer" style="flex: 1;" onclick="window.saveServiceOrderNumber(${entryId})">Speichern</button>
             </div>
         </div>`;
     document.body.appendChild(modal);
