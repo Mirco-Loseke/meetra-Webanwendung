@@ -929,29 +929,46 @@
        ihn von 1,0 abwaerts erneut, und jeder Versuch ist ein kompletter
        Seitenumbruch mit Messen. Gemerkt wird deshalb der zuletzt passende
        Wert und beim naechsten Mal sofort dort angefangen. */
-    let rechtMerker = { schluessel: null, f: 1 };
+    let rechtMerker = { schluessel: null, f: 1, gross: false };
+
+    const RECHT_MAX_F = 1.25;   // größer als das Formular muss der Vertragstext nicht werden
 
     function verteileRechtstext(container, html) {
         const vorher = container.querySelectorAll('.miet-page').length;
         const schluessel = html.length + '|' + (a4Modus ? 'a4' : istHandy() ? 'fluss' : 'schirm');
-        let f = rechtMerker.schluessel === schluessel ? rechtMerker.f : 1;
-        for (let versuch = 0; versuch < 20; versuch++) {
+        const gemerkt = rechtMerker.schluessel === schluessel;
+        const versuchen = f => {
             const markup = html.replace(
                 'class="miet-block miet-recht"',
                 `class="miet-block miet-recht" style="--miet-recht-f:${f}"`);
             verteileAufSeiten(container, [markup], true);
+            return container.querySelectorAll('.miet-page').length - vorher;
+        };
+        const verwerfen = () => Array.from(container.querySelectorAll('.miet-page')).slice(vorher).forEach(s => s.remove());
 
-            const seiten = container.querySelectorAll('.miet-page').length - vorher;
-            if (seiten <= RECHT_ZIEL_SEITEN || f <= RECHT_MIN_F) {
-                rechtMerker = { schluessel: schluessel, f: f };
-                return;
-            }
-
-            // Zu viele Blätter: Versuch verwerfen und eine Stufe kleiner.
-            Array.from(container.querySelectorAll('.miet-page')).slice(vorher)
-                .forEach(s => s.remove());
+        // 1) Von 1,0 (bzw. dem gemerkten Wert) abwärts, bis der Text auf die Zielseiten passt.
+        let f = gemerkt ? rechtMerker.f : 1;
+        for (let versuch = 0; versuch < 20; versuch++) {
+            if (versuchen(f) <= RECHT_ZIEL_SEITEN || f <= RECHT_MIN_F) break;
+            verwerfen();                                   // zu viele Blätter: eine Stufe kleiner
             f = Math.round((f - 0.03) * 100) / 100;
         }
+
+        // 2) Danach in feinen Schritten wieder GRÖSSER, solange es noch passt — sonst bleibt unten auf den
+        //    Vertragsseiten viel weiße Fläche über dem Briefbogen-Fuß (Schrittweite oben war grob).
+        if (!(gemerkt && rechtMerker.gross) && f > RECHT_MIN_F) {
+            let beste = f;
+            for (let v = 0; v < 12; v++) {
+                const kandidat = Math.round((beste + 0.01) * 100) / 100;
+                if (kandidat > RECHT_MAX_F) break;
+                verwerfen();
+                if (versuchen(kandidat) <= RECHT_ZIEL_SEITEN) beste = kandidat; else break;
+            }
+            verwerfen();
+            versuchen(beste);
+            f = beste;
+        }
+        rechtMerker = { schluessel: schluessel, f: f, gross: true };
     }
 
     // Ein leeres <input type="date"> zeigt im Browser "tt.mm.jjjj", ein

@@ -485,6 +485,7 @@
                     };
 
                     let lastDatum = null;
+                    let nrImTag = 0;
                     const body = workLogData.map(row => {
                         let formattedDate = row.datum;
                         if (row.datum) {
@@ -520,10 +521,17 @@
 
                         const datum = row.datum || '';
                         const rowArr = [formattedDate || '', typText];
-                        if (datum !== lastDatum) {
-                            const group = dateGroups[datum];
-                            rowArr.push({ content: getLegalPauseText(group.dayTotal, group.pauseTotal), rowSpan: group.count, styles: { halign: 'center', valign: 'middle' } });
-                        }
+                        // Pausenzelle je Tag: früher per rowSpan über alle Zeilen des Tages. Eine rowSpan-Gruppe kann der Seitenumbruch
+                        // nicht teilen — sie wanderte komplett auf die nächste Seite und ließ unten viel weiße Fläche. Jetzt steht der Text in
+                        // der ersten Zeile des Tages, die Zellen darunter haben keine Zwischenlinien (sieht wie eine verbundene Zelle aus),
+                        // und der Umbruch darf zwischen den Zeilen eines Tages passieren.
+                        const group = dateGroups[datum];
+                        nrImTag = (datum === lastDatum) ? nrImTag + 1 : 0;
+                        const erste = nrImTag === 0, letzte = nrImTag === group.count - 1;
+                        rowArr.push({
+                            content: erste ? getLegalPauseText(group.dayTotal, group.pauseTotal) : '',
+                            styles: { halign: 'center', valign: 'middle', lineWidth: { top: erste ? 0.1 : 0, right: 0.1, bottom: letzte ? 0.1 : 0, left: 0.1 } }
+                        });
                         lastDatum = datum;
                         rowArr.push(zeitText, kmVal);
                         return rowArr;
