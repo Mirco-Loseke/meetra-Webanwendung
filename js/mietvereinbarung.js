@@ -2635,6 +2635,9 @@
 
         const kacheln = pos_liste.map((pos, i) => {
             const bild = satz[pos];
+            // Druck/PDF: leere Kästen fallen dort weg — sie dürfen beim Seitenumbruch
+            // auch keinen Platz belegen, sonst rutscht die Rücknahme auf ein eigenes Blatt.
+            if (ausgabe && !bild) return '';
             return `
             <div class="miet-photo-slot${bild ? ' filled' : ''}" data-split
                  data-welche="${esc(welche)}" data-pos="${esc(pos)}"
@@ -2655,11 +2658,11 @@
         return `
         <div class="miet-block${aktiv ? '' : ' miet-dim'}">
             <div class="miet-block-title">${esc(titel)}</div>
-            <div class="miet-photo-progress" data-nurerste>${fertig} von ${pos_liste.length} Positionen erfasst${fertig < pos_liste.length
+            ${ausgabe ? '' : `<div class="miet-photo-progress" data-nurerste>${fertig} von ${pos_liste.length} Positionen erfasst${fertig < pos_liste.length
                 ? ` <button type="button" class="miet-photo-start" onclick="window.mietFotoserie('${esc(welche)}')">Rundgang starten</button>`
                 : ''}${maschine
                 ? ` <button type="button" class="miet-photo-start miet-photo-letzte" onclick="window.mietLetzteBilder('${esc(welche)}')">Letzte Bilder</button>`
-                : ''}</div>
+                : ''}</div>`}
             <div class="miet-photo-grid" data-splitbox data-drop-welche="${esc(welche)}">${kacheln}</div>
             ${zusatzBlock(welche)}
             ${fotoUnterschriften(welche)}
@@ -2679,6 +2682,7 @@
         const liste = zusatzListe(welche);
         const satz = daten.fotos[welche] || {};
         const wort = welche === 'uebergabe' ? 'Übergabe' : 'Rücknahme';
+        if (ausgabe && !liste.length) return '';
         const kacheln = liste.map((z, i) => `
             <div class="miet-photo-slot filled miet-zusatz-slot" data-split>
                 <button type="button" class="miet-photo-del" onclick="event.stopPropagation(); window.mietZusatzLoeschen('${esc(welche)}', '${esc(z.pos)}')" title="Bild entfernen">&times;</button>
