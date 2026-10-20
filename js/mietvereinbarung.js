@@ -872,9 +872,9 @@
         const platz = innen(seite).clientHeight;
         const hoehe = innen(seite).scrollHeight;
         let f = 1;
-        // Etwas Luft lassen (2 %): im Druck/PDF bricht der Text minimal anders um
+        // Luft lassen (6 %): im Druck/PDF bricht der Text minimal anders um
         // als am Bildschirm, und die letzte Zeile darf nie hinter die Fusszeile rutschen.
-        const luft = platz * 0.98;
+        const luft = platz * 0.94;
         if (hoehe > luft && platz > 0) {
             f = Math.max(0.55, Math.floor((luft / hoehe) * 100) / 100);
         }
@@ -2478,7 +2478,7 @@
                 </tr>` : ''}
                 <tr data-split>
                     <td>${esc(f.sonstiges || 'Sonstiges:')}</td><td class="miet-num"></td>
-                    <td colspan="${sp.length}">${txtZeilen('sauberkeit.sonstiges', s.sonstiges, 5)}</td>
+                    <td colspan="${sp.length}">${txtZeilen('sauberkeit.sonstiges', s.sonstiges, 4)}</td>
                 </tr>
                 <tr data-split>
                     <td>${esc(f.einweisung || 'Einweisung stattgefunden')}</td><td class="miet-num"></td>
