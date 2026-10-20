@@ -2422,9 +2422,11 @@
         openDialog('Gespeicherte Routen', '<div class="rp2-hint">Wird geladen…</div>', null, null);
 
         let cloud = [];
+        let cloudFehler = '';
+        savedRoutesTableOk = true;   // bei jedem Öffnen neu versuchen, nicht dauerhaft aufgeben
         if (savedRoutesTableOk && window.supabaseClient) {
             const { data, error } = await sb().from('saved_routes').select('*').order('created_at', { ascending: false }).limit(300);
-            if (error) { savedRoutesTableOk = false; console.warn('saved_routes nicht verfügbar:', error.message); }
+            if (error) { savedRoutesTableOk = false; cloudFehler = error.message; console.warn('saved_routes nicht verfügbar:', error.message); }
             else cloud = data || [];
         }
         // Alte, nur lokal liegende Routen automatisch hochladen, damit Kollegen sie sehen.
@@ -2442,13 +2444,15 @@
                 const { error: upErr } = rows.length ? await sb().from('saved_routes').insert(rows) : { error: null };
                 if (!upErr) {
                     setLocalRoutes([]);
+                    if (rows.length) window.showToast(rows.length + (rows.length === 1 ? ' lokale Route' : ' lokale Routen') + ' hochgeladen — jetzt für alle sichtbar.');
                     if (currentRouteLocal) { currentRouteId = null; currentRouteLocal = false; }
                     const neu = await sb().from('saved_routes').select('*').order('created_at', { ascending: false }).limit(300);
                     if (!neu.error) cloud = neu.data || [];
-                } else console.warn('Automatisches Hochladen lokaler Routen fehlgeschlagen:', upErr.message);
+                } else { cloudFehler = upErr.message; window.showToast('Routen konnten nicht hochgeladen werden: ' + upErr.message); console.warn('Automatisches Hochladen lokaler Routen fehlgeschlagen:', upErr.message); }
             } catch (e) { console.warn('Auto-Upload Routen:', e); }
         }
         window.rp2SavedRoutes = cloud.concat(localRoutes());
+        window.rp2CloudFehler = cloudFehler;
         // Keine eigenen, aber Routen von Kollegen vorhanden → gleich dort öffnen
         if (ladeAnsicht.tab === 'meine' && !window.rp2SavedRoutes.some(istMeine) && window.rp2SavedRoutes.length) ladeAnsicht.tab = 'andere';
         renderLoadList();
@@ -2458,7 +2462,8 @@
         const body = document.getElementById('rp2-dialog-body');
         if (!body) return;
         const all = window.rp2SavedRoutes || [];
-        if (!all.length) { body.innerHTML = '<div class="rp2-hint">Noch keine Route gespeichert.</div>'; return; }
+        const fehlerHtml = window.rp2CloudFehler ? '<div class="rp2-hint" style="color:#f87171">Datenbank-Fehler: ' + esc(window.rp2CloudFehler) + ' — Kollegen können diese Routen nicht sehen. Ggf. supabase_add_saved_routes.sql ausführen.</div>' : '';
+        if (!all.length) { body.innerHTML = fehlerHtml + '<div class="rp2-hint">Noch keine Route gespeichert.</div>'; return; }
 
         const meine = all.filter(istMeine);
         const andere = all.filter(r => !istMeine(r));
@@ -2493,7 +2498,7 @@
         const hatteFokus = altesFeld && document.activeElement === altesFeld;
         const pos = hatteFokus ? altesFeld.selectionStart : null;
 
-        body.innerHTML = `
+        body.innerHTML = fehlerHtml + `
             <div class="rp2-load-tabs" role="tablist">
                 <button type="button" class="${ladeAnsicht.tab === 'meine' ? 'aktiv' : ''}" data-rp2-action="load-tab" data-rp2-id="meine">Meine Routen <span>${meine.length}</span></button>
                 <button type="button" class="${ladeAnsicht.tab === 'andere' ? 'aktiv' : ''}" data-rp2-action="load-tab" data-rp2-id="andere">Von Kollegen <span>${andere.length}</span></button>

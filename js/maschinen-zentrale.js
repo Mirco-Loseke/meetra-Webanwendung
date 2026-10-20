@@ -749,6 +749,7 @@
         }
         if (was.startsWith('neu-')) {
             const art = was.slice(4);
+            if (art === 'mietvereinbarung') return weiter(id => { window.currentSelectedMachineForService = id; window.openMietvereinbarung && window.openMietvereinbarung(id); });
             if (['servicebericht', 'eingangsprotokoll', 'abnahmeprotokoll', 'uvv-protokoll', 'mietvereinbarung'].includes(art)) return bericht(art);
             if (art === 'vorgang') return weiter(id => {
                 if (typeof window.openProcessAddModal === 'function') window.openProcessAddModal();

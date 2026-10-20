@@ -1999,7 +1999,7 @@
 
             // MIETVEREINBARUNG — diesen Block loeschen = weg (js/mietvereinbarung.js)
             if (type === 'mietvereinbarung' && typeof window.openMietvereinbarung === 'function') {
-                window.openMietvereinbarung(currentSelectedMachineForService);
+                window.openMietvereinbarung(window.currentSelectedMachineForService || (typeof currentSelectedMachineForService !== 'undefined' ? currentSelectedMachineForService : null));
                 return;
             }
 

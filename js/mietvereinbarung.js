@@ -206,6 +206,8 @@
     // vorbelegung (nur neuer Bogen): { plan_id, customer_id, kunde, von, bis } aus einer Timeline-Planung.
     window.openMietvereinbarung = async function (machineId, agreementId, vorbelegung) {
         if (machineId === 'null' || machineId === 'undefined') machineId = null;
+        // Von einer Maschine aus gestartet, aber ohne ID durchgereicht: zuletzt gewählte Maschine nehmen.
+        if (!machineId && !agreementId && !vorbelegung && window.currentSelectedMachineForService) machineId = window.currentSelectedMachineForService;
 
         // Vorlagen sicherheitshalber nachladen, falls das Vorladen beim
         // Start noch nicht durch war.
@@ -218,6 +220,13 @@
         maschine = null;
         if (machineId) {
             maschine = (window.machineList || []).find(m => String(m.id) === String(machineId)) || null;
+            // Nicht in der geladenen Liste (z. B. noch nicht nachgeladen)? Direkt holen.
+            if (!maschine && window.supabaseClient) {
+                try {
+                    const r = await window.supabaseClient.from('machines').select('*').eq('id', machineId).maybeSingle();
+                    if (r && r.data) maschine = r.data;
+                } catch (e) { console.warn('Maschine nicht geladen:', e); }
+            }
         }
 
         // Aufbau des Bogens: je Maschinentyp kann in den Einstellungen eine
@@ -264,6 +273,14 @@
         const entwurf = await entwurfLesen(entwurfKey);
         if (entwurf && entwurf.daten && !agreementId && !entwurf.gespeicherteId) {
             daten = entwurf.daten;
+            // Leere Geräte-Felder des Entwurfs aus der Maschine nachfüllen.
+            if (maschine) {
+                const kat2 = (window.categoryList || []).find(c => String(c.id) === String(maschine.category_id));
+                daten.geraet = daten.geraet || {};
+                if (!daten.geraet.typ) daten.geraet.typ = kat2 ? kat2.name : (maschine.manufacturer || '');
+                if (!daten.geraet.bezeichnung) daten.geraet.bezeichnung = [maschine.manufacturer, maschine.name].filter(Boolean).join(' ');
+                if (!daten.geraet.seriennummer) daten.geraet.seriennummer = maschine.serial || '';
+            }
             if (entwurf.phase) phase = entwurf.phase;
             window.showToast('Nicht gespeicherter Bogen wiederhergestellt — bitte speichern.');
         } else if (entwurf) {
@@ -282,6 +299,22 @@
         // Wiederhergestellter Entwurf gilt als ungespeichert, alles andere als Grundstand.
         basisStand = (entwurf && entwurf.daten && !agreementId && !entwurf.gespeicherteId) ? '' : standJetzt();
         if (!geladen) ladeBetriebsstunden();
+    };
+
+    // Bogen ohne Maschine: Maschine nachträglich wählen, Gerätefelder füllen, Bogen neu zeichnen.
+    window.mietMaschineWaehlen = function (id) {
+        const m = (window.machineList || []).find(x => String(x.id) === String(id));
+        if (!m) return;
+        maschine = m;
+        const kat = (window.categoryList || []).find(c => String(c.id) === String(m.category_id));
+        daten.geraet.typ = kat ? kat.name : (m.manufacturer || '');
+        daten.geraet.bezeichnung = [m.manufacturer, m.name].filter(Boolean).join(' ');
+        daten.geraet.seriennummer = m.serial || '';
+        const ort = [m.location_street, [m.location_zip, m.location_city].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+        if (ort && !daten.mieter.einsatzort) daten.mieter.einsatzort = ort;
+        if (typeof window.getMietVorlage === 'function') vorlage = window.getMietVorlage(m.category_id);
+        zeichneFenster();
+        ladeBetriebsstunden();
     };
 
     // Planung aus der Timeline: Kunde mit Anschrift, Zeitraum und die Verknüpfung
@@ -460,7 +493,7 @@
                         <h2>${esc(vorlage.titel || 'Mietvereinbarung')}</h2>
                         <div class="miet-sub">${maschine
                 ? esc([maschine.manufacturer, maschine.name, maschine.serial ? '#' + maschine.serial : ''].filter(Boolean).join(' '))
-                : 'Ohne Maschinenbezug'}</div>
+                : '<select data-no-enhance onchange="window.mietMaschineWaehlen(this.value)" style="max-width:100%;padding:4px 8px;border-radius:8px;background:#0f172a;color:#fff;border:1px solid #475569"><option value="">Maschine wählen …</option>' + (window.machineList || []).slice().sort((x, y) => String(x.manufacturer || '').localeCompare(String(y.manufacturer || ''), 'de')).map(m => '<option value="' + esc(String(m.id)) + '">' + esc([m.manufacturer, m.name, m.serial ? '#' + m.serial : ''].filter(Boolean).join(' ')) + '</option>').join('') + '</select>'}</div>
                     </div>
                     <div class="miet-head-spacer"></div>
                     <button class="miet-close miet-vollbild-btn" onclick="window.mietVollbild()" title="Vollbild an/aus">&#x26F6;</button>
