@@ -874,9 +874,24 @@
         let f = 1;
         // Luft lassen (6 %): im Druck/PDF bricht der Text minimal anders um
         // als am Bildschirm, und die letzte Zeile darf nie hinter die Fusszeile rutschen.
-        const luft = platz * 0.94;
+        const luft = platz * 0.97;
         if (hoehe > luft && platz > 0) {
             f = Math.max(0.55, Math.floor((luft / hoehe) * 100) / 100);
+        }
+        // Gegenprobe in der Druck-Darstellung (dort verkleinert CSS-zoom statt transform
+        // und der Text bricht minimal anders um): so lange verkleinern, bis der Stapel
+        // wirklich mit Abstand über der Fusszeile endet.
+        const innenEl = innen(seite);
+        const druckVerhaeltnis = () => {
+            box.style.transform = 'none'; box.style.zoom = String(f); box.style.width = 'auto';
+            const r = box.getBoundingClientRect().height / (innenEl.getBoundingClientRect().height || 1);
+            box.style.transform = ''; box.style.zoom = ''; box.style.width = '';
+            return r;
+        };
+        box.style.setProperty('--miet-fit-f', f);
+        for (let i = 0; i < 25 && f > 0.55 && platz > 0 && druckVerhaeltnis() > 0.965; i++) {
+            f = Math.round((f - 0.01) * 100) / 100;
+            box.style.setProperty('--miet-fit-f', f);
         }
         box.style.setProperty('--miet-fit-f', f);
         // Breite gegenrechnen, damit der verkleinerte Stapel den Satzspiegel

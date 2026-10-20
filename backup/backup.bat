@@ -2,6 +2,10 @@
 setlocal enabledelayedexpansion
 title meetra Datensicherung
 cd /d "%~dp0"
+rem  Unbeaufsichtigt (Aufgabenplanung): backup.bat /auto = keine Rueckfragen, kein Pause-Fenster, Ergebnis in backup-log.txt
+set "AUTO=0"
+if /i "%~1"=="/auto" set "AUTO=1"
+set "ERGEBNIS=FEHLER"
 
 rem ==========================================================
 rem  meetra — Datensicherung auf Knopfdruck
@@ -16,6 +20,7 @@ if not exist "%~dp0backup-config.cmd" (
     goto :ende
 )
 call "%~dp0backup-config.cmd"
+if not defined ZIEL set "ZIEL=%USERPROFILE%\meetra-Backups"
 
 if "%DB_URL%"=="" (
     echo [FEHLER] In backup-config.cmd ist DB_URL noch leer.
@@ -65,9 +70,10 @@ if errorlevel 1 (
     goto :ende
 )
 
-rem --- b) Lesbare SQL-Fassung -------------------------------
-echo [2] Lesbare Fassung (.sql) wird gezogen ...
-call "%PGDUMP%" "%DB_URL%" --format=plain --no-owner --no-privileges --schema=public --file="%DBZIEL%\meetra_%STAMP%.sql"
+rem --- b) Lesbare SQL-Fassung: LOKAL aus der .dump-Datei erzeugt (kein zweiter Abruf, spart Egress) ---
+echo [2] Lesbare Fassung (.sql) wird lokal erzeugt ...
+set "PGRESTORE=%PGDUMP:pg_dump.exe=pg_restore.exe%"
+call "%PGRESTORE%" --no-owner --no-privileges --file="%DBZIEL%\meetra_%STAMP%.sql" "%DBZIEL%\meetra_%STAMP%.dump"
 if errorlevel 1 echo [WARNUNG] Die lesbare Fassung konnte nicht erstellt werden.
 
 for %%f in ("%DBZIEL%\meetra_%STAMP%.dump") do set "GROESSE=%%~zf"
@@ -117,18 +123,26 @@ if errorlevel 1 (
     echo Dokumente sind auf Stand.
 )
 
+
 :fertig
+set "ERGEBNIS=OK"
 echo.
 echo ==========================================================
 echo  Sicherung abgeschlossen.
 echo  Ordner: %ZIEL%
 echo ==========================================================
 echo.
+if "%AUTO%"=="1" goto :ende
 choice /c JN /n /t 20 /d N /m "Zielordner oeffnen? [J/N] "
 if errorlevel 2 goto :ende
 start "" "%ZIEL%"
-
 :ende
+if not exist "%ZIEL%" mkdir "%ZIEL%" 2>nul
+set "JETZT=%DATE% %TIME:~0,5%"
+>>"%ZIEL%\backup-log.txt" echo %JETZT%  %ERGEBNIS%
+if "%AUTO%"=="1" (
+    if "%ERGEBNIS%"=="OK" (exit /b 0) else (exit /b 1)
+)
 echo.
 pause
 endlocal

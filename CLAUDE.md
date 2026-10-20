@@ -344,7 +344,7 @@ einem Inline-`style` suchen.
 `manifest.json` + `assets/icons/app-icon-{192,512}.png`, `-maskable-*` (Pfeile auf 60 % für Androids Zuschnitt), `apple-touch-icon.png` (180, iPhone-Home-Bildschirm), `favicon-32.png` — alle aus `meetra_arrows_icon.png` erzeugt (weißer Grund). `display_override: minimal-ui` = Zurück- und Aktualisieren-Knopf im installierten App-Fenster (Chrome/Edge); iPhone ignoriert das und bleibt Vollbild. Neues Logo ⇒ alle neu erzeugen und in `PRECACHE` lassen.
 
 ## Aktueller Stand
-`sw.js` CACHE_NAME: v1088 (Stand 2026-10-02) — bei jeder Änderung hochzählen.
+`sw.js` CACHE_NAME: v1099 (Stand 2026-10-02) — bei jeder Änderung hochzählen.
 
 **To-do-Liste (2026-10-02).** Vollbild per Knopf/Doppelklick auf den Kopf (`body.todo-vollbild`, je Browser gemerkt), Diktieren an Stand, Notiz, eigenem Punkt (`micButtonHtml`). `js/todo-liste.js` + `css/components/todo-liste.css`: Knopf links neben dem KI-Knopf (Handy: über der Leiste), Panel mit Einträgen je Stufe, aufklappbar — Vorgang (Schritte abhaken, Stand eintragen), Termin, Adresse (Tel/Mail/Route), Notiz. Gefüllt aus dem Briefing über „✅ Als To-do übernehmen" (`kiAuswahl` in `ai-briefing.js`, gleiche KI-Auswahl wie der Druck) → `window.todoUebernehmen(liste)`. Ablage `todo_listen` (eine Zeile je Benutzer, Migration `supabase_add_todo_listen.sql`), ohne Tabelle Rückfall localStorage.
 **Angebote im Briefing + Mail aus der To-do-Liste (2026-10-02).** Briefing lädt zusätzlich offene Angebote der letzten 6 Monate (`angebotOffen` = Regex wie `classifyAngebotStatus`, „Nur meine" über `assigned_users` des Angebots-Vorgangs), eigener KI-Abschnitt „Angebote" und darunter eine echte Liste mit 📄 PDF / ✉ Mail / ＋ To-do (`window.todoAktion.pdf/mail`). To-do-Eintrag Angebot/Vorgang zeigt Status, Alter, Betrag, PDFs (`attachments` des Vorgangs ohne `step_id`), Ansprechpartner (`customer_contacts`). „✉ Mail" → Auswahl Empfänger (Adresse + Ansprechpartner, Vorschlag über `contact_name`) + Anhänge → `window.mailSchreiben(an, betreff, html, dateien)` — 4. Parameter neu, lädt `[{name,url,type}]` als Anhang. Gesendet wird nie automatisch.
@@ -518,6 +518,7 @@ Schriften laufen als Style-Attributor mit Kurznamen (`calibri`, `arial` …); `t
 größer per Upload-Session; mit Anhang wird immer Entwurf → Anhänge → `/send` gefahren.
 Signatur je Browser in `localStorage['outlook_signatur']` (Einstellungen → Outlook).
 **Freigabe vor dem Senden (2026-09-24):** beide Mail-KI-Knöpfe rufen `fetchMaskiert(payload, extra, { pruefen: true })` → Fenster „Das geht an die KI" (`freigabeFragen` in `ki-pseudonym.js`): Original mit rot unterstrichenen Ersetzungen (`maskierenMarkiert`), orange = Verdacht aus `pruefen()`, Umschalter auf den Sendetext; Abbrechen wirft `err.abgebrochen`.
+**ENTFERNT 2026-10-20 (auf Wunsch, Datenschutz): jede KI-Funktion in der Mail-Ansicht** (Antwort entwerfen, Vorgang aus Mail, Kontextmenü-Einträge, `mailKiNamen`, `openAiCaptureFromMail`) — Mails und Outlook-Kontakte gehen nie an die KI; Vermerk in Einstellungen → Datenschutz. Nur noch "Vorgang erstellen" ohne KI. Nicht wieder einbauen, ohne zu fragen. Alter Stand:
 **KI in der Mail-Ansicht (2026-09-22):** „✨ Vorgang aus Mail" →
 `window.openAiCaptureFromMail(mail)` (`ai-quick-capture.js`, Bereich `vorgaenge`,
 `mailKontext`): Mail-Prompt-Baustein, jede Vorgangskarte bekommt Von/An, Kunde

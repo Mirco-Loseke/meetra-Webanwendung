@@ -52,6 +52,11 @@
         cursor: pointer;
     }
     .gross:active { background: #1d2027; }
+    .gross.ueber { border-color: var(--gruen, #10a068); background: rgba(16,160,104,.15); }
+    details.hilfe { font-size: 15px; color: var(--leise); border: 1px solid #2a2f3a; border-radius: 12px; padding: 10px 14px; }
+    details.hilfe summary { cursor: pointer; font-weight: 600; color: inherit; }
+    details.hilfe ol { margin: 10px 0 0; padding-left: 20px; line-height: 1.5; }
+    details.hilfe code { background: #1d2027; padding: 2px 6px; border-radius: 6px; word-break: break-all; user-select: all; }
     .gross span { font-size: 64px; line-height: 1; }
     .gross small { font-size: 14px; font-weight: 400; color: var(--leise); }
     .reihe { display: flex; gap: 10px; }
@@ -128,7 +133,7 @@
 
     <button class="gross" id="gross" type="button">
         <span>📷</span>Fotos auswählen
-        <small>Galerie, mehrere auf einmal</small>
+        <small>Galerie, mehrere auf einmal — oder Dateien hierher ziehen</small>
     </button>
     <button class="knopf sprechen" id="knopf-sprechen" type="button">
         <span class="sp-symbol">🎤</span><span class="sp-text">Einsprechen</span><small class="sp-zeit"></small>
@@ -137,6 +142,17 @@
         <button class="knopf haupt" id="knopf-serie" type="button">📸 Fotoserie</button>
         <button class="knopf" id="knopf-kamera" type="button">Einzelfoto</button>
     </div>
+
+    <details class="hilfe" id="hilfe">
+        <summary>📲 iPhone: direkt aus WhatsApp teilen</summary>
+        <ol>
+            <li>Einmalig in der App <b>Kurzbefehle</b> einen neuen Kurzbefehl <b>„An meetra“</b> anlegen. In den Einstellungen des Kurzbefehls <b>„Im Teilen-Menü anzeigen“</b> einschalten, Typen: <b>Bilder, Medien, PDF</b>.</li>
+            <li>Aktion <b>„Inhalte von URL abrufen“</b>: URL <code id="hilfe-url"></code>, Methode <b>POST</b>, Anfragetext <b>Formular</b>.</li>
+            <li>Header hinzufügen: <code>x-foto-schluessel</code> = <code id="hilfe-key"></code></li>
+            <li>Formularfeld hinzufügen: Typ <b>Datei</b>, Schlüssel <code>fotos</code>, Wert = <b>Kurzbefehl-Eingabe</b>.</li>
+            <li>Danach in WhatsApp: Foto öffnen → <b>Teilen</b> → <b>An meetra</b>. Die Fotos landen direkt im Foto-Eingang.</li>
+        </ol>
+    </details>
 
     <div class="vorschau" id="vorschau"></div>
 
@@ -475,6 +491,15 @@
     $('knopf-kamera').onclick = function () { $('kamera').click(); };
     $('wahl').onchange = function () { hinzu(this.files); this.value = ''; };
     $('kamera').onchange = function () { hinzu(this.files); this.value = ''; };
+    // Ablegen per Ziehen (Rechner/iPad): Dateien auf die Seite fallen lassen
+    ['dragover', 'dragenter'].forEach(function (n) { document.addEventListener(n, function (e) { if (e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types || [], 'Files') >= 0) { e.preventDefault(); $('gross').classList.add('ueber'); } }); });
+    document.addEventListener('dragleave', function (e) { if (!e.relatedTarget) $('gross').classList.remove('ueber'); });
+    document.addEventListener('drop', function (e) {
+        if (!e.dataTransfer || !e.dataTransfer.files || !e.dataTransfer.files.length) return;
+        e.preventDefault(); $('gross').classList.remove('ueber');
+        if (!$('mit').classList.contains('hidden')) hinzu(e.dataTransfer.files);
+    });
+    try { $('hilfe-url').textContent = FUNKTION; $('hilfe-key').textContent = localStorage.getItem(KEY) || '(Schlüssel erscheint nach dem Einrichten)'; } catch (er) { /* egal */ }
     $('senden').onclick = senden;
 
     if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {

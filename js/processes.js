@@ -12,6 +12,20 @@ window.procZustaendige = function (p) {
     return out;
 };
 
+// Gehört der Vorgang (ganz oder über einen Schritt) dieser Person? Einträge sind mal ID, mal Name.
+window.procHatUser = function (p, user) {
+    if (!user) return false;
+    const id = String(user.id == null ? '' : user.id).toLowerCase().trim();
+    const name = String(user.name || '').toLowerCase().trim();
+    return window.procZustaendige(p).some(u => { const x = String(u).toLowerCase().trim(); return !!x && (x === id || x === name); });
+};
+window.eventsState = window.eventsState || {};
+// Zuständigen-Filter der Vorgänge-Ansicht: null = aus, 'me' = ich, sonst Benutzer-ID
+window.setProcessAssignee = function (wer) {
+    window.eventsState.processAssignee = (wer && window.eventsState.processAssignee !== wer) ? wer : null;
+    window.renderProcesses();
+};
+
 /* ========================================================= */
 /* =================== PROCESSSES MODULE =================== */
 /* ========================================================= */
@@ -562,6 +576,18 @@ window.renderProcesses = function(targetId, opts) {
         });
     }
 
+    // Zuständigkeit: Kachel „Dir zugewiesen“ (nicht in der kompakten Einbettung)
+    const ich = window.activeUser || {};
+    const userListe = Array.isArray(window.userList) ? window.userList : [];
+    const esc2 = t => String(t == null ? '' : t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const vorZustaendig = base;
+    const zeigeZust = !opts.compact;
+    let zustWahl = zeigeZust && window.eventsState.processAssignee === 'me' ? 'me' : null;
+    if (zustWahl) {
+        const u = zustWahl === 'me' ? ich : userListe.find(x => String(x.id) === String(zustWahl));
+        base = u ? base.filter(p => window.procHatUser(p, u)) : base;
+    }
+
     const isStale = p => {
         const age = window.getProcessAgeDays(p);
         return p.status !== 'erledigt' && age !== null && age > 7;
@@ -606,6 +632,10 @@ window.renderProcesses = function(targetId, opts) {
             <div class="maint-kpi-tile${kpiActive('stale')}" onclick="window.toggleProcessKpiFilter('stale')" title="Unerledigte Vorgänge, die älter als 7 Tage sind">
                 <div class="maint-kpi-value" style="color: #F87171;">${counts.stale}</div>
                 <div class="maint-kpi-label">&gt; 7 Tage offen</div>
+            </div>
+            <div class="maint-kpi-tile${zustWahl === 'me' ? ' active' : ''}" onclick="window.setProcessAssignee('me')" title="Vorgänge, bei denen du als Zuständiger eingetragen bist (ganzer Vorgang oder ein Schritt) — ohne erledigte">
+                <div class="maint-kpi-value" style="color: #a78bfa;">${vorZustaendig.filter(p => p.status !== 'erledigt' && window.procHatUser(p, ich)).length}</div>
+                <div class="maint-kpi-label">Dir zugewiesen</div>
             </div>
         </div>
     `;

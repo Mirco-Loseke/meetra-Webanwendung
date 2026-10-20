@@ -490,7 +490,7 @@
     // Zusätzliche Namen fürs Ersetzen (Outlook-Kontakte, Ansprechpartner, Absender-Domain)
     async function mailNamenExtra() {
         const mk = mailKontext || {};
-        const n = window.mailKiNamen ? await window.mailKiNamen(mk.fromAddress) : { kontakte: [], firmen: [] };
+        const n = { kontakte: [], firmen: [] };
         return {
             kontakte: [mk.fromName, mk.contactName].filter(Boolean).concat(n.kontakte),
             firmen: [mk.customerName].filter(Boolean).concat(n.firmen)
@@ -1766,20 +1766,8 @@ Regeln:
         });
     }
 
-    // Einstieg aus js/mail-view.js („✨ Vorgang aus Mail"): Fenster öffnen, Mailtext
-    // eintragen und sofort analysieren — der Nutzer sieht direkt die Vorschau.
-    window.openAiCaptureFromMail = function (mail) {
-        window.openAiCaptureModal('vorgaenge');
-        mailKontext = Object.assign({ subject: '', fromName: '', fromAddress: '', to: '', receivedAt: '', body: '', customerId: null, customerName: '', contactName: '' }, mail || {});
-        const ta = document.getElementById('ai-capture-text');
-        const kopf = ['Betreff: ' + mailKontext.subject, 'Von: ' + (mailKontext.fromName ? mailKontext.fromName + ' <' + mailKontext.fromAddress + '>' : mailKontext.fromAddress), mailKontext.to ? 'An: ' + mailKontext.to : '', mailKontext.receivedAt ? 'Datum: ' + new Date(mailKontext.receivedAt).toLocaleString('de-DE') : ''].filter(Boolean).join('\n');
-        if (ta) ta.value = kopf + '\n\n' + mailKontext.body.slice(0, 12000);
-        const titel = document.getElementById('ai-capture-title');
-        if (titel) titel.textContent = 'KI-Erfassung — Vorgang aus Mail';
-        // Der Mailtext ist kein Diktat-Entwurf — nicht in localStorage merken
-        window.aiCapClearDraft();
-        setTimeout(() => window.runAiCapture(), 50);
-    };
+    // Hinweis: Aus der Mail-Ansicht (Outlook/Graph) gibt es bewusst KEINEN Weg zur KI mehr (2026-10-20).
+    // Mails und Outlook-Kontakte werden nie an die KI gesendet.
 
     window.processAiCaptureMsgFile = function (file) {
         if (!file.name.toLowerCase().endsWith('.msg')) {

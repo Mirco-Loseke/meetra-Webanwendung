@@ -39,7 +39,7 @@
     // artVon() eintragen, sonst bleibt sie ungefärbt und ist nicht abschaltbar.
     // ---------------------------------------------------------------
     const ARTEN = [
-        { art: 'faellig',  kurz: 'Erinnerung',  label: 'Erinnerungen',  info: 'Vorgänge und Schritte zur eingestellten Uhrzeit' },
+        { art: 'faellig',  kurz: 'Zu erledigen', label: 'Erinnerungen',  info: 'Vorgänge und Schritte zur eingestellten Uhrzeit' },
         { art: 'termin',   kurz: 'Termin',      label: 'Termine',       info: 'Kalendertermine zur Uhrzeit' },
         { art: 'fuerdich', kurz: 'Für dich',    label: 'Für dich',      info: 'Ein Vorgang oder Schritt wurde dir zugewiesen' },
         { art: 'info',     kurz: 'Info',        label: 'Rückmeldungen', info: 'Kollegen haben etwas erhalten, angenommen oder erledigt — schließt sich nach 20 s selbst' }

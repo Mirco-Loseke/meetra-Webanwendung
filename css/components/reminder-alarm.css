@@ -534,3 +534,11 @@ body.geraet-stumm #notif-bell-btn.has-overdue {
 @media (max-width: 768px) {
     #alarm-stack { max-height: calc(100dvh - env(safe-area-inset-top, 0px) - 28px); overflow-y: auto; overscroll-behavior: contain; }
 }
+
+/* Was ist zu tun + von wem (2026-10-20) */
+.alarm-todo {
+    margin-top: 8px; padding: 6px 9px; border-radius: 8px; font-size: 0.88rem; line-height: 1.35; color: #fff;
+    background: rgba(251, 191, 36, 0.14); border-left: 3px solid #fbbf24; word-break: break-word;
+}
+.alarm-todo b { color: #fbbf24; font-weight: 800; }
+.alarm-wer { margin-top: 5px; font-size: 0.78rem; color: rgba(255, 255, 255, 0.55); }

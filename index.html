@@ -161,7 +161,7 @@
     <link rel="stylesheet" href="css/components/buttons.css?v=3">
     <link rel="stylesheet" href="css/components/forms.css?v=7">
     <link rel="stylesheet" href="css/components/notifications.css?v=8">
-    <link rel="stylesheet" href="css/components/reminder-alarm.css?v=13">
+    <link rel="stylesheet" href="css/components/reminder-alarm.css?v=14">
     <link rel="stylesheet" href="css/components/calendar.css?v=1">
     <link rel="stylesheet" href="css/components/calendar-widget.css?v=7">
     <link rel="stylesheet" href="css/components/dropdowns.css?v=4">
@@ -197,7 +197,8 @@
     <link rel="stylesheet" href="css/views/dashboard.css?v=1">
     <link rel="stylesheet" href="css/views/listen.css?v=6">
     <link rel="stylesheet" href="css/views/addressbook.css?v=38">
-    <link rel="stylesheet" href="css/components/medien-ablage.css?v=7">
+    <link rel="stylesheet" href="css/components/medien-ablage.css?v=9">
+    <link rel="stylesheet" href="css/components/vorgang-zustaendig.css?v=2">
     <link rel="stylesheet" href="css/components/wartung-import.css?v=1">
     <link rel="stylesheet" href="css/components/eintrag-anlegen.css?v=2">
     <link rel="stylesheet" href="css/views/routenplanung.css?v=8">
@@ -324,7 +325,7 @@
          gewinnt. Diese Zeile loeschen = alles wie vorher. -->
     <link rel="stylesheet" href="css/components/dropdown-look.css?v=6">
     <!-- MIETVEREINBARUNG (1/3) — eigenstaendig, diese Zeile loeschen = weg -->
-    <link rel="stylesheet" href="css/views/mietvereinbarung.css?v=78">
+    <link rel="stylesheet" href="css/views/mietvereinbarung.css?v=79">
     <link rel="stylesheet" href="css/views/einstellungen.css?v=18">
     <!-- KNÖPFE — einheitliches System + Angleichung der alten Klassen. Bleibt LETZTES Stylesheet im head. -->
     <!-- MASCHINEN-ZENTRALE (Probe) — diese Zeile + die Script-Zeile unten löschen = weg -->
@@ -3082,7 +3083,7 @@
                                 </tr>
                                 <tr>
                                     <td><strong>Google Gemini</strong><br><span class="ds-klein">KI-Funktionen</span></td>
-                                    <td>Zusammenfassungen, Briefing, Erfassung aus Freitext, Mail-Antwortentwurf</td>
+                                    <td>Zusammenfassungen, Briefing, Erfassung aus Freitext (keine E-Mails, keine Outlook-Kontakte)</td>
                                     <td>nur der jeweils gesendete Text — <strong>pseudonymisiert</strong> (siehe Abschnitt 4)</td>
                                     <td>Aufruf über die eigene Edge Function <code>ki-proxy</code>; der Schlüssel liegt serverseitig. Verarbeitung außerhalb der EU möglich</td>
                                 </tr>
@@ -3138,9 +3139,17 @@
                 <div class="glass-card ds-karte">
                     <h3>4 · Künstliche Intelligenz</h3>
                     <p>KI-Funktionen gibt es an diesen Stellen: Zusammenfassung einer Adresse, Zusammenfassung
-                        einer Maschine, Tages-/Wochen-Briefing, Erfassung aus Freitext, Vorgang aus einer Mail,
-                        Antwortentwurf auf eine Mail.</p>
+                        einer Maschine, Tages-/Wochen-Briefing und Erfassung aus Freitext.</p>
                     <ul>
+                        <li><strong>Kein Zugriff auf E-Mails und Outlook:</strong> Die Mail-Ansicht (Posteingang,
+                            Outlook-Kontakte, Schreiben) hat seit 2026-10-20 keine KI-Funktion mehr. Postfach-Inhalte,
+                            Anhänge und Outlook-Kontakte werden weder gelesen noch an die KI oder an Gemini
+                            gesendet — die KI kann sich nicht mit Outlook verbinden. Zwei Wege, auf denen Mail-Text trotzdem bei der KI landen kann, weil ihn jemand
+                            selbst in die App übernommen hat: (1) Text, den jemand als Vorgang oder Notiz übernommen hat,
+                            ist danach normaler Vorgangs-/Notiztext und geht — pseudonymisiert — in Zusammenfassungen einer
+                            Adresse oder Maschine ein; (2) importiert jemand eine Mail als .msg-Datei in einen Vorgang und
+                            klickt ausdrücklich „Schritte vorschlagen“, geht der Text dieser einen Datei (pseudonymisiert)
+                            an die KI.</li>
                         <li>Jede Anfrage läuft über die eigene Edge Function <code>ki-proxy</code>; der Schlüssel
                             des Anbieters liegt auf dem Server, nicht im Browser.</li>
                         <li><strong>Vor dem Senden werden Namen, Firmen, Orte, Kunden-, Serien- und
@@ -4911,7 +4920,7 @@
     <script src="js/process-machine-select.js?v=2"></script>
     <script src="js/customer-matching.js?v=2"></script>
     <script src="js/ui-modals.js?v=4"></script>
-    <script src="js/processes.js?v=148"></script>
+    <script src="js/processes.js?v=152"></script>
     <script src="js/service-reports.js?v=2"></script>
     <script src="js/service-entries.js?v=30"></script>
     <script src="js/service-picker.js?v=2"></script>
@@ -6703,7 +6712,7 @@
     <!-- MIETVEREINBARUNG (2/3) — eigenstaendig, diese Zeile loeschen = weg -->
     <script src="js/mietvereinbarung-vorlagen.js?v=27"></script>
     <script src="js/einstellungen.js?v=1"></script>
-    <script src="js/mietvereinbarung.js?v=99"></script>
+    <script src="js/mietvereinbarung.js?v=100"></script>
     <script src="js/mietvereinbarung-liste.js?v=8"></script>
 
     </main>
@@ -6723,7 +6732,7 @@
     <script src="js/groq-proxy.js?v=9"></script>
     <script src="js/ki-pseudonym.js?v=15"></script>
     <script src="js/ki-einstellungen.js?v=3"></script>
-    <script src="js/ai-quick-capture.js?v=32"></script>
+    <script src="js/ai-quick-capture.js?v=33"></script>
     <script src="js/ai-task-extend.js?v=5"></script>
     <script src="js/ki-erkennung.js?v=3"></script>
     <script src="js/ki-auswertung.js?v=1"></script>
@@ -6772,7 +6781,7 @@
     <!-- /@partial:modals/photos-lightbox.html -->
 
     <script src="js/photo-lightbox.js?v=7"></script>
-    <script src="js/medien-ablage.js?v=8"></script>
+    <script src="js/medien-ablage.js?v=10"></script>
     <script src="js/wartung-import.js?v=3"></script>
     <script src="js/eintrag-anlegen.js?v=6"></script>
     <script src="js/zaehler.js?v=1"></script>
@@ -7467,7 +7476,7 @@
     <script src="js/address-history.js?v=4"></script>
     <script src="js/addressbook.js?v=106"></script>
     <script src="js/outlook-graph.js?v=4"></script>
-    <script src="js/mail-view.js?v=26"></script>
+    <script src="js/mail-view.js?v=27"></script>
     <script src="js/mail-anhang-app.js?v=5"></script>
     <script src="js/outlook-settings.js?v=3"></script>
     <script src="js/onedrive-angebote.js?v=3"></script>
@@ -7498,8 +7507,8 @@
     <script src="js/notification-settings.js?v=6"></script>
     <!-- Minutengenauer Wecker fuer Erinnerungen mit Uhrzeit. Muss NACH
          notifications.js stehen: nutzt window.notificationsPushEnabled. -->
-    <script src="js/meldungs-takt.js?v=9"></script>
-    <script src="js/reminder-alarm.js?v=13"></script>
+    <script src="js/meldungs-takt.js?v=10"></script>
+    <script src="js/reminder-alarm.js?v=14"></script>
     <script src="js/assignment-handoff.js?v=8"></script>
     <script src="js/calendar-widget.js?v=25"></script>
     <script src="js/kalender-todo-druck.js?v=6"></script>
@@ -8464,7 +8473,7 @@
 <script src="js/voice-dictation.js?v=2"></script>
 <script src="js/handy-check.js?v=8"></script>
 <script src="js/globale-suche.js?v=9"></script>
-<script src="js/foto-eingang.js?v=18"></script>
+<script src="js/foto-eingang.js?v=19"></script>
 <script src="js/nichts-verlieren.js?v=4"></script>
 </body>
 

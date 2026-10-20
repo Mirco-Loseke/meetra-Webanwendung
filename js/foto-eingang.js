@@ -792,25 +792,45 @@
     function kurzbefehlZeigen(box, schluessel) {
         if (box.innerHTML) { box.innerHTML = ''; return; }
         const kopie = (wert, label) => '<div class="fe-link" style="display:flex;gap:var(--space-2);align-items:center"><span style="flex:1">' + esc(wert) + '</span><button type="button" class="btn-secondary" data-fe-kopie="' + esc(wert) + '">' + label + '</button></div>';
-        box.innerHTML = '<p class="fe-hinweis" style="margin-top:var(--space-3)"><b>Auf dem iPhone in der App „Kurzbefehle“</b> (einmalig, ca. 3 Minuten):</p>' +
-            '<ol class="fe-hinweis" style="padding-left:1.2em;display:flex;flex-direction:column;gap:6px">' +
-            '<li>„+“ → Name oben: <b>An meetra senden</b>. Unten auf ⓘ (Details) → <b>„Im Share-Sheet anzeigen“</b> an, Typen nur <b>Bilder</b> (und ggf. Medien/PDF).</li>' +
-            '<li>Oben steht dann „Empfange <b>Bilder</b> aus Share-Sheet“ — dort „Wenn keine Eingabe“ auf <b>„Fotos auswählen“</b> stellen (dann geht es auch per Antippen vom Home-Bildschirm). Bei „Fotos auswählen“ <b>„Mehrere auswählen“</b> an.</li>' +
-            '<li>Aktion <b>„Text anfordern“</b> hinzufügen, Frage: <i>Wozu? (leer lassen geht)</i>. Optional — kann auch weg.</li>' +
-            '<li>Aktion <b>„Wiederholen mit jedem“</b> hinzufügen, Eingabe: <b>Kurzbefehleingabe</b>.</li>' +
-            '<li>Darin Aktion <b>„Inhalte von URL abrufen“</b>. URL:</li></ol>' + kopie(FUNKTION_URL, 'Kopieren') +
-            '<ol start="6" class="fe-hinweis" style="padding-left:1.2em;display:flex;flex-direction:column;gap:6px">' +
-            '<li>Auf den Pfeil der Aktion tippen: Methode <b>POST</b>. Header hinzufügen: Schlüssel <b>x-foto-schluessel</b>, Wert:</li></ol>' + kopie(schluessel, 'Kopieren') +
-            '<ol start="7" class="fe-hinweis" style="padding-left:1.2em;display:flex;flex-direction:column;gap:6px">' +
-            '<li>Anfragetext: <b>Formular</b>. Feld hinzufügen → Typ <b>Datei</b>, Schlüssel <b>fotos</b>, Wert: <b>Wiederholungsobjekt</b>. Wenn Schritt 3 benutzt: zweites Feld Typ <b>Text</b>, Schlüssel <b>notiz</b>, Wert: <b>Bereitgestellte Eingabe</b>.</li>' +
-            '<li>Nach „Ende der Wiederholung“ Aktion <b>„Mitteilung anzeigen“</b>: <i>✓ Fotos angekommen</i>.</li>' +
-            '<li>Fertig. Benutzen: in Fotos Bilder markieren → Teilen → <b>An meetra senden</b>. Optional über Teilen → „Zum Home-Bildschirm“ ein Symbol anlegen.</li></ol>' +
-            '<p class="fe-hinweis">Der Schlüssel gehört zu diesem Handy — wird es gesperrt, nimmt die Function vom Kurzbefehl nichts mehr an.</p>';
+        const schritte = 'class="fe-hinweis" style="padding-left:1.3em;display:flex;flex-direction:column;gap:8px;margin:6px 0"';
+        box.innerHTML =
+            '<h4 style="margin:var(--space-3) 0 4px">📲 iPhone: Fotos aus WhatsApp direkt an meetra senden</h4>' +
+            '<p class="fe-hinweis">Einmal pro iPhone einrichten (ca. 5 Minuten). Danach: Foto in WhatsApp → Teilen → <b>An meetra senden</b> — fertig. Die Fotos landen hier im Foto-Eingang. Am besten die Anleitung am Computer lesen und die Eingaben aufs iPhone kopieren (Link per Mail oder AirDrop).</p>' +
+
+            '<b class="fe-hinweis">Teil A — Kurzbefehl anlegen</b>' +
+            '<ol ' + schritte + '>' +
+            '<li>Auf dem iPhone die App <b>Kurzbefehle</b> öffnen (blau-rosa Symbol, ist vorinstalliert). Unten auf <b>Kurzbefehle</b> tippen, dann oben rechts auf das <b>＋</b>.</li>' +
+            '<li>Oben auf den Namen „Neuer Kurzbefehl“ tippen → <b>Umbenennen</b> → eintippen: <b>An meetra senden</b> → <b>Fertig</b>.</li>' +
+            '<li>Unten auf das <b>ⓘ</b> (Details) tippen und <b>„Im Share Sheet anzeigen“</b> einschalten. Bei „Akzeptierte Typen“ <b>Bilder</b> auswählen (die anderen ausschalten oder auf „Keine“) → <b>Fertig</b>.</li>' +
+            '<li>Ganz oben im Kurzbefehl steht jetzt „Empfange <b>Bilder</b> von Share Sheet“. Dahinter bei „Wenn keine Eingabe“ → <b>Fotos auswählen</b> antippen (so funktioniert er auch, wenn man ihn selbst startet).</li>' +
+            '<li>Unten auf <b>„Aktion hinzufügen“</b> (oder das Suchfeld) → <b>Wiederholen mit jedem</b> suchen und antippen. Beim blauen Feld „Eingabe“ / „Elemente“ → <b>Kurzbefehleingabe</b> wählen.</li>' +
+            '<li><b>Innerhalb</b> der Wiederholung (zwischen „Wiederholen mit jedem“ und „Ende Wiederholung“) auf <b>＋</b> tippen → <b>Inhalte von URL abrufen</b> suchen und antippen.</li>' +
+            '<li>Beim Feld <b>URL</b> diese Adresse einfügen (oben Kopieren drücken, im Feld lange tippen → Einsetzen):</li></ol>' + kopie(FUNKTION_URL, 'Kopieren') +
+
+            '<b class="fe-hinweis">Teil B — Diese Aktion genau einstellen</b>' +
+            '<ol start="8" ' + schritte + '>' +
+            '<li>Rechts neben „Inhalte von URL abrufen“ auf den kleinen <b>Pfeil ›</b> tippen, damit die Einstellungen aufklappen.</li>' +
+            '<li><b>Methode</b>: <b>POST</b> wählen.</li>' +
+            '<li><b>Header</b> → „Neuen Header hinzufügen“. Links bei „Schlüssel“ eintippen: <b>x-foto-schluessel</b>. Rechts bei „Text“ diesen Wert einfügen (der Schlüssel gehört nur zu diesem Handy):</li></ol>' + kopie(schluessel, 'Kopieren') +
+            '<ol start="11" ' + schritte + '>' +
+            '<li><b>Anfragetext</b>: <b>Formular</b> wählen. Dann <b>„Neues Feld hinzufügen“</b> → <b>Datei</b>.</li>' +
+            '<li>Beim Feld: <b>Schlüssel</b> = <b>fotos</b> (klein geschrieben). <b>Wert</b>: antippen → bei den Variablen <b>Wiederholungsobjekt</b> wählen.</li>' +
+            '<li>Unter „Ende Wiederholung“ (also <b>außerhalb</b> der Schleife) <b>＋</b> → <b>Mitteilung anzeigen</b> → Text: <b>✓ Fotos angekommen</b>.</li>' +
+            '<li>Oben rechts <b>Fertig</b> tippen. Der Kurzbefehl ist jetzt gespeichert.</li></ol>' +
+
+            '<b class="fe-hinweis">Teil C — So benutzt man ihn (z. B. aus WhatsApp)</b>' +
+            '<ol ' + schritte + '>' +
+            '<li>In WhatsApp den Chat öffnen und das Foto <b>antippen</b> (Vollbild).</li>' +
+            '<li>Unten links auf das <b>Teilen-Symbol</b> (Quadrat mit Pfeil nach oben) tippen.</li>' +
+            '<li>In der Liste nach unten scrollen und <b>An meetra senden</b> antippen. Beim ersten Mal: ganz unten <b>„Aktionen bearbeiten“</b> → neben „An meetra senden“ auf das grüne <b>＋</b> — dann steht er künftig weiter oben.</li>' +
+            '<li><b>Mehrere Fotos auf einmal:</b> im Chat oben rechts ⋯ → <b>Auswählen</b>, die Fotos antippen, dann unten das Teilen-Symbol → <b>An meetra senden</b>.</li>' +
+            '<li>Kurz danach erscheint „✓ Fotos angekommen“. Hier in der App unter <b>Foto-Eingang</b> die Fotos einer Maschine/Adresse zuordnen.</li></ol>' +
+
+            '<p class="fe-hinweis"><b>Wenn es nicht klappt:</b> Beim ersten Start fragt das iPhone evtl. „Darf der Kurzbefehl Daten an … senden?“ → <b>Immer erlauben</b>. Kommt nichts an, prüfen: Adresse und Schlüssel genau wie oben (keine Leerzeichen), Feldname <b>fotos</b>, Methode <b>POST</b>. Wird das Handy gesperrt (oben in der Liste), nimmt der Kurzbefehl nichts mehr an.</p>';
         box.querySelectorAll('[data-fe-kopie]').forEach(b => b.onclick = async () => {
             try { await navigator.clipboard.writeText(b.dataset.feKopie); toast('Kopiert.', 'success'); } catch (e) { toast('Kopieren nicht möglich — bitte markieren.', 'warn'); }
         });
     }
-
     async function handys() {
         const f = fenster('📱 Handys für „meetra Fotos"',
             '<p class="fe-hinweis">Jedes Handy bekommt einen eigenen Einrichtungs-Link. Damit kann es <b>nur</b> Fotos in den Eingang schicken — ohne Anmeldung, ohne Zugriff auf andere Daten. Gesperrte Handys können nichts mehr schicken.</p>' +
@@ -819,7 +839,7 @@
             '<div id="fe-neu-link"></div>' +
             '<div id="fe-geraete">Lädt …</div>' +
             '<p class="fe-hinweis"><b>Android:</b> Link öffnen → Menü ⋮ → „Zum Startbildschirm hinzufügen". Danach steht „meetra Fotos" auch im Teilen-Menü der Galerie.<br>' +
-            '<b>iPhone:</b> Link in Safari öffnen → Teilen → „Zum Home-Bildschirm".</p>');
+            '<b>iPhone:</b> Link in Safari öffnen → Teilen → „Zum Home-Bildschirm". Für „Teilen → meetra“ aus WhatsApp: beim Handy oben auf <b>📲 iPhone-Anleitung</b> tippen.</p>');
         const $ = s => f.el.querySelector(s);
 
         async function liste() {
@@ -829,6 +849,7 @@
                 '<div class="fe-geraet' + (g.gesperrt ? ' gesperrt' : '') + '">' +
                     '<b>' + esc(g.name) + '</b>' +
                     '<button type="button" class="btn-secondary" data-fe-link="' + esc(g.schluessel) + '">Link</button>' +
+                    '<button type="button" class="btn-secondary" data-fe-iphone="' + esc(g.schluessel) + '">📲 iPhone-Anleitung</button>' +
                     '<button type="button" class="btn-secondary" data-fe-sperren="' + esc(g.id) + '" data-an="' + (g.gesperrt ? '0' : '1') + '">' + (g.gesperrt ? 'Entsperren' : 'Sperren') + '</button>' +
                     '<button type="button" class="btn-secondary" data-fe-weg="' + esc(g.id) + '" title="Handy entfernen">🗑</button>' +
                     '<small>' + (g.gesperrt ? 'Gesperrt · ' : '') + (g.letzte_nutzung ? 'zuletzt ' + new Date(g.letzte_nutzung).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' }) : 'noch nicht benutzt') + '</small>' +
@@ -862,6 +883,13 @@
         $('#fe-geraete').addEventListener('click', async e => {
             const l = e.target.closest('[data-fe-link]');
             if (l) { linkZeigen(l.dataset.feLink, l.closest('.fe-geraet').querySelector('b').textContent); return; }
+            const ip = e.target.closest('[data-fe-iphone]');
+            if (ip) {
+                linkZeigen(ip.dataset.feIphone, ip.closest('.fe-geraet').querySelector('b').textContent);
+                $('#fe-iphone').click();
+                $('#fe-neu-link').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                return;
+            }
             const s = e.target.closest('[data-fe-sperren]');
             if (s) {
                 const { error } = await sb().from('foto_geraete').update({ gesperrt: s.dataset.an === '1' }).eq('id', s.dataset.feSperren);

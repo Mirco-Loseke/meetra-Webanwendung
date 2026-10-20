@@ -293,12 +293,30 @@
     // Was auf der Karte über den Vorgang stehen soll: Adresse, Ansprechpartner,
     // letzter Stand (statt der Bemerkung — der Stand ist meist aktueller),
     // offene Schritte.
+    // ID oder Name → Anzeigename (Einträge sind mal das eine, mal das andere)
+    function personName(x) {
+        if (x == null || x === '') return '';
+        const liste = Array.isArray(window.userList) ? window.userList : [];
+        const u = liste.find(y => String(y.id) === String(x));
+        return u ? (u.name || '') : String(x);
+    }
+    function wer(p, schritt) {
+        const ersteller = personName(schritt && schritt.created_by) || personName(p.created_by_user) || personName(p.user_id);
+        const ich = (window.activeUser && window.activeUser.name) || '';
+        const von = ersteller && ersteller !== ich ? 'von ' + ersteller : (ersteller ? 'von dir erstellt' : '');
+        const zust = (schritt && (schritt.assigned_to || schritt.assigned_id) ? [schritt.assigned_to || personName(schritt.assigned_id)] : (Array.isArray(p.assigned_users) ? p.assigned_users.map(personName) : []))
+            .filter(Boolean).map(n => n === ich ? 'du' : n);
+        return [von, zust.length ? 'zuständig: ' + [...new Set(zust)].join(', ') : ''].filter(Boolean).join(' · ');
+    }
     function procInfos(p) {
         const stand = Array.isArray(p.status_updates) && p.status_updates.length
             ? (p.status_updates[0].text || '') : '';
         const schritte = Array.isArray(p.steps) ? p.steps : [];
         const offen = schritte.filter(s => !s.done).length;
+        const naechster = schritte.find(s => s && !s.done && s.text);
         return {
+            aufgabe: naechster ? naechster.text : '',
+            wer: wer(p, null),
             adresse: adresseText(p.customers),
             kontakt: p.contact_name || '',
             notiz: stand || p.remark || '',
@@ -343,6 +361,8 @@
                         key: 'step:' + p.id + ':' + i + ':' + wann.getTime(),
                         titel: s.text || 'Schritt',
                         untertitel: p.title || 'Vorgang',
+                        aufgabe: '',
+                        wer: wer(p, s),
                         zeit: hhmm(wann),
                         art: 'Schritt',
                         zielTyp: 'process',
@@ -388,6 +408,8 @@
                 <span>${esc(eintrag.adresse)}${eintrag.kontakt ? ` <em>· ${esc(eintrag.kontakt)}</em>` : ''}</span>
             </div>` : (eintrag.kontakt ? `<div class="alarm-sub">${esc(eintrag.kontakt)}</div>` : '')}
             ${eintrag.ort ? `<div class="alarm-sub">${esc(eintrag.ort)}</div>` : ''}
+            ${eintrag.aufgabe ? `<div class="alarm-todo"><b>Zu erledigen:</b> ${esc(eintrag.aufgabe)}</div>` : ''}
+            ${eintrag.wer ? `<div class="alarm-wer">${esc(eintrag.wer)}</div>` : ''}
             ${eintrag.notiz ? `<div class="alarm-note">${esc(eintrag.notiz)}</div>` : ''}
             ${eintrag.schritte ? `<div class="alarm-steps">${esc(eintrag.schritte)}</div>` : ''}
             <div class="alarm-actions">

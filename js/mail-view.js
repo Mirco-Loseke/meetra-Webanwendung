@@ -293,8 +293,6 @@
                 + '<div id="mv-kunde-box"></div>'
                 + '<div class="mv-mail-aktionen">'
                 + '<button class="btn-secondary" id="mv-antworten">Antworten</button>'
-                + '<button class="btn-secondary mv-ki-btn" id="mv-ki-antwort" title="Die KI schreibt einen Antwortentwurf mit Kundenkontext — gesendet wird nichts ohne Klick">✨ Antwort entwerfen</button>'
-                + '<button class="btn-secondary mv-ki-btn" id="mv-ki-vorgang" title="Aus dieser Mail einen Vorgang machen — die KI füllt Titel, Art, Maschine, Zusammenfassung und Schritte vor">✨ Vorgang aus Mail</button>'
                 + '<a class="btn-secondary" href="' + esc(m.webLink || '#') + '" target="_blank" rel="noopener">In Outlook öffnen</a>'
                 + '</div>'
                 + (anhaenge.length ? '<div class="mv-anhaenge-empfangen">' + anhaenge.map(a => '<button type="button" class="mv-anhang mv-anhang-klick" data-att="' + esc(a.id) + '" data-name="' + esc(a.name) + '" data-typ="' + esc(a.contentType || '') + '" title="Öffnen">📎 ' + esc(a.name) + ' <span class="text-muted-sm">' + Math.round((a.size || 0) / 1024) + ' KB</span></button>').join('') + '</div>' : '')
@@ -302,8 +300,6 @@
             ziel.querySelector('.mv-zurueck').onclick = () => kasten.classList.remove('zeigt-detail');
             ziel.querySelectorAll('.mv-anhang-klick').forEach(b => { b.onclick = () => empfangenOeffnen(id, b); });
             $('mv-antworten').onclick = () => schreibenVorbelegen(von.address || '', antwortBetreff(m), zitatVon(m, von));
-            $('mv-ki-vorgang').onclick = () => mailZuVorgang(m, von, an);
-            $('mv-ki-antwort').onclick = () => antwortEntwerfen(m, von, an);
             kundeBoxZeichnen(von.address, von.name);
             const body = $('mv-body');
             if (m.body && m.body.contentType === 'html') {
@@ -325,7 +321,7 @@
         } catch (e) { ziel.innerHTML = '<div class="mv-platzhalter">' + esc(e.message) + '</div>'; }
     }
 
-    // ---------- Mail als Text, Zitat, KI-Aktionen ----------
+    // ---------- Mail als Text, Zitat ----------
     // Reiner Text der Mail: bei HTML ohne Layout, Skripte und Styles
     function mailText(m) {
         const roh = m.body ? m.body.content : '';
@@ -344,7 +340,7 @@
             html: zeilen.slice(0, 200).map(z => '<p>' + (esc(z) || '<br>') + '</p>').join('')
         };
     }
-    // Zitierte ältere Mails und Signatur-Trenner abschneiden — die KI soll nur das Neue lesen
+    // Zitierte ältere Mails und Signatur-Trenner abschneiden — nur das Neue wird übernommen
     function mailKern(text) {
         const t = String(text || '');
         const marken = [/^\s*-{2,}\s*Ursprüngliche Nachricht/im, /^\s*Von:\s.+\n\s*Gesendet:/im, /^\s*Am .+ schrieb .+:\s*$/im, /^\s*On .+ wrote:\s*$/im, /^\s*From:\s.+\n\s*Sent:/im, /^\s*-{2,}\s*Original Message/im];
@@ -353,7 +349,7 @@
         return signaturWeg(t.slice(0, ende)).trim();
     }
     // Alles nach der letzten Grußformel weg (Name, Position, Firma, HRB, IBAN …) —
-    // für die KI wertlos, für den Datenschutz das Heikelste. Die Grußzeile bleibt.
+    // Name, Position, Firma, IBAN … gehören nicht in einen Vorgang. Die Grußzeile bleibt.
     function signaturWeg(text) {
         const re = /^[ \t]*(?:Mit freundlichen Grüßen|Freundliche Grüße|Viele Grüße|Beste Grüße|Liebe Grüße|Schöne Grüße|Herzliche Grüße|Gruß|Grüße|MfG|Best regards|Kind regards|Regards|Met vriendelijke groet)[^\n]{0,20}$/gim;
         let letzte = null, m;
@@ -361,110 +357,8 @@
         if (!letzte || letzte.index < 20) return text;
         return text.slice(0, letzte.index + letzte[0].length) + '\n[Signatur entfernt]';
     }
-    // Namen für die Pseudonymisierung: Outlook-Kontakte (einmal laden, bleibt im
-    // Browser), Ansprechpartner des Adressbuchs, Firma aus der Absender-Domain.
-    // Nichts davon geht an die KI — es sind nur die Suchbegriffe fürs Ersetzen.
-    let kiNamenCache = null;
-    async function kiNamen(absender) {
-        if (!kiNamenCache) {
-            const kontakte = [], firmen = [];
-            try {
-                if (!S.kontakteGeladen && window.graphAlle) {
-                    S.kontakte = await window.graphAlle('/me/contacts?$top=500&$select=id,displayName,givenName,surname,companyName,emailAddresses', 10000);
-                    S.kontakteGeladen = true;
-                }
-                (S.kontakte || []).forEach(k => {
-                    const n = k.displayName || [k.givenName, k.surname].filter(Boolean).join(' ');
-                    if (n && !/@/.test(n)) kontakte.push(n);
-                    if (k.companyName) firmen.push(k.companyName);
-                });
-            } catch (e) { console.warn('KI: Outlook-Kontakte nicht ladbar', e); }
-            try {
-                const { data } = await window.supabaseClient.from('customer_contacts').select('name');
-                (data || []).forEach(c => { if (c.name) kontakte.push(c.name); });
-            } catch (e) { /* egal */ }
-            kiNamenCache = { kontakte, firmen };
-        }
-        const firmen = kiNamenCache.firmen.slice();
-        const dom = domainVon(absender || '');
-        if (dom && !FREEMAIL.test(dom)) {
-            const kern = dom.replace(/\.[a-z]{2,}$/i, '').split('.').pop();
-            if (kern && kern.length >= 5) { firmen.push(kern); if (/-/.test(kern)) firmen.push(kern.replace(/-/g, ' ')); }
-        }
-        return { kontakte: kiNamenCache.kontakte, firmen };
-    }
-    window.mailKiNamen = kiNamen;
-    // Kundenkontext für die KI: Kunde, dessen Maschinen, offene Vorgänge — knapp
-    async function kundenKontext(adr) {
-        const t = kundeZuAdresse(adr);
-        if (!t) return { kunde: null, text: '' };
-        const k = t.kunde;
-        const zeilen = ['Kunde: ' + k.name + (k.city ? ' (' + k.city + ')' : '') + (t.kontakt && t.kontakt.name ? ' · Ansprechpartner ' + t.kontakt.name : '')];
-        const maschinen = (window.machineList || []).filter(m => String(m.customer_id) === String(k.id)).slice(0, 15);
-        if (maschinen.length) zeilen.push('Maschinen des Kunden: ' + maschinen.map(m => (typeof window.machineLabel === 'function' ? window.machineLabel(m) : m.name) + (m.next_maintenance ? ' (nächste Wartung ' + new Date(m.next_maintenance).toLocaleDateString('de-DE') + ')' : '')).join('; '));
-        try {
-            const { data } = await window.supabaseClient.from('internal_processes').select('title, process_type, process_date, created_at, steps').eq('customer_id', k.id).neq('status', 'erledigt').order('created_at', { ascending: false }).limit(10);
-            if (data && data.length) zeilen.push('Offene Vorgänge: ' + data.map(p => (p.title || '') + (Array.isArray(p.steps) && p.steps.some(s => !s.done) ? ' [offen: ' + p.steps.filter(s => !s.done).slice(0, 3).map(s => s.text).join(', ') + ']' : '')).join('; '));
-        } catch (e) { /* egal */ }
-        return { kunde: k, kontakt: t.kontakt, text: zeilen.join('\n') };
-    }
-    // ✨ Vorgang aus Mail: an die KI-Schnellerfassung übergeben (js/ai-quick-capture.js)
-    async function mailZuVorgang(m, von, an) {
-        if (typeof window.openAiCaptureFromMail !== 'function') { toast('KI-Erfassung nicht geladen.', 'error'); return; }
-        const t = kundeZuAdresse(von.address);
-        window.openAiCaptureFromMail({
-            subject: m.subject || '',
-            fromName: von.name || '', fromAddress: von.address || '',
-            to: an || '',
-            receivedAt: m.receivedDateTime || '',
-            body: mailKern(mailText(m)),
-            customerId: t ? t.kunde.id : null,
-            customerName: t ? t.kunde.name : '',
-            contactName: t && t.kontakt ? (t.kontakt.name || '') : (von.name || '')
-        });
-    }
-    // ✨ Antwort entwerfen: KI schreibt einen Entwurf, der im Editor landet — nichts wird gesendet
-    async function antwortEntwerfen(m, von, an) {
-        const btn = $('mv-ki-antwort');
-        if (!window.groqFetch) { toast('KI nicht verfügbar.', 'error'); return; }
-        if (btn) { btn.disabled = true; btn.textContent = '⏳ Entwurf wird geschrieben …'; }
-        try {
-            const kk = await kundenKontext(von.address);
-            const text = mailKern(mailText(m)).slice(0, 8000);
-            const ich = (window.activeUser && window.activeUser.name) || '';
-            const du = /\b(du|dir|dich|dein[e]?)\b/i.test(text) && !/\bSie\b/.test(text);
-            const system = 'Du schreibst für einen Mitarbeiter einer Firma für Recycling-Maschinen (Service, Vermietung, Verkauf) die Antwort auf eine Kunden-E-Mail. Heute ist ' + new Date().toLocaleDateString('de-DE') + '.\n'
-                + 'Regeln:\n- Deutsch, ' + (du ? 'per Du (der Absender duzt)' : 'höflich per Sie') + ', freundlich, knapp, sachlich — kein Blabla.\n'
-                + '- Gehe auf JEDEN Punkt der Mail ein, in der Reihenfolge der Mail.\n'
-                + '- Nichts erfinden: keine Preise, Termine, Lieferzeiten oder Zusagen, die nicht im Kontext stehen. Wo eine Angabe fehlt, setze einen Platzhalter in eckigen Klammern, z. B. [Termin], [Preis], [Lieferzeit].\n'
-                + '- Nutze den Kundenkontext (Maschinen, offene Vorgänge), wenn er zur Mail passt.\n'
-                + '- Anrede mit dem Namen des Absenders, wenn bekannt. Grußformel am Ende, dann der Name des Mitarbeiters' + (ich ? ' („' + ich + '")' : '') + '. Keine Signatur-Zusätze (die App hängt die Signatur an).\n'
-                + '- Antworte NUR mit dem Mailtext, ohne Betreff, ohne Erklärungen, ohne Markdown.';
-            const user = 'EINGEGANGENE MAIL\nVon: ' + (von.name || '') + ' <' + (von.address || '') + '>\nBetreff: ' + (m.subject || '') + '\n\n' + text + (kk.text ? '\n\nKUNDENKONTEXT\n' + kk.text : '');
-            const resp = await (window.kiPseudonym ? window.kiPseudonym.fetchMaskiert : window.groqFetch)({
-                messages: [{ role: 'system', content: system }, { role: 'user', content: user }],
-                temperature: 0.4, max_tokens: 1200
-            }, await (async () => {
-                const n = await kiNamen(von.address);
-                return { kontakte: [von.name, kk.kontakt && kk.kontakt.name].filter(Boolean).concat(n.kontakte), firmen: (kk.kunde ? [kk.kunde.name] : []).concat(n.firmen) };
-            })(), { pruefen: true, titel: 'Antwort entwerfen' });
-            if (!resp.ok) { let e = 'HTTP ' + resp.status; try { const j = await resp.json(); e = (j.error && j.error.message) || e; } catch (_) { } throw new Error(e); }
-            const d = await resp.json();
-            const entwurf = (d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content || '').trim();
-            if (!entwurf) throw new Error('Die KI hat keinen Text geliefert.');
-            const html = entwurf.split(/\n{2,}/).map(abs => '<p>' + abs.split('\n').map(z => esc(z)).join('<br>') + '</p>').join('');
-            schreibenVorbelegen(von.address || '', antwortBetreff(m), zitatVon(m, von), html);
-            $('mv-s-status').textContent = '✨ KI-Entwurf — bitte lesen, Platzhalter in [eckigen Klammern] ersetzen, dann senden.' + (window.kiPseudonym && window.kiPseudonym.letztes ? ' 🔒 ' + window.kiPseudonym.letztes.p.anzahl + ' Angaben vor dem Senden an die KI ersetzt.' : '');
-        } catch (e) {
-            if (e.abgebrochen) { toast('Nicht an die KI gesendet.'); return; }
-            toast('Entwurf fehlgeschlagen: ' + e.message, 'error');
-        } finally {
-            if (btn) { btn.disabled = false; btn.textContent = '✨ Antwort entwerfen'; }
-        }
-    }
-
     // ---------- Rechtsklick auf eine Mail ----------
-    // Eigenes Menü statt des Browser-Menüs: Antworten, KI-Antwort, Vorgang (mit/ohne KI),
+    // Eigenes Menü statt des Browser-Menüs: Antworten, Vorgang,
     // Mail an einen bestehenden Vorgang hängen. Beim Anhängen stehen zuerst die offenen
     // Vorgänge der erkannten Adresse oben, darunter die Suche über alle offenen Vorgänge.
     async function mailVoll(id) {
@@ -526,10 +420,8 @@
             + (treffer ? '✓ ' + esc(treffer.kunde.name) : esc(von.name || von.address || '')) + '</span></div>'
             + '<ul class="menu-list">'
             + '<li data-a="antworten">↩️ Antworten</li>'
-            + '<li data-a="ki-antwort">✨ Antwort mit KI entwerfen</li>'
             + '<li class="mv-km-trenner"></li>'
             + '<li data-a="anhaengen">📎 Zu Vorgang hinzufügen …</li>'
-            + '<li data-a="ki-vorgang">✨ Vorgang mit KI erstellen</li>'
             + '<li data-a="vorgang">＋ Vorgang erstellen</li>'
             + '<li class="mv-km-trenner"></li>'
             + (treffer ? '<li data-a="adresse">🏢 Adresse öffnen</li>' : '')
@@ -547,13 +439,11 @@
                 const m = await mailVoll(id);
                 const v = vonVon(m);
                 // Aus dem Mail-Reiter einer Adresse: erst in die Mail-Ansicht wechseln, dort liegt der Editor.
-                if ((a === 'antworten' || a === 'ki-antwort') && document.querySelector('.ab-mails-liste')) {
+                if (a === 'antworten' && document.querySelector('.ab-mails-liste')) {
                     schliesseAdressDetail();
                     if (typeof window.switchView === 'function') window.switchView('mail');
                 }
                 if (a === 'antworten') schreibenVorbelegen(v.address || '', antwortBetreff(m), zitatVon(m, v));
-                else if (a === 'ki-antwort') { toast('✨ Entwurf wird geschrieben …'); await antwortEntwerfen(m, v, anText(m)); }
-                else if (a === 'ki-vorgang') mailZuVorgang(m, v, anText(m));
                 else if (a === 'vorgang') vorgangOhneKi(m, v);
             } catch (err) { toast('Mail nicht ladbar: ' + err.message, 'error'); }
         });
@@ -605,7 +495,7 @@
         el.innerHTML = '<div class="mv-km-kopf">Zu Vorgang hinzufügen<span>' + esc(kurz.subject || '(kein Betreff)') + '</span></div>'
             + '<input type="text" class="mv-km-suche" placeholder="' + (treffer ? 'Alle Vorgänge durchsuchen …' : 'Vorgang suchen (Titel, Kunde) …') + '" autocomplete="off">'
             + '<div class="mv-km-liste"><div class="mv-laden">Vorgänge werden geladen …</div></div>'
-            + '<ul class="menu-list mv-km-fuss"><li data-a="ki-vorgang">✨ Neuen Vorgang mit KI erstellen</li><li data-a="vorgang">＋ Neuen Vorgang erstellen</li></ul>';
+            + '<ul class="menu-list mv-km-fuss"><li data-a="vorgang">＋ Neuen Vorgang erstellen</li></ul>';
         kmPlatzieren(el, x, y);
         document.addEventListener('mousedown', kmAussen, true);
         document.addEventListener('keydown', kmTaste, true);
@@ -650,7 +540,7 @@
             try {
                 const m = await mailVoll(id);
                 const v = vonVon(m);
-                if (neu) { if (neu.dataset.a === 'ki-vorgang') mailZuVorgang(m, v, anText(m)); else vorgangOhneKi(m, v); return; }
+                if (neu) { vorgangOhneKi(m, v); return; }
                 await mailAnVorgang(m, v, alle.find(p => String(p.id) === li.dataset.pid));
             } catch (err) { toast('Nicht hinzugefügt: ' + err.message, 'error'); }
         });
@@ -1068,7 +958,7 @@
         entwurfHinweis('');
     }
     // zitat: { kopf, html } der Ursprungsmail (Antworten) — kommt unter die Signatur
-    // entwurfHtml: vorformulierter Text (KI-Entwurf) statt der leeren Zeile oben
+    // entwurfHtml: vorformulierter Text statt der leeren Zeile oben
     function schreibenVorbelegen(an, betreff, zitat, entwurfHtml) {
         editorBauen();
         schreibenLeeren();

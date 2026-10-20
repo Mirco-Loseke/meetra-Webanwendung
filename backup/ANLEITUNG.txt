@@ -126,11 +126,22 @@ WAS NICHT GESICHERT WIRD
   gesichert wird der R2-Bucket "dateien".
 
 
-SPAETER AUTOMATISCH LAUFEN LASSEN
-=================================
-Wenn der Knopfdruck laestig wird: Aufgabenplanung oeffnen
-(taskschd.msc) -> "Einfache Aufgabe erstellen" -> Zeitplan
-"Woechentlich" -> Aktion "Programm starten" -> als Programm
-backup.bat auswaehlen -> als Ordner "Starten in" den backup-Ordner
-eintragen. Fuer den unbeaufsichtigten Lauf in backup.bat die
-letzten Zeilen "choice ..." und "pause" entfernen.
+TAEGLICH AUTOMATISCH SICHERN
+===========================
+Voraussetzung: backup.bat laeuft per Doppelklick fehlerfrei (Schritt 4).
+
+1. Doppelklick auf  taeglich-einrichten.bat  (einmalig, als Administrator: Rechtsklick -> Als Administrator ausfuehren; laeuft dann als Systemkonto, auch ohne Anmeldung).
+   Das legt in der Windows-Aufgabenplanung die Aufgabe "meetra Datensicherung" an:
+   jeden Tag um 17:00 Uhr. War der Rechner dann aus, wird die Sicherung beim
+   naechsten Einschalten nachgeholt.
+2. Ergebnis jedes Laufs: backup-log.txt im Sicherungsordner (Datum + OK/FEHLER).
+   Einmal pro Woche reinschauen. Steht dort FEHLER: backup.bat von Hand starten,
+   dort steht der Grund.
+3. Alte Sicherungen werden nach AUFHEBEN_TAGE (Vorgabe 90) automatisch geloescht.
+4. Zeit aendern: taeglich-einrichten.bat im Editor oeffnen, "17:00" aendern,
+   erneut ausfuehren. Entfernen: taeglich-entfernen.bat.
+
+Wichtig: Der Rechner muss zu der Zeit eingeschaltet und angemeldet sein. Besser:
+Sicherungsordner (ZIEL in backup-config.cmd) auf ein Laufwerk legen, das selbst
+gesichert wird (z. B. OneDrive-Ordner oder Netzlaufwerk), sonst liegt die Sicherung
+nur auf demselben Rechner.
