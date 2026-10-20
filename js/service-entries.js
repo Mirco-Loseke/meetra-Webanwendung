@@ -422,6 +422,7 @@ window.rescueServiceReportData = async function () {
 };
 
 window.openServiceberichtModal = function (editData = null) {
+    window._serviceBewusstLeer = new Set();   // nichts ist beim Öffnen „bewusst leer“
     try {
         const modal = document.getElementById('servicebericht-modal');
         if (modal) {

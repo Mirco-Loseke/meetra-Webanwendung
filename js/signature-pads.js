@@ -181,6 +181,7 @@
             if (signatureCanvas) {
                 const dataUrl = window.signaturKlein(signatureCanvas);
                 document.getElementById('service-customer-signature').value = dataUrl;
+                if (window.serviceBewusstLeer) window.serviceBewusstLeer('customer_signature', false);
                 
                 const sigPreviewImg = document.getElementById('signature-preview-img');
                 if (sigPreviewImg) {
@@ -200,6 +201,7 @@
         window.clearSignature = async function() {
             if (!await window.appFrage("Möchten Sie die gespeicherte Unterschrift wirklich löschen?")) return;
             document.getElementById('service-customer-signature').value = '';
+            if (window.serviceBewusstLeer) window.serviceBewusstLeer('customer_signature', true);   // bleibt beim Speichern leer
             const sigPreviewImg = document.getElementById('signature-preview-img');
             if (sigPreviewImg) {
                 sigPreviewImg.src = '';
@@ -275,6 +277,7 @@
             if (techSignatureCanvas) {
                 const dataUrl = window.signaturKlein(techSignatureCanvas);
                 document.getElementById('service-tech-signature').value = dataUrl;
+                if (window.serviceBewusstLeer) window.serviceBewusstLeer('tech_signature', false);
                 const img = document.getElementById('tech-signature-preview-img');
                 if (img) { img.src = dataUrl; img.classList.remove('hidden'); img.style.display = 'block'; }
                 const ph = document.getElementById('tech-signature-placeholder');
@@ -289,6 +292,7 @@
         window.clearTechSignature = async function() {
             if (!await window.appFrage("Möchten Sie die gespeicherte Unterschrift wirklich löschen?")) return;
             document.getElementById('service-tech-signature').value = '';
+            if (window.serviceBewusstLeer) window.serviceBewusstLeer('tech_signature', true);   // bleibt beim Speichern leer
             const img = document.getElementById('tech-signature-preview-img');
             if (img) { img.src = ''; img.classList.add('hidden'); img.style.display = 'none'; }
             const ph = document.getElementById('tech-signature-placeholder');

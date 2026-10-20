@@ -91,6 +91,8 @@
 
                 const { jsPDF } = window.jspdf;
                 const doc = new jsPDF();
+                // Beim Drucken aus einem PDF-Betrachter nicht auf den bedruckbaren Bereich verkleinern: 100 % (sonst bleibt unten Platz leer)
+                try { doc.viewerPreferences({ PrintScaling: 'None', FitWindow: true, DisplayDocTitle: true }); } catch (e) { /* ältere jsPDF-Version */ }
                 // Handbericht wird ausgedruckt und von Hand ausgefüllt: alle Linien und
                 // Kästen kräftiger und dunkler. Zentral hier, statt an den ~25 Stellen
                 // einzeln — dünne/helle Linien (0,1–0,3 mm, grau) verschwinden im Druck.

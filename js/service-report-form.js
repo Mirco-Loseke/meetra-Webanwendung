@@ -662,6 +662,7 @@
             if (String(selectedTechs.length > 0 ? selectedTechs[0] : null) !== String(primaryTechId)) return;
 
             techSigInput.value = sig;
+            window.serviceBewusstLeer('tech_signature', !sig);
             const img = document.getElementById('tech-signature-preview-img');
             const ph = document.getElementById('tech-signature-placeholder');
             const btn = document.getElementById('btn-clear-tech-signature');
@@ -983,9 +984,22 @@
             const isEmpty = (v) => v == null || v === '' ||
                 (Array.isArray(v) && v.length === 0) ||
                 (typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length === 0);
-            PROTECT.forEach(f => { if (isEmpty(data[f]) && !isEmpty(base[f])) data[f] = base[f]; });
+            // Was der Nutzer BEWUSST geleert hat (Unterschrift gelöscht, Text weggenommen), bleibt leer. Vorher holte dieses
+            // Sicherheitsnetz jede gelöschte Unterschrift beim Speichern aus dem alten Stand zurück.
+            const leer = window._serviceBewusstLeer || new Set();
+            PROTECT.forEach(f => { if (!leer.has(f) && isEmpty(data[f]) && !isEmpty(base[f])) data[f] = base[f]; });
             return data;
         };
+
+        // Merker „bewusst leer“: Textfelder, die der Nutzer selbst leer macht
+        window._serviceBewusstLeer = window._serviceBewusstLeer || new Set();
+        window.serviceBewusstLeer = function (feld, leer) { if (leer) window._serviceBewusstLeer.add(feld); else window._serviceBewusstLeer.delete(feld); };
+        document.addEventListener('input', function (e) {
+            const map = { 'service-description': 'description', 'service-remarks': 'remarks', 'service-operating-hours': 'operating_hours',
+                          'service-customer-signee-name': 'customer_name', 'service-workshop-order-suffix': 'workshop_order_number' };
+            const feld = e.target && map[e.target.id];
+            if (feld) window.serviceBewusstLeer(feld, String(e.target.value || '').trim() === '');
+        }, true);
 
         // ── Formular aus einem bestehenden Bericht vorbefüllen (Bearbeiten) ──
         // War verloren gegangen: das Modal setzte nur die ID, füllte aber keine

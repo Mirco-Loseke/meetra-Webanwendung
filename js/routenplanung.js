@@ -2427,6 +2427,27 @@
             if (error) { savedRoutesTableOk = false; console.warn('saved_routes nicht verfügbar:', error.message); }
             else cloud = data || [];
         }
+        // Alte, nur lokal liegende Routen automatisch hochladen, damit Kollegen sie sehen.
+        // Schon vorhandene (gleicher Name + Zeitpunkt) werden nicht doppelt angelegt.
+        if (savedRoutesTableOk && window.supabaseClient && localRoutes().length) {
+            try {
+                const lokal = localRoutes();
+                const ich = currentAuthor();
+                const key = r => normName(r.name) + '|' + (r.created_at ? new Date(r.created_at).getTime() : '');
+                const vorhanden = new Set(cloud.map(key));
+                const rows = lokal.filter(r => !vorhanden.has(key(r))).map(r => ({
+                    name: r.name, stops: r.stops || [], total_km: r.total_km ?? null, total_min: r.total_min ?? null,
+                    author: r.author || ich, created_at: r.created_at || new Date().toISOString()
+                }));
+                const { error: upErr } = rows.length ? await sb().from('saved_routes').insert(rows) : { error: null };
+                if (!upErr) {
+                    setLocalRoutes([]);
+                    if (currentRouteLocal) { currentRouteId = null; currentRouteLocal = false; }
+                    const neu = await sb().from('saved_routes').select('*').order('created_at', { ascending: false }).limit(300);
+                    if (!neu.error) cloud = neu.data || [];
+                } else console.warn('Automatisches Hochladen lokaler Routen fehlgeschlagen:', upErr.message);
+            } catch (e) { console.warn('Auto-Upload Routen:', e); }
+        }
         window.rp2SavedRoutes = cloud.concat(localRoutes());
         // Keine eigenen, aber Routen von Kollegen vorhanden → gleich dort öffnen
         if (ladeAnsicht.tab === 'meine' && !window.rp2SavedRoutes.some(istMeine) && window.rp2SavedRoutes.length) ladeAnsicht.tab = 'andere';
