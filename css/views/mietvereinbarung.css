@@ -2807,3 +2807,12 @@ textarea.miet-in {
     .miet-sign-date.leer::-webkit-calendar-picker-indicator { display: none; }
 }
 .miet-pdf .miet-sign-date.leer::-webkit-calendar-picker-indicator { display: none; }
+
+/* Mieter + Mietgerät (die ersten zwei Blöcke auf Seite 1) eine halbe Stufe kleiner,
+   damit unten die Einweisungszeile nicht angeschnitten wird (2026-10-20). */
+.miet-pages .miet-page .miet-fit > .miet-block:nth-child(-n+2) .miet-table { font-size: 12.5px !important; }
+.miet-pages .miet-page .miet-fit > .miet-block:nth-child(-n+2) .miet-table th { font-size: 11.5px !important; }
+.miet-pages .miet-page .miet-fit > .miet-block:nth-child(-n+2) .miet-in { font-size: 12.5px !important; }
+.miet-pages .miet-page .miet-fit > .miet-block:nth-child(-n+2) .miet-table td,
+.miet-pages .miet-page .miet-fit > .miet-block:nth-child(-n+2) .miet-table th { padding-top: 1px !important; padding-bottom: 1px !important; line-height: 1.2 !important; }
+.miet-pages .miet-page .miet-fit > .miet-block:nth-child(-n+2) .miet-in { line-height: 1.2 !important; min-height: 0 !important; }
