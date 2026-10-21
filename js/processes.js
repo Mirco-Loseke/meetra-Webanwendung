@@ -19,6 +19,46 @@ window.procHatUser = function (p, user) {
     const name = String(user.name || '').toLowerCase().trim();
     return window.procZustaendige(p).some(u => { const x = String(u).toLowerCase().trim(); return !!x && (x === id || x === name); });
 };
+// Gleiche Person? Einträge sind mal ID, mal Name.
+window.istPerson = function (wert, user) {
+    if (!user || wert == null || wert === '') return false;
+    const x = String(wert).toLowerCase().trim();
+    return !!x && (x === String(user.id == null ? '' : user.id).toLowerCase().trim() || x === String(user.name || '').toLowerCase().trim());
+};
+// Ersteller eines Vorgangs: created_by_user; bei älteren Vorgängen ohne dieses Feld der erste
+// Stand-Schreiber bzw. Ersteller des ersten Schritts (Name). Liefert den Benutzer oder null.
+window.procErsteller = function (p) {
+    const users = Array.isArray(window.userList) ? window.userList : [];
+    const finde = w => (w == null || w === '') ? null : users.find(u => window.istPerson(w, u)) || null;
+    let u = finde(p && p.created_by_user);
+    if (u) return u;
+    const st = (Array.isArray(p && p.status_updates) ? p.status_updates : []).filter(x => x && (x.by_id || x.by)).sort((a, b) => String(a.at || '').localeCompare(String(b.at || '')))[0];
+    if (st) { u = finde(st.by_id) || finde(st.by); if (u) return u; }
+    const sc = (Array.isArray(p && p.steps) ? p.steps : []).filter(x => x && x.created_by).sort((a, b) => String(a.created_at || '').localeCompare(String(b.created_at || '')))[0];
+    return sc ? finde(sc.created_by) : null;
+};
+// „Dir zugewiesen": nur, was jemand ANDERES dir gegeben hat (ganzer Vorgang oder ein Schritt).
+// Wer den Vorgang selbst angelegt hat bzw. sich den Schritt selbst gegeben hat, zählt nicht.
+window.procFremdZugewiesen = function (p, user) {
+    if (!p || p.status === 'erledigt' || !user) return false;
+    const ersteller = window.procErsteller(p);
+    const ownerIch = !ersteller || window.istPerson(ersteller.id, user) || window.istPerson(ersteller.name, user);   // unbekannt = nicht „von anderen“
+    const steps = Array.isArray(p.steps) ? p.steps : [];
+    const meine = steps.filter(st => st && !st.done && (window.istPerson(st.assigned_id, user) || window.istPerson(st.assigned_to, user)));
+    if (meine.some(st => st.created_by && !window.istPerson(st.created_by, user))) return true;
+    const ganz = Array.isArray(p.assigned_users) && p.assigned_users.some(u => window.istPerson(u, user));
+    if (!ganz || ownerIch) return false;
+    return !(meine.length && meine.every(st => window.istPerson(st.created_by, user)));
+};
+// Letzte Bearbeitung: jüngster Zeitpunkt aus Ständen, Schritten und Anlage
+window.procZuletzt = function (p) {
+    const t = [];
+    const add = v => { const d = v ? new Date(v) : null; if (d && !isNaN(d)) t.push(d.getTime()); };
+    (Array.isArray(p.status_updates) ? p.status_updates : []).forEach(u => add(u && u.at));
+    (Array.isArray(p.steps) ? p.steps : []).forEach(st => { if (st) { add(st.created_at); add(st.done_at); } });
+    add(p.created_at);
+    return t.length ? new Date(Math.max.apply(null, t)) : null;
+};
 window.eventsState = window.eventsState || {};
 // Zuständigen-Filter der Vorgänge-Ansicht: null = aus, 'me' = ich, sonst Benutzer-ID
 window.setProcessAssignee = function (wer) {
@@ -585,7 +625,7 @@ window.renderProcesses = function(targetId, opts) {
     let zustWahl = zeigeZust && window.eventsState.processAssignee === 'me' ? 'me' : null;
     if (zustWahl) {
         const u = zustWahl === 'me' ? ich : userListe.find(x => String(x.id) === String(zustWahl));
-        base = u ? base.filter(p => window.procHatUser(p, u)) : base;
+        base = u ? base.filter(p => zustWahl === 'me' ? window.procFremdZugewiesen(p, u) : window.procHatUser(p, u)) : base;
     }
 
     const isStale = p => {
@@ -604,6 +644,10 @@ window.renderProcesses = function(targetId, opts) {
     // bei der Standardreihenfolge, dort gibt es keinen Umschalter.
     const sortMode = opts.compact ? 'alter' : window.getProcessSortMode();
     filtered = window.sortProcesses(filtered, sortMode);
+
+    if (!opts.compact && targetId === 'standalone-processes-container') {
+        window._procDruck = { liste: filtered, status: statusFilter, zust: zustWahl, meine: !!opts.onlyAssignedTo, suche: searchQuery, sort: sortMode };
+    }
 
     const counts = {
         offen: base.filter(p => p.status === 'offen').length,
@@ -625,17 +669,13 @@ window.renderProcesses = function(targetId, opts) {
                 <div class="maint-kpi-value" style="color: #f59e0b;">${counts.in_bearbeitung}</div>
                 <div class="maint-kpi-label">In Arbeit</div>
             </div>
+            <div class="maint-kpi-tile${zustWahl === 'me' ? ' active' : ''}" onclick="window.setProcessAssignee('me')" title="Vorgänge oder Schritte, die dir jemand anderes zugewiesen hat — ohne erledigte">
+                <div class="maint-kpi-value" style="color: #a78bfa;">${vorZustaendig.filter(p => window.procFremdZugewiesen(p, ich)).length}</div>
+                <div class="maint-kpi-label">Dir zugewiesen</div>
+            </div>
             <div class="maint-kpi-tile${kpiActive('erledigt')}" onclick="window.toggleProcessKpiFilter('erledigt')" title="Nur erledigte Vorgänge anzeigen">
                 <div class="maint-kpi-value" style="color: #10b981;">${counts.erledigt}</div>
                 <div class="maint-kpi-label">Erledigt</div>
-            </div>
-            <div class="maint-kpi-tile${kpiActive('stale')}" onclick="window.toggleProcessKpiFilter('stale')" title="Unerledigte Vorgänge, die älter als 7 Tage sind">
-                <div class="maint-kpi-value" style="color: #F87171;">${counts.stale}</div>
-                <div class="maint-kpi-label">&gt; 7 Tage offen</div>
-            </div>
-            <div class="maint-kpi-tile${zustWahl === 'me' ? ' active' : ''}" onclick="window.setProcessAssignee('me')" title="Vorgänge, bei denen du als Zuständiger eingetragen bist (ganzer Vorgang oder ein Schritt) — ohne erledigte">
-                <div class="maint-kpi-value" style="color: #a78bfa;">${vorZustaendig.filter(p => p.status !== 'erledigt' && window.procHatUser(p, ich)).length}</div>
-                <div class="maint-kpi-label">Dir zugewiesen</div>
             </div>
         </div>
     `;
@@ -793,6 +833,28 @@ window.renderProcesses = function(targetId, opts) {
                 `</div>`;
         }
 
+        {
+            const users = window.userList || [];
+            const ersteller = window.procErsteller(p);
+            const istZust = u => Array.isArray(p.assigned_users) && p.assigned_users.some(x => window.istPerson(x, u));
+            if (ersteller) {
+                const ini = ersteller.initials || String(ersteller.name || '?').substring(0, 2).toUpperCase();
+                const zust = istZust(ersteller);
+                const farbe = ersteller.color || '#666';
+                const stil = zust
+                    ? `background:${farbe}; color:#fff; box-shadow:0 0 0 2px rgba(255,255,255,0.85), 0 0 10px ${farbe};`
+                    : 'background:rgba(148,163,184,0.25); color:rgba(255,255,255,0.55); border:1px dashed rgba(255,255,255,0.3);';
+                const tip = 'Erstellt von ' + ersteller.name + (zust ? '' : ' — ist selbst nicht zuständig');
+                const kreis = `<div title="${tip}" style="width:24px; height:24px; border-radius:50%; ${stil} display:flex; align-items:center; justify-content:center; font-size:0.69rem; font-weight:800; flex-shrink:0;">${ini}</div>`;
+                if (zust) {
+                    // Ersteller ist auch zuständig: seinen Kreis in der Liste hervorheben
+                    const marke = '<div title="' + ersteller.name + '" style="';
+                    assignedHtml = assignedHtml.split(marke).join('<div title="' + tip + '" style="box-shadow:0 0 0 2px rgba(255,255,255,0.85), 0 0 10px ' + farbe + '; ');
+                } else {
+                    assignedHtml = '<div style="display:flex; gap:4px; flex-wrap:wrap; align-items:center;">' + kreis + (assignedHtml ? '<span style="width:1px; height:16px; background:rgba(255,255,255,0.2);"></span>' + assignedHtml : '') + '</div>';
+                }
+            }
+        }
         const procSteps = Array.isArray(p.steps) ? p.steps : [];
         const stepsDone = procSteps.filter(s => s.done).length;
         const escStep = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -918,12 +980,10 @@ window.renderProcesses = function(targetId, opts) {
         const ageDays = window.getProcessAgeDays(p);
         const isOld = p.status !== 'erledigt' && ageDays !== null && ageDays > 7;
         const isVeryOld = isOld && ageDays > 21;
-        const ageBadge = isOld
-            ? `<span style="font-size: 0.68rem; padding: 3px 9px; border-radius: 6px; background: rgba(248,113,113,${isVeryOld ? '0.24' : '0.14'}); color: #F87171; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap;">seit ${ageDays} Tagen offen</span>`
-            : '';
+        const ageBadge = (() => { const z = window.procZuletzt(p); return z ? `<span style="font-size:0.68rem; color:rgba(255,255,255,0.5); white-space:nowrap;">Zuletzt bearbeitet: ${fmtStamp(z.toISOString())}</span>` : ''; })();
 
         const cardHtml = `
-            <div class="proc-card${isOld ? ' is-old' : ''}${isVeryOld ? ' is-very-old' : ''}" style="border-left-color: ${statusColor};">
+            <div class="proc-card${isOld ? ' is-old' : ''}${isVeryOld ? ' is-very-old' : ''}" data-proc-open="${p.id}" title="Zum Bearbeiten anklicken" style="cursor:pointer; border-left-color: ${statusColor};">
                 <div class="proc-card-head">
                     ${typeHtml}
                     <div class="proc-card-headmain">
@@ -1007,9 +1067,6 @@ window.renderProcesses = function(targetId, opts) {
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                         </button>`;
                         })()}
-                        <button onclick="window.openEditProcessModal('${p.id}')" class="btn-icon-soft" title="Bearbeiten" style="background: rgba(255,255,255,0.05); color: #60a5fa; border: 1px solid rgba(255,255,255,0.1); width: 34px; height: 34px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.background='rgba(59,130,246,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4Z"></path></svg>
-                        </button>
                         <button onclick="window.deleteProcess('${p.id}')" class="btn-icon-soft delete-permission-required" data-del-area="vorgaenge" title="Löschen" style="background: rgba(255,255,255,0.05); color: #ef4444; border: 1px solid rgba(255,255,255,0.1); width: 34px; height: 34px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
                         </button>
@@ -1348,3 +1405,13 @@ window.procPopHide = function (host, sel) {
 window.procPopMove = function (host, sel) {
     window.procPopShow(host, sel);
 };
+
+
+// Klick irgendwo auf die Vorgangs-Karte (wo nichts anderes liegt) öffnet das Bearbeiten-Fenster.
+document.addEventListener('click', function (e) {
+    const k = e.target.closest && e.target.closest('[data-proc-open]');
+    if (!k) return;
+    if (e.target.closest('button, a, input, select, textarea, label, [onclick], [contenteditable], video, [data-no-open]')) return;
+    if (window.getSelection && String(window.getSelection()).length) return;   // Text markiert, nicht öffnen
+    window.openEditProcessModal(k.getAttribute('data-proc-open'));
+});

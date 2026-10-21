@@ -34,10 +34,40 @@
     // ohneKlick: nur Vorschau (z. B. Foto-Eingang, dort wählt ein Klick aus)
     function videoKachelHtml(url, klasse, ohneKlick) {
         return (ohneKlick ? '<span class="mv-video' : '<button type="button" class="mv-video') + (klasse ? ' ' + klasse : '') + '"' + (ohneKlick ? '>' : ' data-mv-video="' + esc(url) + '" title="Video abspielen">') +
-            '<video preload="metadata" muted playsinline src="' + esc(url) + '#t=0.1"></video>' +
+            '<video preload="none" muted playsinline data-lazy-src="' + esc(url) + '#t=0.1"></video>' +
             '<span class="mv-play" aria-hidden="true">▶</span><span class="mv-dauer"></span>' + (ohneKlick ? '</span>' : '</button>');
     }
     window.videoKachelHtml = videoKachelHtml;
+
+    // Videos erst laden, wenn die Kachel (fast) im Sichtfeld ist
+    const videoBeob = typeof IntersectionObserver === 'function' ? new IntersectionObserver(eintraege => {
+        eintraege.forEach(en => {
+            if (!en.isIntersecting) return;
+            const v = en.target;
+            videoBeob.unobserve(v);
+            if (v.dataset.lazySrc) { v.preload = 'metadata'; v.src = v.dataset.lazySrc; delete v.dataset.lazySrc; }
+        });
+    }, { rootMargin: '300px' }) : null;
+    function videosPruefen() {
+        document.querySelectorAll('video[data-lazy-src]:not([data-beob])').forEach(v => {
+            v.setAttribute('data-beob', '1');
+            if (videoBeob) videoBeob.observe(v);
+            else { v.src = v.dataset.lazySrc; }
+        });
+    }
+    new MutationObserver(videosPruefen).observe(document.documentElement, { childList: true, subtree: true });
+    videosPruefen();
+
+    // Bilder, die wegen eines Netzwackelns nicht kamen: bis zu 2 weitere Versuche
+    document.addEventListener('error', e => {
+        const im = e.target;
+        if (!(im instanceof HTMLImageElement) || !im.classList.contains('ab-ablage-bild')) return;
+        const n = Number(im.dataset.versuch || 0);
+        if (n >= 2) { im.classList.add('ab-fehler'); return; }
+        im.dataset.versuch = n + 1;
+        const basis = im.dataset.orig || (im.dataset.orig = im.getAttribute('src'));
+        setTimeout(() => { im.src = basis + (basis.includes('?') ? '&' : '?') + 'r=' + Date.now(); }, 1500 * (n + 1));
+    }, true);
 
     function dauerText(s) {
         if (!isFinite(s) || s <= 0) return '';
@@ -128,6 +158,7 @@
 
     function zieh(p) { return p.eid ? ' draggable="true" data-ab-url="' + esc(p.url) + '" data-ab-eid="' + esc(p.eid) + '"' : ''; }
 
+    const LIMIT = 30;
     function postenHtml(p, alleBilder, gi) {
         if (p.art === 'video') return '<div class="ab-ablage-item"' + zieh(p) + '>' + videoKachelHtml(p.url) + '<span class="ab-ablage-name">' + esc(p.name) + '</span></div>';
         if (p.art === 'bild') {
@@ -168,12 +199,15 @@
             gruppen.forEach((posten, kopf) => {
                 // Jede Gruppe (Tag + Überschrift) öffnet nur ihre eigenen Bilder, mit Titel und Datum
                 const eids = [...new Set(posten.map(p => p.eid).filter(Boolean))];
-                const gi = window.__ablageGruppen.push({ urls: posten.filter(p => p.art === 'bild').map(p => p.url), titel: [kopf, tagText(tag)].filter(Boolean).join(' · '), roh: posten[0].titel, eids, posten: posten.map(p => ({ url: p.url, name: p.name, art: p.art, eid: p.eid })) }) - 1;
+                const gi = window.__ablageGruppen.push({ urls: posten.filter(p => p.art === 'bild').map(p => p.url), titel: [kopf, tagText(tag)].filter(Boolean).join(' · '), roh: posten[0].titel, datum: tag === '0000-00-00' ? '' : tag, eids, posten: posten.map(p => ({ url: p.url, name: p.name, art: p.art, eid: p.eid })) }) - 1;
                 inhalt += '<div class="ab-ablage-gruppe" data-ablage-gi="' + gi + '">' + (kopf ? (eids.length ? '<button type="button" class="ab-ablage-kopf ab-ablage-kopf-edit" data-ablage-edit="' + gi + '" title="Überschrift ändern, Dateien entfernen oder hinzufügen">' + esc(kopf) + ' <span class="ab-ablage-stift">✎</span></button>' : '<div class="ab-ablage-kopf">' + esc(kopf) + '</div>') : '') +
-                    '<div class="ab-ablage-raster' + (S.art === 'dok' ? ' ab-ablage-raster-dok' : '') + '">' + posten.map(p => postenHtml(p, alleBilder, gi)).join('') + '</div></div>';
+                    '<div class="ab-ablage-raster' + (S.art === 'dok' ? ' ab-ablage-raster-dok' : '') + '">' + posten.map((p, i) => { const h = postenHtml(p, alleBilder, gi); return i >= LIMIT ? h.replace(/^<(div|button)/, '<$1 hidden data-ab-mehr') : h; }).join('') + '</div>' +
+                    (posten.length > LIMIT ? '<button type="button" class="knopf knopf--text knopf--klein" data-ablage-mehr>Weitere ' + (posten.length - LIMIT) + ' anzeigen</button>' : '') + '</div>';
             });
             inhalt += '</section>';
         });
+
+        if (liste.length) inhalt += '<div class="ab-ablage-neu" data-ablage-neu><b>＋ Neue Gruppe</b><span>Datei hierher ziehen, um eine neue Gruppe zu starten (z. B. „Motorfehler November“)</span></div>';
 
         return '<div class="ab-ablage" data-ablage-kunde="' + esc(customerId) + '">' +
             '<div class="ab-ablage-leiste"><div class="ab-ablage-reiterleiste">' + reiter + '</div>' +
@@ -244,6 +278,8 @@
             if (window.refreshAddressDetailAnsicht) window.refreshAddressDetailAnsicht();
             return;
         }
+        const mehr = e.target.closest('[data-ablage-mehr]');
+        if (mehr) { mehr.parentElement.querySelectorAll('[data-ab-mehr]').forEach(x => { x.hidden = false; x.removeAttribute('data-ab-mehr'); }); mehr.remove(); return; }
         const ed = e.target.closest('[data-ablage-edit]');
         if (ed) { gruppeBearbeiten(Number(ed.getAttribute('data-ablage-edit')), box.getAttribute('data-ablage-kunde')); return; }
         if (e.target.closest('[data-ablage-hoch]')) { box.querySelector('[data-ablage-datei]').click(); return; }
@@ -356,6 +392,19 @@
         return true;
     }
 
+    async function dateiInNeueGruppe(url, vonId, titel, kundeId, iso) {
+        const von = await eintragHolen(vonId);
+        if (!von) throw new Error('Eintrag nicht gefunden');
+        const vonDateien = Array.isArray(von.files) ? von.files : [];
+        const obj = vonDateien.find(f => urlVon(f) === url);
+        if (!obj) return false;
+        const { error } = await sb().from(TABELLE).insert({ type: medienArt(obj) === 'dok' ? 'note' : 'photo', title: titel, files: [obj], customer_id: kundeId, ...(iso && !isNaN(new Date(iso + 'T12:00:00')) ? { created_at: new Date(iso + 'T12:00:00').toISOString() } : {}), created_by: (window.activeUser && window.activeUser.id) || null });
+        if (error) throw error;
+        const rest = vonDateien.filter(f => urlVon(f) !== url);
+        if (!(await leereHuelleEntfernen(von, rest))) await dateienSetzen(vonId, rest);
+        return true;
+    }
+
     // ---- Ziehen zwischen Gruppen
     document.addEventListener('dragstart', e => {
         const k = e.target.closest && e.target.closest('[data-ab-eid]');
@@ -370,9 +419,11 @@
     const internerDrag = ev => ev.dataTransfer && [...(ev.dataTransfer.types || [])].includes('text/x-ablage');
     document.addEventListener('dragover', e => {
         if (!internerDrag(e)) return;
-        const g = e.target.closest && e.target.closest('[data-ablage-gi]');
+        const neu = e.target.closest && e.target.closest('[data-ablage-neu]');
+        const g = neu || (e.target.closest && e.target.closest('[data-ablage-gi]'));
         document.querySelectorAll('.ab-drop-ziel').forEach(x => { if (x !== g) x.classList.remove('ab-drop-ziel'); });
         if (!g) return;
+        if (neu) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; g.classList.add('ab-drop-ziel'); return; }
         const grp = (window.__ablageGruppen || [])[Number(g.getAttribute('data-ablage-gi'))];
         if (!grp || !grp.eids.length) return;
         e.preventDefault();
@@ -381,8 +432,31 @@
     });
     document.addEventListener('drop', async e => {
         if (!internerDrag(e)) return;
+        const neu = e.target.closest && e.target.closest('[data-ablage-neu]');
         const g = e.target.closest && e.target.closest('[data-ablage-gi]');
         document.querySelectorAll('.ab-drop-ziel, .ab-zieht').forEach(x => x.classList.remove('ab-drop-ziel', 'ab-zieht'));
+        if (neu) {
+            e.preventDefault(); e.stopPropagation();
+            let d; try { d = JSON.parse(e.dataTransfer.getData('text/x-ablage')); } catch (er) { return; }
+            const kunde = neu.closest('.ab-ablage').getAttribute('data-ablage-kunde');
+            const titel = await window.appEingabe('Name der neuen Gruppe:', '');
+            if (titel === null) return;
+            const heute = new Date().toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            const dtxt = await window.appEingabe('Datum der Gruppe (TT.MM.JJJJ):', heute);
+            if (dtxt === null) return;
+            const m = /^(d{1,2}).(d{1,2}).(d{4})$/.exec((dtxt || '').trim());
+            const iso = m ? m[3] + '-' + m[2].padStart(2, '0') + '-' + m[1].padStart(2, '0') : null;
+            try {
+                if (await dateiInNeueGruppe(d.url, d.eid, (titel || '').trim() || 'Neue Gruppe', kunde, iso)) {
+                    if (window.showToast) window.showToast('Neue Gruppe angelegt', 'success');
+                    if (window.refreshAddressDetail) await window.refreshAddressDetail();
+                }
+            } catch (er) {
+                console.error('Ablage: Neue Gruppe fehlgeschlagen', er);
+                if (window.showToast) window.showToast('Neue Gruppe fehlgeschlagen: ' + (er.message || er), 'error');
+            }
+            return;
+        }
         if (!g) return;
         e.preventDefault(); e.stopPropagation();
         const grp = (window.__ablageGruppen || [])[Number(g.getAttribute('data-ablage-gi'))];
@@ -431,13 +505,15 @@
                 '<div class="ab-edit-kopf"><h3>Ablage bearbeiten</h3><button type="button" class="knopf-x" data-ab-zu aria-label="Schließen">×</button></div>' +
                 '<label class="ab-edit-label" for="ab-edit-titel">Überschrift</label>' +
                 '<input id="ab-edit-titel" class="glass-input" type="text" value="' + esc(grp.roh) + '">' +
+                '<label class="ab-edit-label" for="ab-edit-datum">Datum</label>' +
+                '<input id="ab-edit-datum" class="glass-input" type="date" value="' + esc(grp.datum || '') + '">' +
                 '<div class="ab-edit-label">Dateien <span>' + dateien.length + '</span></div>' +
                 '<div class="ab-edit-raster">' + (dateien.length ? dateien.map(kachel).join('') : '<div class="ab-ablage-leer"><span>Keine Dateien mehr in dieser Gruppe.</span></div>') + '</div>' +
                 '<div class="ab-edit-hinweis">Tipp: Dateien lassen sich in der Ablage auch einfach auf eine andere Gruppe ziehen.</div>' +
                 '<div class="ab-edit-fuss"><button type="button" class="knopf knopf--sekundaer" data-ab-hoch>＋ Dateien hinzufügen</button>' +
                 '<span class="ab-edit-fuss-platz"></span>' +
                 '<button type="button" class="knopf knopf--sekundaer" data-ab-zu>Schließen</button>' +
-                '<button type="button" class="knopf knopf--primaer" data-ab-titel>Überschrift speichern</button></div>' +
+                '<button type="button" class="knopf knopf--primaer" data-ab-titel>Speichern</button></div>' +
                 '<input type="file" multiple hidden data-ab-datei accept="image/*,video/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,.zip,.msg,.eml"></div>';
         }
         zeichnen();
@@ -471,12 +547,15 @@
             if (ev.target.closest('[data-ab-titel]')) {
                 const neu = (o.querySelector('#ab-edit-titel').value || '').trim();
                 if (!neu) { if (window.showToast) window.showToast('Bitte eine Überschrift eingeben.'); return; }
-                if (neu === grp.roh) { if (window.showToast) window.showToast('Die Überschrift ist unverändert.'); return; }
+                const dat = o.querySelector('#ab-edit-datum').value;
+                if (neu === grp.roh && dat === (grp.datum || '')) { if (window.showToast) window.showToast('Nichts geändert.'); return; }
                 try {
-                    const { error } = await sb().from(TABELLE).update({ title: neu }).in('id', grp.eids);
+                    const upd = { title: neu };
+                    if (dat && dat !== grp.datum) upd.created_at = new Date(dat + 'T12:00:00').toISOString();
+                    const { error } = await sb().from(TABELLE).update(upd).in('id', grp.eids);
                     if (error) throw error;
-                    grp.roh = neu; geaendert = true;
-                    if (window.showToast) window.showToast('Überschrift gespeichert', 'success');
+                    grp.roh = neu; grp.datum = dat; geaendert = true;
+                    if (window.showToast) window.showToast('Gespeichert', 'success');
                     zu();
                 } catch (er) {
                     console.error('Ablage: Überschrift speichern fehlgeschlagen', er);

@@ -234,3 +234,11 @@ button.ab-ablage-kopf-edit:hover .ab-ablage-stift, button.ab-ablage-kopf-edit:fo
 @media (max-width: 768px) {
     .ab-edit-x { width: 34px; height: 34px; }
 }
+
+/* Neue Gruppe: Ablagefläche unter den Gruppen */
+.ab-ablage-neu { margin-top: var(--space-4); min-height: 76px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-1); text-align: center; padding: var(--space-3); border: 2px dashed var(--glass-border, rgba(255, 255, 255, .18)); border-radius: var(--radius-lg); color: var(--text-3); font-size: var(--fs-sm); transition: border-color var(--dur-fast), background var(--dur-fast); }
+.ab-ablage-neu b { color: var(--text-2); }
+.ab-ablage-neu.ab-drop-ziel { border-color: var(--success, #10a068); background: rgba(16, 160, 104, .08); color: var(--text-1); }
+
+.ab-ablage-item[hidden], .ab-ablage-dok[hidden] { display: none !important; }
+.ab-ablage-bild.ab-fehler { opacity: .35; }

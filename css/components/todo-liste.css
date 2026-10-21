@@ -622,3 +622,7 @@ body.todo-offen #todo-kopf-btn { background: #10b981; border-color: #10b981; col
 
 /* Panel deckend: bei 96 % schien die Startseite (weiße Schrift) sichtbar durch */
 #todo-panel { background-color: #0f172a; }
+
+/* AUF EIS (2026-10-21, auf Wunsch): Knopf „Meine Liste“ in der Kopfleiste ausgeblendet.
+   Code bleibt. Wieder an = diese Regel löschen. */
+#todo-kopf-btn { display: none !important; }

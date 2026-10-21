@@ -89,7 +89,12 @@
         } catch (e) { /* nichts offen */ }
     }
 
+    // AUF EIS (2026-10-21, auf Wunsch): alle Pop-ups/Windows-Meldungen sind für ALLE Geräte aus.
+    // Code bleibt vollständig erhalten. Wieder einschalten = PAUSIERT auf false setzen.
+    const PAUSIERT = true;
+
     function geraetStumm() {
+        if (PAUSIERT) return true;
         try { return localStorage.getItem(STUMM_KEY) === '1'; } catch (e) { return false; }
     }
 

@@ -592,7 +592,7 @@
    die sollen auf iPad und Rechner in EINER Reihe passen; erst auf dem Handy umbrechen.
    Höhere Spezifität (#processes) schlägt die 900px-2-Spalten-Regel weiter unten. */
 #processes .maint-kpi-grid {
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 10px;
 }
 #processes .maint-kpi-tile {
