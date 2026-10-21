@@ -92,7 +92,7 @@
   header .liste { font-size: 11pt; margin: 3px 0 0; }
   header .meta { font-size: 7.5pt; color: #555; margin-top: 2px; }
   .legende { font-size: 6.8pt; color: #666; margin: 2px 0; }
-  h2.uber { font-size: 14pt; font-weight: 800; margin: 10px 0 2px; padding: 2px 4px; color: #000; border: 2px solid #000; border-width: 2px 0; break-after: avoid; page-break-after: avoid; }
+  h2.uber { font-size: 10.5pt; font-weight: 700; margin: 8px 0 2px; padding: 1px 2px; color: #333; border-bottom: 1px solid #888; break-after: avoid; page-break-after: avoid; }
   h3.stufe { font-size: 8.6pt; margin: 5px 0 0; padding: 1.5px 5px; background: #e6e6e6; break-after: avoid; page-break-after: avoid; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   h2 .anzahl, h3 .anzahl { font-weight: normal; opacity: .75; }
   .eintrag { display: grid; grid-template-columns: 1fr 33%; border: 1px solid #999; border-top: none; break-inside: avoid; page-break-inside: avoid; }
@@ -149,7 +149,7 @@
             const mit = rest.filter(g.test);
             rest = rest.filter(x => !mit.includes(x));
             if (!mit.length && !g.immer) return;
-            rumpf += `<h2 class="uber">${esc(g.titel)} <span class="anzahl">${mit.length}${g.hinweis ? ' · ' + esc(g.hinweis) : ''}</span></h2>`;
+            rumpf += `<h2 class="uber">${esc(g.titel)} <span class="anzahl">${mit.length}</span></h2>`;
             if (!mit.length) rumpf += '<p class="grau" style="margin:2px 0 4px 6px">Keine offenen Einträge.</p>';
             STUFEN.forEach((name, s) => {
                 const teil = mit.filter(x => stufe(x.p) === s)

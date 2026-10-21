@@ -721,10 +721,19 @@ window.renderProcesses = function(targetId, opts) {
         typeCounts[key] = (typeCounts[key] || 0) + 1;
     });
 
+    const aktiveFilter = [];
+    if (!opts.compact) {
+        if (statusFilter && statusFilter !== 'all') aktiveFilter.push('Status ' + ({ offen: 'Offen', in_bearbeitung: 'In Arbeit', erledigt: 'Erledigt', stale: '> 7 Tage' }[statusFilter] || statusFilter));
+        if (zustWahl === 'me') aktiveFilter.push('Dir zugewiesen');
+        if (opts.onlyAssignedTo) aktiveFilter.push('Meine Vorgänge');
+        if (searchQuery) aktiveFilter.push('Suche „' + searchQuery + '“');
+    }
+
     if (filtered.length === 0) {
         html += `
             <div style="padding: 3rem 2rem; text-align: center; border-radius: 12px; background: rgba(255,255,255,0.01); border: 1px dashed rgba(255,255,255,0.08);">
-                <p style="color: #fff; font-size: 1rem; margin: 0;">${window.eventsState.processesGeladen ? 'Keine internen Vorgänge gefunden.' : 'Vorgänge werden geladen …'}</p>
+                <p style="color: #fff; font-size: 1rem; margin: 0;">${window.eventsState.processesGeladen ? (aktiveFilter.length ? 'Keine Vorgänge für diese Filter: ' + aktiveFilter.join(' · ') : 'Keine internen Vorgänge gefunden.') : 'Vorgänge werden geladen …'}</p>
+                ${window.eventsState.processesGeladen ? `<div style="margin-top:14px; display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">${aktiveFilter.length ? '<button type="button" class="knopf knopf--primaer" onclick="window.procFilterZuruecksetzen()">Filter zurücksetzen</button>' : ''}<button type="button" class="knopf knopf--sekundaer" onclick="window.procNeuLaden()">Neu laden</button></div>` : ''}
             </div>
         `;
         container.innerHTML = html;
@@ -1415,3 +1424,16 @@ document.addEventListener('click', function (e) {
     if (window.getSelection && String(window.getSelection()).length) return;   // Text markiert, nicht öffnen
     window.openEditProcessModal(k.getAttribute('data-proc-open'));
 });
+
+
+// Aus der Leer-Meldung: alle Filter weg bzw. frisch laden (statt die ganze Seite neu zu laden).
+window.procFilterZuruecksetzen = function () {
+    window.eventsState.processStatusFilter = 'all';
+    window.eventsState.processAssignee = null;
+    const i = document.getElementById('process-search-input'); if (i) i.value = '';
+    if (typeof window.filterProcessesByUser === 'function') window.filterProcessesByUser('all'); else window.renderProcesses();
+};
+window.procNeuLaden = async function () {
+    try { if (window.vorgangAngebotePufferLeeren) window.vorgangAngebotePufferLeeren(); await window.fetchProcesses(); } catch (e) { /* Meldung kommt aus dem Laden */ }
+    window.renderProcesses();
+};
