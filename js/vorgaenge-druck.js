@@ -69,12 +69,11 @@
         const schZusatz = sch ? [sch.remind_at ? 'bis ' + kurz(sch.remind_at) : '', schZu ? kuerzel(schZu) : (sch.assigned_to || '')].filter(Boolean).map(esc).join(' · ') : '';
         const stand = (Array.isArray(p.status_updates) ? p.status_updates : []).filter(u => u && u.text).sort((a, b) => String(b.at || '').localeCompare(String(a.at || '')))[0];
         const ab = abstand(faellig(p));
-        const wann = ab ? `<span class="wann ${ab.art}">${esc(ab.text)}</span>` : '';
         const zl = window.procZuletzt ? window.procZuletzt(p) : null;
+        const wann = zl ? `<span class="wann">Zuletzt: ${esc(zl.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' }))}</span>` : '';
         const info = [];
         if (sch) info.push(`<div class="z schritt"><span class="box klein"></span><span class="lbl">Nächster Schritt:</span> <b>${esc(sch.text)}</b>${schZusatz ? ` <span class="grau">(${schZusatz})</span>` : ''}</div>`);
         if (stand) info.push(`<div class="z"><span class="lbl">Stand ${esc(kurz(stand.at))}${stand.by ? ' (' + esc(stand.by) + ')' : ''}:</span> ${esc(stand.text)}</div>`);
-        if (zl) info.push(`<div class="z grau">Zuletzt bearbeitet: ${esc(zl.toLocaleDateString('de-DE'))}</div>`);
         return `<div class="eintrag"><div class="inhalt">
             <div class="kopf"><span class="nr">${nr}</span><span class="box"></span><span class="art">Vorgang</span><span class="wer">${wer}</span>
                 <span class="titel">${esc(p.title || 'Vorgang')}</span>${wann}</div>
