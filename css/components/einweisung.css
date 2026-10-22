@@ -1,0 +1,33 @@
+/* Einweisungserklärung (js/einweisung.js) — nutzt Overlay/Panel von eintrag-anlegen.css */
+.ew-overlay { z-index: 9710; }
+.ew-panel { width: min(760px, 100%); }
+.ew-body { gap: var(--space-4); }
+.ew-block { display: flex; flex-direction: column; gap: var(--space-2); }
+.ew-block h3 { margin: 0; font-size: var(--fs-lg); }
+.ew-feld { display: block; }
+.ew-feld .glass-input { width: 100%; }
+.ew-zwei { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
+.ew-suche { position: relative; }
+.ew-suche .glass-input { width: 100%; }
+.ew-treffer { position: absolute; left: 0; right: 0; top: 100%; z-index: 5; max-height: 260px; overflow-y: auto; }
+.ew-treffer li small { display: block; opacity: 0.7; }
+.ew-hinweis { margin: 0; font-weight: var(--fw-semibold, 600); }
+.ew-sig { display: flex; flex-direction: column; gap: var(--space-2); }
+.ew-sig canvas { width: 100%; aspect-ratio: 70 / 22; background: #fff; border-radius: var(--radius-md); touch-action: none; }
+@media (max-width: 768px) {
+    .ew-zwei { grid-template-columns: 1fr; }
+}
+.ew-punkte { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2) var(--space-4); }
+.ew-punkt { display: flex; align-items: flex-start; gap: var(--space-2); font-size: var(--fs-sm); cursor: pointer; }
+.ew-punkt input { margin-top: 3px; }
+.ew-listenzeile { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-3) 0; border-bottom: 1px solid var(--glass-border); }
+.ew-listenzeile small { display: block; opacity: 0.7; }
+.ew-listeknoepfe { display: flex; gap: var(--space-2); flex-wrap: wrap; justify-content: flex-end; }
+@media (max-width: 768px) {
+    .ew-punkte { grid-template-columns: 1fr; }
+}
+.ew-treffer { background: #0f172a; border: 1px solid rgba(255, 255, 255, 0.14); border-radius: var(--radius-lg); box-shadow: var(--shadow-3); padding: var(--space-1); margin-top: var(--space-1); }
+.ew-treffer[hidden] { display: none; }
+.ew-treffer .menu-list { list-style: none; margin: 0; padding: 0; }
+.ew-treffer li { padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); cursor: pointer; }
+.ew-treffer li:hover { background: rgba(255, 255, 255, 0.08); }

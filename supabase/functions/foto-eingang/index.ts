@@ -27,7 +27,7 @@ const R2_BUCKET     = Deno.env.get('R2_BUCKET') ?? 'dateien';
 const R2_PUBLIC_URL = Deno.env.get('R2_PUBLIC_URL') ?? 'https://pub-28aab7dd73f540f38b6358d78f889a27.r2.dev';
 const R2_ENDPOINT   = `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`;
 
-const MAX_DATEI = 25 * 1024 * 1024;
+const MAX_DATEI = 50 * 1024 * 1024;
 const MAX_ANZAHL = 30;
 const ERLAUBT = /^(image\/|video\/|audio\/|application\/pdf$)/;
 const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY') ?? '';
@@ -167,6 +167,28 @@ function imHintergrund(p: Promise<unknown>) {
     return p;
 }
 
+async function sha256(daten: ArrayBuffer) {
+    const h = new Uint8Array(await crypto.subtle.digest('SHA-256', daten));
+    return Array.from(h).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// Gibt es diesen Inhalt schon im Eingang? Fehlt die Spalte (Migration offen), gilt: nein.
+async function hashVorhanden(hash: string) {
+    const { data, error } = await db.from('foto_eingang').select('id').eq('inhalt_hash', hash).limit(1);
+    return !error && !!data && data.length > 0;
+}
+
+// POST application/json { hashes: [...] } mit x-foto-schluessel → { doppelt: [hash, …] }
+async function doppeltePruefen(req: Request) {
+    const geraet = await geraetPruefen(req.headers.get('x-foto-schluessel'));
+    if (!geraet) return json({ error: 'Schlüssel ungültig oder gesperrt' }, 403);
+    const body = await req.json().catch(() => ({}));
+    const hashes: string[] = (Array.isArray(body.hashes) ? body.hashes : []).map(String).filter((h: string) => /^[0-9a-f]{64}$/.test(h)).slice(0, 200);
+    if (!hashes.length) return json({ doppelt: [] });
+    const { data, error } = await db.from('foto_eingang').select('inhalt_hash').in('inhalt_hash', hashes);
+    return json({ doppelt: error ? [] : (data || []).map((z: { inhalt_hash: string }) => z.inhalt_hash) });
+}
+
 async function erneutAbschreiben(req: Request) {
     const jwt = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
     const { data: u } = jwt ? await db.auth.getUser(jwt) : { data: null };
@@ -190,7 +212,11 @@ Deno.serve(async (req) => {
         return g ? json({ ok: true, name: g.name }) : json({ ok: false, error: 'Schlüssel ungültig oder gesperrt' }, 403);
     }
     if (req.method !== 'POST') return json({ error: 'Nur POST' }, 405);
-    if ((req.headers.get('content-type') || '').includes('application/json')) return erneutAbschreiben(req);
+    if ((req.headers.get('content-type') || '').includes('application/json')) {
+        // Handy fragt vor dem Hochladen: welche dieser Hashes sind schon im Eingang? (Schlüssel statt JWT)
+        if (req.headers.get('x-foto-schluessel')) return doppeltePruefen(req);
+        return erneutAbschreiben(req);
+    }
 
     let form: FormData;
     try { form = await req.formData(); } catch { return json({ error: 'Erwartet multipart/form-data' }, 400); }
@@ -206,36 +232,49 @@ Deno.serve(async (req) => {
 
     const aws = new AwsClient({ accessKeyId: R2_ACCESS_KEY, secretAccessKey: R2_SECRET_KEY, service: 's3', region: 'auto' });
     const tag = new Date().toISOString().slice(0, 10);
-    let angekommen = 0;
+    let angekommen = 0, doppelt = 0;
     const fehler: string[] = [];
+    // Je Datei der Ausgang an das Handy: 'neu' | 'doppelt' | 'fehler' (gleiche Reihenfolge wie gesendet)
+    const ergebnis: string[] = dateien.map(() => 'fehler');
+    // Das Handy schickt je Datei den Inhalts-Hash des Originals mit (Feld „hash“, gleiche Reihenfolge)
+    const hashes = form.getAll('hash').map(String);
+    const clientHash = hashes.length === dateien.length;
 
     // Alle Dateien einer Anfrage parallel ablegen statt nacheinander
     await Promise.all(dateien.map(async (f, i) => {
         const typ = f.type || 'image/jpeg';
         if (!ERLAUBT.test(typ)) { fehler.push(`${f.name}: Dateityp nicht erlaubt`); return; }
-        if (f.size > MAX_DATEI) { fehler.push(`${f.name}: größer als 25 MB`); return; }
-        const pfad = `foto-eingang/${tag}/${geraet.id}/${Date.now()}-${i}-${crypto.randomUUID().slice(0, 8)}.${endung(f.name || '', typ)}`;
+        if (f.size > MAX_DATEI) { fehler.push(`${f.name}: größer als 50 MB`); return; }
         const daten = await f.arrayBuffer();
+        const hash = clientHash && /^[0-9a-f]{64}$/.test(hashes[i]) ? hashes[i] : await sha256(daten);
+        // Schon da (z. B. erneut gesendet, weil die Verbindung hing)? Dann gar nicht erst ablegen.
+        if (await hashVorhanden(hash)) { doppelt++; ergebnis[i] = 'doppelt'; return; }
+        const pfad = `foto-eingang/${tag}/${geraet.id}/${Date.now()}-${i}-${crypto.randomUUID().slice(0, 8)}.${endung(f.name || '', typ)}`;
         const res = await aws.fetch(`${R2_ENDPOINT}/${R2_BUCKET}/${pfad}`, {
             method: 'PUT', headers: { 'Content-Type': typ }, body: daten,
         });
         if (!res.ok) { fehler.push(`${f.name}: Ablage fehlgeschlagen`); return; }
         const istTon = typ.startsWith('audio/');
-        const { data: neu, error } = await db.from('foto_eingang').insert({
+        const zeile = {
             geraet_id: geraet.id, absender: geraet.name, notiz,
             url: `${R2_PUBLIC_URL}/${pfad}`, pfad, dateiname: f.name || null, typ, groesse: f.size,
             ...(istTon ? { text_status: 'laeuft' } : {}),
-        }).select('id').single();
+        };
+        let { data: neu, error } = await db.from('foto_eingang').insert({ ...zeile, inhalt_hash: hash }).select('id').single();
+        // Migration supabase_add_foto_eingang_hash.sql noch nicht gelaufen → ohne Hash ablegen
+        if (error && /inhalt_hash/.test(error.message || '')) ({ data: neu, error } = await db.from('foto_eingang').insert(zeile).select('id').single());
         if (error) {
             await aws.fetch(`${R2_ENDPOINT}/${R2_BUCKET}/${pfad}`, { method: 'DELETE' });
+            // Eindeutigkeits-Sperre: dieselbe Datei kam gleichzeitig über eine zweite Anfrage an
+            if (error.code === '23505') { doppelt++; ergebnis[i] = 'doppelt'; return; }
             fehler.push(`${f.name}: ${error.message}`);
             return;
         }
-        angekommen++;
+        angekommen++; ergebnis[i] = 'neu';
         // Nicht abwarten: das Handy ist sofort fertig, der Text kommt per Realtime in der App an.
         if (istTon && neu) imHintergrund(abschreiben(neu.id, typ, daten));
     }));
 
     await db.from('foto_geraete').update({ letzte_nutzung: new Date().toISOString() }).eq('id', geraet.id);
-    return json({ ok: angekommen > 0, angekommen, fehler }, angekommen ? 200 : 500);
+    return json({ ok: angekommen + doppelt > 0, angekommen, doppelt, ergebnis, fehler }, angekommen + doppelt ? 200 : 500);
 });

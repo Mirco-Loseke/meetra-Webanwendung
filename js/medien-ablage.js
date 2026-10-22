@@ -125,11 +125,11 @@
     function sammeln(detail) {
         const posten = [];   // { url, name, art, datum, titel, quelle }
         const gesehen = new Set();
-        const rein = (f, datum, titel, quelle, eid) => {
+        const rein = (f, datum, titel, quelle, eid, notiz) => {
             const url = dateiUrl(f);
             if (!url || gesehen.has(url)) return;
             gesehen.add(url);
-            posten.push({ url, name: dateiName(f), art: medienArt(f), datum: datum || '', titel: titel || '', quelle: quelle || '', typ: (f && f.type) || '', eid: eid || null });
+            posten.push({ url, name: dateiName(f), art: medienArt(f), datum: datum || '', titel: titel || '', quelle: quelle || '', typ: (f && f.type) || '', eid: eid || null, notiz: String(notiz || '').trim() });
         };
         (detail.machineHistoryEntries || []).forEach(e => {
             const files = Array.isArray(e.files) ? e.files : [];
@@ -137,7 +137,8 @@
             if (e.machine_id && typeof window.getMachineName === 'function') quelle = window.getMachineName(e.machine_id) || '';
             const titel = e.title || (e._sourceTable === 'service_entries' ? 'Servicebericht' : 'Eintrag');
             const bearb = e._sourceTable === 'manual' ? e.id : null;   // nur eigene Ablage-Einträge sind änderbar
-            files.forEach(f => rein(f, e.entry_date || e.created_at, titel, quelle, bearb));
+            // Notiz nur bei eigenen Ablage-Einträgen (bei Serviceberichten wäre es die lange Beschreibung)
+            files.forEach(f => rein(f, e.entry_date || e.created_at, titel, quelle, bearb, bearb ? e.content : ''));
             // Servicebericht: das PDF zählt auch dann, wenn zusätzlich Fotos/Dateien dranhängen
             if (e.rawService && e.rawService.pdf_url) rein({ url: e.rawService.pdf_url, name: titel + '.pdf', type: 'application/pdf' }, e.entry_date || e.created_at, titel, quelle);
         });
@@ -201,6 +202,7 @@
                 const eids = [...new Set(posten.map(p => p.eid).filter(Boolean))];
                 const gi = window.__ablageGruppen.push({ urls: posten.filter(p => p.art === 'bild').map(p => p.url), titel: [kopf, tagText(tag)].filter(Boolean).join(' · '), roh: posten[0].titel, datum: tag === '0000-00-00' ? '' : tag, eids, posten: posten.map(p => ({ url: p.url, name: p.name, art: p.art, eid: p.eid })) }) - 1;
                 inhalt += '<div class="ab-ablage-gruppe" data-ablage-gi="' + gi + '">' + (kopf ? (eids.length ? '<button type="button" class="ab-ablage-kopf ab-ablage-kopf-edit" data-ablage-edit="' + gi + '" title="Überschrift ändern, Dateien entfernen oder hinzufügen">' + esc(kopf) + ' <span class="ab-ablage-stift">✎</span></button>' : '<div class="ab-ablage-kopf">' + esc(kopf) + '</div>') : '') +
+                    [...new Set(posten.map(p => p.notiz).filter(Boolean))].map(n => '<div class="ab-ablage-notiz" style="margin:2px 0 8px;font-size:.85em;white-space:pre-wrap;opacity:.85">📝 ' + esc(n) + '</div>').join('') +
                     '<div class="ab-ablage-raster' + (S.art === 'dok' ? ' ab-ablage-raster-dok' : '') + '">' + posten.map((p, i) => { const h = postenHtml(p, alleBilder, gi); return i >= LIMIT ? h.replace(/^<(div|button)/, '<$1 hidden data-ab-mehr') : h; }).join('') + '</div>' +
                     (posten.length > LIMIT ? '<button type="button" class="knopf knopf--text knopf--klein" data-ablage-mehr>Weitere ' + (posten.length - LIMIT) + ' anzeigen</button>' : '') + '</div>';
             });

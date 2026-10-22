@@ -415,7 +415,7 @@
         let art = 'maschine', ziel = null;
         const f = fenster(zeilen.length + (zeilen.length === 1 ? ' Datei zuordnen' : ' Dateien zuordnen'),
             '<div class="fe-arten">' + ARTEN.map(a => '<button type="button" data-fe-art="' + a.id + '"' + (a.id === art ? ' class="active"' : '') + '>' + a.label + '</button>').join('') + '</div>' +
-            '<input type="search" class="fe-feld" id="fe-such" placeholder="Suchen …" autocomplete="off">' +
+            '<input type="search" class="fe-feld" id="fe-such" placeholder="Suchen … dann Treffer antippen" autocomplete="off">' +
             '<ul class="fe-treffer" id="fe-treffer"></ul>' +
             '<div id="fe-miet-plan" hidden></div>' +
             '<div id="fe-text-block"><label class="form-label-caps" for="fe-titel">Titel</label>' +
@@ -430,6 +430,8 @@
 
         async function treffer() {
             const liste = await quellen(art, $('#fe-such').value);
+            // Genau ein Treffer: gleich vormerken (sonst bleibt unklar, dass man ihn antippen muss)
+            if (liste.length === 1 && art !== 'miet' && (!ziel || String(ziel.id) !== String(liste[0].id))) { ziel = liste[0]; okPruefen(); }
             $('#fe-treffer').innerHTML = liste.length
                 ? liste.map(x => '<li data-fe-ziel="' + esc(x.id) + '"' + (ziel && String(ziel.id) === String(x.id) ? ' class="selected"' : '') + '>' + esc(x.titel) + (x.sub ? '<small>' + esc(x.sub) + '</small>' : '') + '</li>').join('')
                 : '<li style="cursor:default">Nichts gefunden</li>';

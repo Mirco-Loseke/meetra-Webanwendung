@@ -19,14 +19,14 @@ set "DB_URL="
 
 rem --- 2) Wohin die Sicherung geschrieben wird --------------
 rem Voreinstellung: Ordner "meetra-Backups" neben OneDrive.
-set "ZIEL=%USERPROFILE%\meetra-Backups"
+set "ZIEL=\\MEETRA-SA\Sammelmappen\Import & Backups meetra Webseite\_Backups"
 
 rem --- 3) Wie lange alte Sicherungen liegen bleiben (Tage) --
 set "AUFHEBEN_TAGE=90"
 
 rem --- 4) Dokumente aus Cloudflare R2 mitsichern? -----------
 rem 1 = ja (braucht rclone), 0 = nur Datenbank
-set "MIT_DOKUMENTEN=0"
+set "MIT_DOKUMENTEN=1"
 
 set "R2_BUCKET=dateien"
 set "R2_ENDPOINT=https://855feaccf4d0215922275100e91c4656.r2.cloudflarestorage.com"

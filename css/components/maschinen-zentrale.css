@@ -574,3 +574,12 @@ a.mz-chip-link:hover { border-color: rgba(16, 185, 129, 0.6); }
 .mz-tab .mz-gruppe > h4 { font-size: 1.3125rem; }
 .mz-karte h3 .mz-mehr { font-size: var(--fs-md); }
 body.mz-offen #mobile-sidebar-toggle { display: none !important; }
+
+/* Dokumente: Filter, Suche, eingeklappte Zeilen */
+.mz-dok-suche { width: 100%; }
+.mz-zeile[hidden], .mz-gruppe[hidden] { display: none; }
+.mz-gruppe:not(.offen) .mz-zeile.mz-spaeter { display: none; }
+.mz-tab.suchend .mz-gruppe .mz-zeile.mz-spaeter:not([hidden]) { display: grid; }
+.mz-gruppe.offen .mz-zeile.mz-spaeter:not([hidden]) { display: grid; }
+.mz-tab.suchend .mz-mehr-knopf { display: none; }
+.mz-mehr-knopf { justify-self: start; }

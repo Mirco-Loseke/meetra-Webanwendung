@@ -80,6 +80,14 @@
         position: absolute; top: 4px; right: 4px; width: 26px; height: 26px; border-radius: 50%;
         border: none; background: rgba(0,0,0,.7); color: #fff; font-size: 15px; line-height: 1; cursor: pointer;
     }
+    /* Zustand je Datei beim Abschicken: Wartet / Lädt (Prozent) / Angekommen / Schon da / Fehler */
+    .vorschau .stat { position: absolute; left: 0; right: 0; bottom: 0; padding: 4px; font-size: 13px; font-weight: 700; text-align: center; background: rgba(0,0,0,.72); color: #fff; }
+    .vorschau .stat.laedt { background: rgba(37,99,235,.9); }
+    .vorschau .stat.fertig { background: rgba(16,160,104,.92); }
+    .vorschau .stat.doppelt { background: rgba(100,116,139,.92); }
+    .vorschau .stat.fehler { background: rgba(229,72,77,.94); }
+    .vorschau .bleibt { opacity: .55; }
+    .vorschau .sperre button { display: none; }
     .meldung { border-radius: 14px; padding: 14px 16px; font-size: 17px; font-weight: 600; text-align: center; }
     .meldung.ok { background: rgba(16,160,104,.18); color: #5ee0a8; }
     .meldung.fehler { background: rgba(229,72,77,.18); color: #ff9a9d; }
@@ -154,6 +162,8 @@
         </ol>
     </details>
 
+    <div id="meldung" class="meldung hidden"></div>
+    <div class="balken hidden" id="balken"><i></i></div>
     <div class="vorschau" id="vorschau"></div>
 
     <div id="senden-block" class="hidden" style="display:flex;flex-direction:column;gap:12px">
@@ -163,8 +173,6 @@
         </div>
         <button class="knopf haupt" id="senden" type="button">Abschicken</button>
     </div>
-    <div class="balken hidden" id="balken"><i></i></div>
-    <div id="meldung" class="meldung hidden"></div>
 </main>
 
 <div class="serie hidden" id="serie">
@@ -189,7 +197,9 @@
     var KEY = 'meetra_fotos_schluessel';
     var NAME = 'meetra_fotos_name';
     var JE_ANFRAGE = 3;      // Dateien je Anfrage
-    var GLEICHZEITIG = 3;    // Anfragen parallel unterwegs
+    var GLEICHZEITIG = 4;    // Anfragen parallel unterwegs
+    var MAX_MB = 50;         // je Datei (Foto/Video); gleiche Grenze in der Function foto-eingang
+    var PAKET_MB = 12;       // grosse Dateien (Videos) gehen allein/zu wenigen raus
     var MAX_KANTE = 1920;    // reicht für Werkstattfotos, ~400 KB statt 1–2 MB
     var QUALITAET = 0.8;
 
@@ -237,6 +247,25 @@
         $('wer').textContent = da ? (speicher(NAME) || '') : '';
     }
 
+    // Zustand je Datei: s = wartet | prueft | laedt | fertig | doppelt | fehler, pct = Fortschritt in %
+    var st = new Map();
+    var laeuft = false;
+    var TEXT = { wartet: 'wartet …', prueft: 'prüft …', fertig: '✓ da', doppelt: 'schon da', fehler: '✗ nicht gesendet' };
+    function zeigeStatus(z) {
+        if (!z.el) return;
+        var b = z.el.querySelector('.stat');
+        if (!b) { b = document.createElement('span'); z.el.appendChild(b); }
+        b.className = 'stat ' + (z.s === 'prueft' ? '' : z.s);
+        b.textContent = z.s === 'laedt' ? z.pct + ' %' : TEXT[z.s] || '';
+        z.el.classList.toggle('bleibt', z.s === 'wartet' || z.s === 'prueft');
+        z.el.classList.toggle('sperre', laeuft);
+    }
+    function setze(f, s, pct) {
+        var z = st.get(f) || {};
+        z.s = s; z.pct = pct || 0; st.set(f, z);
+        zeigeStatus(z);
+    }
+
     function zeichnen() {
         var v = $('vorschau');
         v.innerHTML = '';
@@ -253,9 +282,11 @@
                 d.appendChild(s);
             }
             var x = document.createElement('button'); x.type = 'button'; x.textContent = '×'; x.setAttribute('aria-label', 'Entfernen');
-            x.onclick = function () { dateien.splice(i, 1); zeichnen(); };
+            x.onclick = function () { if (laeuft) return; st.delete(f); dateien.splice(i, 1); zeichnen(); };
             d.appendChild(x);
             v.appendChild(d);
+            var z = st.get(f);
+            if (z) { z.el = d; zeigeStatus(z); }
         });
         $('senden-block').classList.toggle('hidden', !dateien.length);
         $('senden').textContent = dateien.length ? dateien.length + (dateien.length === 1 ? ' Datei' : ' Dateien') + ' abschicken' : 'Abschicken';
@@ -263,8 +294,14 @@
     }
 
     function hinzu(liste) {
-        for (var i = 0; i < liste.length; i++) dateien.push(liste[i]);
-        $('meldung').classList.add('hidden');
+        var zuGross = [];
+        for (var i = 0; i < liste.length; i++) {
+            if (liste[i].size > MAX_MB * 1024 * 1024) zuGross.push(liste[i]);
+            else dateien.push(liste[i]);
+        }
+        if (zuGross.length) {
+            meldung((zuGross.length === 1 ? '„' + zuGross[0].name + '“ ist' : zuGross.length + ' Dateien sind') + ' zu groß (' + (zuGross[0].size / 1048576).toFixed(0) + ' MB, erlaubt sind ' + MAX_MB + ' MB) und wurde nicht übernommen.', 'fehler');
+        } else $('meldung').classList.add('hidden');
         zeichnen();
     }
 
@@ -285,55 +322,163 @@
         } catch (e) { return f; }
     }
 
+    // SHA-256 des Originals: erkennt dieselbe Datei auch dann, wenn sie erneut gesendet wird.
+    // Ohne sicheren Kontext (kein https) gibt es keinen Hash — dann zählt der Server selbst.
+    async function hashVon(f) {
+        var z = st.get(f);
+        if (z && z.hash) return z.hash;
+        try {
+            if (!window.crypto || !crypto.subtle) return '';
+            var buf = await crypto.subtle.digest('SHA-256', await f.arrayBuffer());
+            var h = Array.prototype.map.call(new Uint8Array(buf), function (b) { return ('0' + b.toString(16)).slice(-2); }).join('');
+            (st.get(f) || (st.set(f, {}), st.get(f))).hash = h;
+            return h;
+        } catch (e) { return ''; }
+    }
+
+    // Eine Anfrage mit Fortschritt (fetch kennt keinen Upload-Fortschritt)
+    function anfrage(k, fd, beiFortschritt) {
+        return new Promise(function (res, rej) {
+            var x = new XMLHttpRequest();
+            x.open('POST', FUNKTION);
+            x.setRequestHeader('x-foto-schluessel', k);
+            x.timeout = 180000;
+            x.upload.onprogress = function (e) { if (e.lengthComputable) beiFortschritt(e.loaded / e.total); };
+            x.onload = function () {
+                var j = {}; try { j = JSON.parse(x.responseText); } catch (e) { /* leer */ }
+                res({ status: x.status, j: j });
+            };
+            x.onerror = function () { rej(new Error('Keine Verbindung')); };
+            x.ontimeout = function () { rej(new Error('Zu langsam')); };
+            x.send(fd);
+        });
+    }
+
     async function senden() {
         var k = speicher(KEY);
-        if (!k || !dateien.length) return;
+        if (laeuft || !k || !dateien.length) return;
+        laeuft = true;
         var knopf = $('senden'); knopf.disabled = true;
         var balken = $('balken'); balken.classList.remove('hidden');
         var notiz = $('notiz').value.trim();
-        var gesamt = dateien.length, fertig = 0, fehler = [];
-        meldung('Wird geschickt …', 'info');
-        // Pakete zu JE_ANFRAGE Dateien; GLEICHZEITIG Pakete laufen parallel — während eines
-        // hochlädt, wird das nächste schon verkleinert.
-        var pakete = [];
-        for (var p = 0; p < dateien.length; p += JE_ANFRAGE) pakete.push(dateien.slice(p, p + JE_ANFRAGE));
-        var naechstes = 0, erledigt = 0, gesperrt = false;
+        var sperre = null;
+        try { if (navigator.wakeLock) sperre = await navigator.wakeLock.request('screen'); } catch (e) { /* Bildschirm darf ausgehen */ }
+        var warnen = function (e) { e.preventDefault(); e.returnValue = ''; };
+        window.addEventListener('beforeunload', warnen);
+
+        var liste = dateien.slice();
+        var gesamt = liste.length;
+        liste.forEach(function (f) { var z = st.get(f); if (!z || z.s !== 'fertig' && z.s !== 'doppelt') setze(f, 'wartet'); });
+        zeichnen();   // bindet die Vorschaukacheln an ihren Zustand
+        var summe = liste.reduce(function (a, f) { return a + f.size; }, 0) || 1;
+        function stand() {
+            var fertig = 0, byte = 0;
+            liste.forEach(function (f) {
+                var z = st.get(f) || {};
+                if (z.s === 'fertig' || z.s === 'doppelt') { fertig++; byte += f.size; }
+                else if (z.s === 'laedt') byte += f.size * (z.pct || 0) / 100;
+            });
+            var p = Math.min(100, Math.round(byte / summe * 100));
+            balken.firstElementChild.style.width = p + '%';
+            meldung('Lädt … ' + fertig + ' von ' + gesamt + ' fertig · ' + p + ' %', 'info');
+        }
+        stand();
+        try { $('meldung').scrollIntoView({ block: 'nearest' }); } catch (e) { /* älterer Browser */ }
+
+        // 1) Hashes bilden und beim Server nachfragen, was schon da ist — das wird gar nicht erst gesendet.
+        for (var h = 0; h < liste.length; h++) {
+            var z0 = st.get(liste[h]);
+            if (z0 && (z0.s === 'fertig' || z0.s === 'doppelt')) continue;
+            setze(liste[h], 'prueft');
+            await hashVon(liste[h]);
+            setze(liste[h], 'wartet');
+        }
+        try {
+            var offen = liste.filter(function (f) { var z = st.get(f); return z && z.hash && z.s === 'wartet'; });
+            if (offen.length) {
+                var rp = await fetch(FUNKTION, { method: 'POST', headers: { 'x-foto-schluessel': k, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ hashes: offen.map(function (f) { return st.get(f).hash; }) }) });
+                if (rp.status === 403) throw new Error('Dieses Handy ist gesperrt oder der Schlüssel ist ungültig.');
+                var jp = await rp.json().catch(function () { return {}; });
+                var da = jp.doppelt || [];
+                offen.forEach(function (f) { if (da.indexOf(st.get(f).hash) >= 0) setze(f, 'doppelt'); });
+            }
+        } catch (e) {
+            if (/gesperrt/.test(e.message)) { liste.forEach(function (f) { setze(f, 'fehler'); }); }
+            // Sonst: Vorabfrage nicht möglich (Netz) — der Server erkennt Doppelte beim Annehmen trotzdem.
+        }
+        stand();
+
+        // 2) Pakete zu JE_ANFRAGE Dateien; GLEICHZEITIG Pakete laufen parallel.
+        var fehler = [];
+        var zuSenden = liste.filter(function (f) { var z = st.get(f); return z && z.s === 'wartet'; });
+        var pakete = [], akt = [], aktByte = 0;
+        zuSenden.forEach(function (f) {
+            if (akt.length && (akt.length >= JE_ANFRAGE || aktByte + f.size > PAKET_MB * 1048576)) { pakete.push(akt); akt = []; aktByte = 0; }
+            akt.push(f); aktByte += f.size;
+        });
+        if (akt.length) pakete.push(akt);
+        var naechstes = 0, gesperrt = false;
         async function arbeiter() {
             while (!gesperrt && naechstes < pakete.length) {
                 var teil = pakete[naechstes++];
                 try {
-                    var klein = [];
-                    for (var i = 0; i < teil.length; i++) klein.push(await verkleinern(teil[i]));
+                    teil.forEach(function (f) { setze(f, 'laedt', 0); });
+                    var klein = await Promise.all(teil.map(verkleinern));
                     var fd = new FormData();
                     fd.append('notiz', notiz);
                     for (var i2 = 0; i2 < klein.length; i2++) fd.append('fotos', klein[i2], klein[i2].name || teil[i2].name);
-                    var r = await fetch(FUNKTION, { method: 'POST', headers: { 'x-foto-schluessel': k }, body: fd });
-                    var j = await r.json().catch(function () { return {}; });
+                    for (var i3 = 0; i3 < teil.length; i3++) fd.append('hash', st.get(teil[i3]).hash || '');
+                    var r = await anfrage(k, fd, function (anteil) {
+                        teil.forEach(function (f) { setze(f, 'laedt', Math.min(99, Math.round(anteil * 100))); });
+                        stand();
+                    });
                     if (r.status === 403) throw new Error('Dieses Handy ist gesperrt oder der Schlüssel ist ungültig.');
-                    fertig += j.angekommen || 0;
-                    (j.fehler || []).forEach(function (t) { fehler.push(t); });
-                    if (!r.ok && !j.angekommen) fehler.push(j.error || ('Fehler ' + r.status));
+                    var erg = r.j.ergebnis || [];
+                    teil.forEach(function (f, n) {
+                        // Ohne Einzelergebnis (alte Function) zählt: Anfrage ok = angekommen
+                        var e = erg[n] || (r.status === 200 && r.j.angekommen === teil.length ? 'neu' : 'fehler');
+                        setze(f, e === 'neu' ? 'fertig' : e === 'doppelt' ? 'doppelt' : 'fehler', 100);
+                    });
+                    (r.j.fehler || []).forEach(function (t) { fehler.push(t); });
+                    if (r.status !== 200 && !(r.j.fehler || []).length) fehler.push(r.j.error || ('Fehler ' + r.status));
                 } catch (e) {
+                    teil.forEach(function (f) { setze(f, 'fehler'); });
                     fehler.push(e.message === 'Failed to fetch' ? 'Keine Verbindung' : e.message);
                     if (/gesperrt/.test(e.message)) gesperrt = true;
                 }
-                erledigt += teil.length;
-                balken.firstElementChild.style.width = Math.round(erledigt / gesamt * 100) + '%';
-                meldung('Wird geschickt … ' + erledigt + ' / ' + gesamt, 'info');
+                stand();
             }
         }
         var arbeiterListe = [];
         for (var a = 0; a < Math.min(GLEICHZEITIG, pakete.length); a++) arbeiterListe.push(arbeiter());
         await Promise.all(arbeiterListe);
+
+        window.removeEventListener('beforeunload', warnen);
+        if (sperre && sperre.release) { try { sperre.release(); } catch (e) { /* egal */ } }
+        laeuft = false;
         knopf.disabled = false;
         setTimeout(function () { balken.classList.add('hidden'); balken.firstElementChild.style.width = '0'; }, 600);
-        if (fertig === gesamt) {
-            dateien = []; $('notiz').value = ''; zeichnen();
-            meldung('✓ ' + fertig + (fertig === 1 ? ' Datei' : ' Dateien') + ' angekommen', 'ok');
+
+        var neu = 0, schonDa = 0, offenBleibt = [];
+        liste.forEach(function (f) {
+            var z = st.get(f) || {};
+            if (z.s === 'fertig') neu++; else if (z.s === 'doppelt') schonDa++; else offenBleibt.push(f);
+        });
+        // Angekommene und bereits vorhandene fallen weg; nur Fehlgeschlagene bleiben zum erneuten Senden.
+        dateien = dateien.filter(function (f) { return offenBleibt.indexOf(f) >= 0; });
+        liste.forEach(function (f) { if (offenBleibt.indexOf(f) < 0) st.delete(f); });
+        offenBleibt.forEach(function (f) { var z = st.get(f); if (z && z.s !== 'fehler') setze(f, 'fehler'); });
+        if (!dateien.length) $('notiz').value = '';
+        zeichnen();
+        var zusatz = schonDa ? ' · ' + schonDa + ' war' + (schonDa === 1 ? '' : 'en') + ' schon da (nicht doppelt gespeichert)' : '';
+        if (!offenBleibt.length) {
+            meldung(neu ? '✓ ' + neu + (neu === 1 ? ' Datei' : ' Dateien') + ' angekommen' + zusatz
+                : '✓ Alles war schon im Eingang (' + schonDa + ') — nichts doppelt gespeichert', 'ok');
             if (navigator.vibrate) navigator.vibrate(80);
         } else {
-            // Nur die Angekommenen fallen weg wäre ungenau — alles bleibt stehen, damit man erneut senden kann.
-            meldung((fertig ? fertig + ' von ' + gesamt + ' angekommen. ' : 'Nicht angekommen. ') + fehler.slice(0, 2).join(' · '), 'fehler');
+            meldung((neu ? neu + ' angekommen' + zusatz + '. ' : '') + offenBleibt.length + ' nicht gesendet — „erneut senden“ tippen. Schon Angekommenes wird nicht doppelt gespeichert. ' + fehler.slice(0, 1).join(' · '), 'fehler');
+            $('senden').textContent = offenBleibt.length + (offenBleibt.length === 1 ? ' Datei' : ' Dateien') + ' erneut senden';
         }
     }
 

@@ -97,6 +97,7 @@ if not "%MIT_DOKUMENTEN%"=="1" (
     goto :fertig
 )
 
+if exist "C:\rclone-v1.75.2-windows-amd64\rclone.exe" set "PATH=%PATH%;C:\rclone-v1.75.2-windows-amd64"
 where rclone >nul 2>nul
 if errorlevel 1 (
     echo [WARNUNG] rclone wurde nicht gefunden - Dokumente uebersprungen.

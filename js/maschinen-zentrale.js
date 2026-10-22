@@ -80,7 +80,7 @@
             const videos = alle.filter(u => RE_VID.test(u));                       // Videos aus jedem Eintrag
             if (!urls.length && !videos.length) return;
             videoAnz += videos.length;
-            fotoGruppen.push({ id: v.id, titel: v.title || (v.type === 'photo' ? 'Fotos / Videos' : 'Eintrag'), wann: v.created_at, start: fotos.length, urls, videos });
+            fotoGruppen.push({ id: v.id, titel: v.title || (v.type === 'photo' ? 'Fotos / Videos' : 'Eintrag'), wann: v.created_at, start: fotos.length, urls, videos, notiz: v.type === 'wartung' ? '' : v.content });
             fotos.push(...urls);
         });
         // Fotos, die hinter einem Servicebericht hängen: je Bericht eine Gruppe
@@ -194,7 +194,7 @@
                             <button type="button" data-mz="neu-servicebericht">📄 Servicebericht</button>
                             <button type="button" data-mz="neu-eingangsprotokoll">📥 Eingangsprotokoll</button>
                             <button type="button" data-mz="neu-abnahmeprotokoll">✅ Abnahmeprotokoll</button>
-                            <button type="button" data-mz="neu-uvv-protokoll">🛡️ UVV- / Wartungsprotokoll</button>
+                            <button type="button" data-mz="neu-einweisung">🛡️ Einweisungserklärung</button>
                             <button type="button" data-mz="neu-mietvereinbarung">🔑 Mietvereinbarung</button>
                             <hr>
                             <button type="button" data-mz="neu-vorgang">📋 Vorgang zu dieser Maschine</button>
@@ -227,7 +227,7 @@
     const REITER = [
         ['uebersicht', 'Übersicht', null],
         ['verlauf', 'Verlauf', d => d.verlauf.length + d.berichte.length],
-        ['berichte', 'Dokumente', d => d.berichte.length + abgelegteDateien(d).length + originaleAnzahl(d) + (d.protokolle ? d.protokolle.eingang.length + d.protokolle.abnahme.length : 0)],
+        ['berichte', 'Dokumente', d => d.berichte.length + abgelegteDateien(d).length + originaleAnzahl(d) + (d.protokolle ? d.protokolle.eingang.length + d.protokolle.abnahme.length + (d.protokolle.einweisung || []).length : 0) + (d.anleitungen ? d.anleitungen.length : 0)],
         ['fotos', 'Fotos & Videos', d => d.fotos.length + (d.videoAnz || 0)],
         ['miete', 'Miete', d => d.mieten.length],
         ['daten', 'Daten', null]
@@ -242,13 +242,15 @@
 
     // ------------------------------------------------------ Reiter-Inhalte (im Fenster)
     const leer = t => `<p class="mz-leer mz-leer-gross">${esc(t)}</p>`;
+    // Notiz zu einer Ablage / einem Foto-Eintrag (manual_history_entries.content)
+    const notizHtml = t => String(t || '').trim() ? `<small class="mz-notiz" style="display:block;margin-top:4px;white-space:pre-wrap;opacity:.85">📝 ${esc(String(t).trim())}</small>` : '';
     const techNamen = ids => (Array.isArray(ids) ? ids : []).map(id => (window.userList || []).find(u => String(u.id) === String(id))).filter(Boolean).map(u => u.name).join(', ');
     const INTERN = 'Servicebericht (Intern)';
 
     // Farben wie in der bisherigen Historie (js/history-modal.js, typeMap)
     const FARBE = { note: '#f59e0b', phone: '#10b981', email: '#3b82f6', photo: '#8b5cf6', hours: '#06b6d4', whatsapp: '#22c55e',
         wartung: '#f97316', auslieferung: '#6366f1', angebot: '#eab308', miete: '#22c55e', service: '#3b82f6', werkstatt: '#f59e0b',
-        intake: '#8b5cf6', acceptance: '#ec4899', datei: '#94a3b8' };
+        intake: '#8b5cf6', acceptance: '#ec4899', einweisung: '#ef4444', anleitung: '#0ea5e9', datei: '#94a3b8' };
     const istBild = f => /^image\//.test(f.type || '') || /\.(jpe?g|png|gif|webp|heic|bmp)(\?|$)/i.test(f.url || f.name || '');
     const dateiListe = v => (Array.isArray(v.files) ? v.files : []).map(f => typeof f === 'string' ? { url: f, name: decodeURIComponent(f.split('/').pop().split('?')[0]) } : f).filter(f => f && f.url);
 
@@ -278,6 +280,7 @@
         if (d.protokolle) {
             d.protokolle.eingang.forEach(p => liste.push({ quelle: 'prot', typ: 'intake', wann: p.created_at, sym: '📥', farbe: FARBE.intake, art: 'Eingangsprotokoll', titel: 'Eingangsprotokoll', text: '', sub: p.status === 'completed' ? 'abgeschlossen' : 'in Arbeit', id: p.id }));
             d.protokolle.abnahme.forEach(p => liste.push({ quelle: 'prot', typ: 'acceptance', wann: p.created_at, sym: '✅', farbe: FARBE.acceptance, art: 'Abnahmeprotokoll', titel: 'Abnahmeprotokoll', text: '', sub: p.status === 'completed' ? 'abgeschlossen' : 'in Arbeit', id: p.id }));
+            (d.protokolle.einweisung || []).forEach(p => liste.push({ quelle: 'dok', wann: p.created_at, sym: '🛡️', farbe: FARBE.einweisung, art: 'Einweisungserklärung', titel: 'Einweisungserklärung', text: '', sub: '', id: p.id, pdf: p.url }));
         }
         return liste.filter(x => x.wann).sort((x, y) => String(y.wann).localeCompare(String(x.wann)));
     }
@@ -330,6 +333,7 @@
                 const videos = x.videos && x.videos.length && window.videoKachelHtml ? `<div class="mz-fotos mz-fotos-klein mz-videos">${x.videos.map(u => window.videoKachelHtml(u)).join('')}</div>` : '';
                 const dateien = x.dateien && x.dateien.length ? `<div class="mz-dateien">${x.dateien.map(f => `<button type="button" class="mz-datei" data-mz="datei" data-url="${esc(f.url)}" data-name="${esc(f.name || '')}" data-typ="${esc(f.type || '')}">📎 ${esc(f.name || 'Datei')}</button>`).join('')}</div>` : '';
                 const knopf = x.quelle === 'bericht' ? `<button type="button" class="knopf knopf--sekundaer knopf--klein" data-mz="oeffnen" data-typ="bericht" data-id="${esc(x.id)}">Öffnen</button>`
+                    : x.quelle === 'dok' ? `<button type="button" class="knopf knopf--bearbeiten knopf--klein" data-mz="einweisung-bearbeiten" data-id="${esc(x.id)}">Bearbeiten</button>`
                     : x.quelle === 'prot' ? `<button type="button" class="knopf knopf--sekundaer knopf--klein" data-mz="prot-oeffnen" data-typ="${x.typ}" data-id="${esc(x.id)}">Öffnen</button>`
                     : `<button type="button" class="knopf knopf--sekundaer knopf--klein" data-mz="oeffnen" data-typ="eintrag" data-id="${esc(x.id)}">Bearbeiten</button>`;
                 return kopf + `<article class="mz-v" style="--f:${esc(x.farbe)}">
@@ -375,13 +379,24 @@
             ＋ Original ${hat ? 'weiteres ' : ''}hochladen — hierher ziehen oder <u>auswählen</u></label>`;
     }
 
+    const DOK_LIMIT = 4;
     function berichteHtml(d) {
         const p = d.protokolle;
-        const gruppe = (titel, art, liste, zeile) => `<section class="mz-gruppe">
+        // Übersicht statt langer Liste: Filter-Chips mit Zahlen, leere Gruppen weg, je Gruppe nur die neuesten DOK_LIMIT Zeilen (Rest per „Alle anzeigen“), Suche über alles
+        const F = aktuell.dokFilter || 'alle';
+        const offen = aktuell.dokOffen || (aktuell.dokOffen = {});
+        const gruppe = (key, titel, art, liste, zeile) => {
+            if (F !== 'alle' && F !== key) return '';
+            if (liste && !liste.length && F === 'alle') return '';
+            const mehr = liste && liste.length > DOK_LIMIT + 1;
+            const zeilen = liste ? liste.map((x, i) => zeile(x).replace('class="mz-zeile"', 'class="mz-zeile' + (mehr && i >= DOK_LIMIT ? ' mz-spaeter' : '') + '"')).join('') : '';
+            return `<section class="mz-gruppe${mehr && (offen[titel] || F !== 'alle') ? ' offen' : ''}" data-g="${esc(titel)}">
             <h4>${esc(titel)} <em>${liste ? liste.length : '…'}</em>
                 ${art ? `<button type="button" class="knopf knopf--text knopf--klein" data-mz="neu-${art}">+ Neu</button>` : ''}</h4>
-            ${liste == null ? '<p class="mz-leer">Lade …</p>' : liste.length ? liste.map(zeile).join('') : '<p class="mz-leer">Noch keine.</p>'}
+            ${liste == null ? '<p class="mz-leer">Lade …</p>' : liste.length ? zeilen : '<p class="mz-leer">Noch keine.</p>'}
+            ${mehr && F === 'alle' ? `<button type="button" class="knopf knopf--text knopf--klein mz-mehr-knopf" data-mz="dok-mehr" data-g="${esc(titel)}">${offen[titel] ? 'Weniger anzeigen' : 'Alle ' + liste.length + ' anzeigen'}</button>` : ''}
         </section>`;
+        };
         const berichtZeile = b => `<div class="mz-zeile">
             <span class="mz-dot mz-dot-${b.is_finalized ? 'gruen' : 'blau'}"></span>
             <div><b>${esc(datum(b.date || b.datum_von || b.created_at))} · ${esc(b.title || 'Servicebericht')}</b>
@@ -394,11 +409,21 @@
             <div><b>${esc(datum(v.created_at))}</b><small>${esc([v.customer_name || v.company || '', v.status === 'completed' ? 'abgeschlossen' : 'in Arbeit'].filter(Boolean).join(' · '))}</small></div>
             <div class="mz-v-knoepfe">${v.status === 'completed' ? `<button type="button" class="knopf knopf--text knopf--klein" data-mz="prot-pdf" data-typ="${typ}" data-id="${esc(v.id)}">PDF</button>` : ''}
                 <button type="button" class="knopf knopf--sekundaer knopf--klein" data-mz="prot-oeffnen" data-typ="${typ}" data-id="${esc(v.id)}">Öffnen</button></div></div>`;
+        const einweisungZeile = v => `<div class="mz-zeile">
+            <span class="mz-dot" style="background:${FARBE.einweisung}"></span>
+            <div><b>${esc(datum(v.created_at))} · ${esc(v.name || 'Einweisungserklärung')}</b></div>
+            <div class="mz-v-knoepfe"><button type="button" class="knopf knopf--sekundaer knopf--klein" data-mz="pdf" data-url="${esc(v.url)}">PDF öffnen</button>
+                <button type="button" class="knopf knopf--bearbeiten knopf--klein" data-mz="einweisung-bearbeiten" data-id="${esc(v.id)}">Bearbeiten</button></div></div>`;
+        // Anleitungen/Kataloge aus Dokumente (nur Verweis, keine Kopie)
+        const anleitungZeile = v => `<div class="mz-zeile">
+            <span class="mz-dot" style="background:${FARBE.anleitung}"></span>
+            <div><b>${esc(v.name || 'Dokument')}</b><small>${esc([v.category, String(v.machine_id) === String(aktuell.id) ? 'nur diese Maschine' : (v.machine_series ? 'Serie ' + v.machine_series : 'Kategorie')].filter(Boolean).join(' · '))}</small></div>
+            <div class="mz-v-knoepfe"><button type="button" class="knopf knopf--sekundaer knopf--klein" data-mz="datei" data-url="${esc(v.url)}" data-name="${esc(v.name || '')}" data-typ="${esc(v.mime_type || '')}">Öffnen</button></div></div>`;
         // Abgelegte Dateien (keine Bilder) aus dem Verlauf
         const abgelegt = abgelegteDateien(d);
         const dateiZeile = ({ f, v }) => `<div class="mz-zeile">
             <span class="mz-dot" style="background:${FARBE.datei}"></span>
-            <div><b>${esc(v.title || f.name || 'Datei')}</b><small>${esc([datum(v.created_at), f.name].filter(Boolean).join(' · '))}</small></div>
+            <div><b>${esc(v.title || f.name || 'Datei')}</b><small>${esc([datum(v.created_at), f.name].filter(Boolean).join(' · '))}</small>${notizHtml(v.content)}</div>
             <div class="mz-v-knoepfe"><button type="button" class="knopf knopf--sekundaer knopf--klein" data-mz="datei" data-url="${esc(f.url)}" data-name="${esc(f.name || '')}" data-typ="${esc(f.type || '')}">Öffnen</button></div></div>`;
         const wartungZeile = v => { const alle = dateiListe(v); const o = alle.filter(f => f.original || (!istBild(f) && !(window.medienArt && window.medienArt(f) === 'video'))).map(f => Object.assign({}, f)); const nf = alle.length - o.length; return `<div class="mz-zeile">
             <span class="mz-dot" style="background:${FARBE.wartung}"></span>
@@ -407,18 +432,27 @@
         const wartungen = (d.verlauf || []).filter(v => v.type === 'wartung').sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
         const service = d.berichte.filter(b => b.title !== INTERN);
         const intern = d.berichte.filter(b => b.title === INTERN);
+        const n = a => (a ? a.length : 0);
+        const summen = { anleitung: n(d.anleitungen), bericht: service.length + intern.length + wartungen.length, protokoll: p ? n(p.eingang) + n(p.abnahme) + n(p.einweisung) : 0, datei: abgelegt.length };
+        const gesamt = summen.anleitung + summen.bericht + summen.protokoll + summen.datei;
+        const chips = [['alle', 'Alle', gesamt], ['anleitung', 'Technische Dokumente', summen.anleitung], ['bericht', 'Berichte & Wartungen', summen.bericht], ['protokoll', 'Protokolle', summen.protokoll], ['datei', 'Dateien', summen.datei]]
+            .filter(([k, , z]) => k === 'alle' || z > 0 || F === k);
         return `<div class="mz-tab mz-gruppen">
+            <div class="mz-filter mz-dok-filter">${chips.map(([k, txt, z]) => `<button type="button" class="mz-filter-chip${F === k ? ' an' : ''}" data-mz="dok-filter" data-f="${k}">${esc(txt)} ${z}</button>`).join('')}</div>
+            <input type="search" class="glass-input mz-dok-suche" data-mz-dok-suche placeholder="In allen Dokumenten suchen …" value="${esc(aktuell.dokSuchtext || '')}" autocomplete="off">
+            ${gruppe('anleitung', 'Technische Dokumente', '', d.anleitungen, anleitungZeile)}
+            ${gruppe('bericht', 'Serviceberichte', 'servicebericht', service, berichtZeile)}
+            ${gruppe('bericht', 'Interne UVV & Wartung', 'uvv-protokoll', intern, berichtZeile)}
+            ${gruppe('bericht', 'Wartungen (manuell eingetragen)', '', wartungen, wartungZeile)}
+            ${gruppe('protokoll', 'Einweisungserklärungen', 'einweisung-neu', p && p.einweisung, einweisungZeile)}
+            ${gruppe('protokoll', 'Eingangsprotokolle', 'eingangsprotokoll', p && p.eingang, protZeile('intake'))}
+            ${gruppe('protokoll', 'Abnahmeprotokolle', 'abnahmeprotokoll', p && p.abnahme, protZeile('acceptance'))}
+            ${gruppe('datei', 'Abgelegte Dateien', '', abgelegt, dateiZeile)}
             <label class="mz-ablage" data-mz-ablage data-ziel="dokument">
                 <input type="file" multiple hidden data-mz-datei data-ziel="dokument" accept="application/pdf,image/*,.doc,.docx,.xls,.xlsx,.txt,.csv,.zip,.msg,.eml">
-                <b>Dateien hierher ziehen</b> oder <u>auswählen</u><small>PDF, Bilder, Word, Excel … — danach Titel und Datum eingeben</small>
+                <b>Datei ablegen</b> — hierher ziehen oder <u>auswählen</u><small>PDF, Bilder, Word, Excel … — danach Titel und Datum eingeben</small>
             </label>
             ${ablageFormHtml()}
-            ${gruppe('Abgelegte Dateien', '', abgelegt, dateiZeile)}
-            ${gruppe('Serviceberichte', 'servicebericht', service, berichtZeile)}
-            ${gruppe('Interne UVV & Wartung', 'uvv-protokoll', intern, berichtZeile)}
-            ${gruppe('Wartungen (manuell eingetragen)', '', wartungen, wartungZeile)}
-            ${gruppe('Eingangsprotokolle', 'eingangsprotokoll', p && p.eingang, protZeile('intake'))}
-            ${gruppe('Abnahmeprotokolle', 'abnahmeprotokoll', p && p.abnahme, protZeile('acceptance'))}
         </div>`;
     }
 
@@ -460,7 +494,7 @@
             }
             toast(neu.length === 1 ? 'Original angehängt' : neu.length + ' Originale angehängt', 'success');
             aktuell.daten = await laden(mid);
-            if (aktuell.tab === 'berichte') { aktuell.daten.protokolle = null; protokolleLaden(); }
+            if (aktuell.tab === 'berichte') { aktuell.daten.protokolle = null; protokolleLaden(); anleitungenLaden(); }
             zeichnen();
         } catch (e) {
             console.error('Maschinen-Zentrale: Original anhängen fehlgeschlagen', e);
@@ -498,7 +532,7 @@
             toast(files.length + (files.length === 1 ? ' Datei' : ' Dateien') + ' abgelegt', 'success');
             aktuell.ablage = null;
             aktuell.daten = await laden(id);
-            if (aktuell.tab === 'berichte') { aktuell.daten.protokolle = null; protokolleLaden(); }
+            if (aktuell.tab === 'berichte') { aktuell.daten.protokolle = null; protokolleLaden(); anleitungenLaden(); }
             zeichnen();
         } catch (e) {
             console.error('Maschinen-Zentrale: Ablegen fehlgeschlagen', e);
@@ -521,7 +555,7 @@
             ${g.teile.map(t => `<div class="mz-untergruppe"><h5>${esc(t.label)} <em>${anz(t.urls.length)}</em></h5>${raster(t.urls, t.start, ['Miete', g.zeit, g.kunde, t.label].filter(Boolean).join(' · '))}</div>`).join('')}
         </section>` : `<section class="mz-gruppe">
             <h4>${esc(g.titel)} <em>${esc(datum(g.wann))} · ${[g.urls.length ? anz(g.urls.length) : '', g.videos && g.videos.length ? g.videos.length + (g.videos.length === 1 ? ' Video' : ' Videos') : ''].filter(Boolean).join(' · ')}</em></h4>
-            ${g.urls.length ? raster(g.urls, g.start, g.titel + ' · ' + datum(g.wann)) : ''}${videoRaster(g.videos)}
+            ${notizHtml(g.notiz)}${g.urls.length ? raster(g.urls, g.start, g.titel + ' · ' + datum(g.wann)) : ''}${videoRaster(g.videos)}
         </section>`).join('')}</div>`;
     }
 
@@ -562,15 +596,51 @@
             </div></div>`;
     }
 
+    // Anleitungen, Kataloge & Co. zur Maschine: liegen schon unter „Dokumente“ (documents) und werden hier nur
+    // angezeigt, nicht kopiert. Passend, wenn das Dokument an der Maschine hängt (machine_id), an ihrer Serie
+    // (machine_series) oder — ohne Serie — an ihrer Maschinenkategorie und eine Anleitung/ein Katalog ist.
+    // Eine schmale Abfrage, erst beim Öffnen des Reiters Dokumente.
+    const ANLEITUNG_RE = /anleitung|katalog|ersatzteil|handbuch|manual|schaltplan|st[üu]ckliste|bedien|betriebs/i;
+    const OHNE_ANZEIGE = ['Übergabeprotokolle', 'Mietvereinbarung'];
+    async function anleitungenLaden() {
+        if (!aktuell || !aktuell.daten || Array.isArray(aktuell.daten.anleitungen) || aktuell.daten.anleitungenLaeuft) return;
+        const id = aktuell.id, m = aktuell.m, c = sb();
+        aktuell.daten.anleitungenLaeuft = true;
+        const serie = String(m.machine_series || '').trim();
+        const kat = ((window.categoryList || []).find(k => String(k.id) === String(m.category_id)) || {}).name || '';
+        const wert = t => '"' + String(t).replace(/[\\"]/g, '\    async function protokolleLaden() {') + '"';
+        const spalten = 'id, name, url, category, mime_type, size, created_at, machine_id, machine_series, machine_categories';
+        const teile = ['machine_id.eq.' + id];
+        if (serie) teile.push('machine_series.ilike.' + wert('%' + serie + '%'));
+        const mitKat = teile.concat(kat ? ['and(machine_categories.ilike.' + wert('%' + kat + '%') + ',or(machine_series.is.null,machine_series.eq.))'] : []);
+        const holen = async liste => { const r = await c.from('documents').select(spalten).or(liste.join(',')).order('name').limit(80); if (r.error) throw r.error; return r.data || []; };
+        let docs = [];
+        try { docs = await holen(mitKat); } catch (e) { try { docs = await holen(teile); } catch (e2) { docs = []; } }
+        const gleich = (a, b) => String(a || '').trim().toLowerCase() === String(b || '').trim().toLowerCase();
+        // Reihenfolge: genau diese Maschine, dann Serie, dann Kategorie; innerhalb davon Anleitungen/Kataloge zuerst
+        const rang = dk => (String(dk.machine_id) === String(id) ? 0 : dk.machine_series ? 10 : 20) + (ANLEITUNG_RE.test((dk.category || '') + ' ' + (dk.name || '')) ? 0 : 5);
+        const liste = docs.filter(dk => {
+            const typen = String(dk.category || '').split(',').map(s => s.trim());
+            if (typen.some(t => OHNE_ANZEIGE.includes(t))) return false;
+            if (String(dk.machine_id) === String(id)) return true;
+            const serien = String(dk.machine_series || '').split(',').map(s => s.trim()).filter(Boolean);
+            if (serie && serien.some(s => gleich(s, serie))) return true;
+            const kats = String(dk.machine_categories || '').split(',').map(s => s.trim()).filter(Boolean);
+            return !serien.length && !dk.machine_id && kat && kats.some(s => gleich(s, kat)) && ANLEITUNG_RE.test((dk.category || '') + ' ' + (dk.name || ''));
+        }).sort((x, y) => rang(x) - rang(y) || String(x.name).localeCompare(String(y.name), 'de'));
+        if (aktuell && String(aktuell.id) === String(id) && aktuell.daten) { aktuell.daten.anleitungen = liste; aktuell.daten.anleitungenLaeuft = false; zeichnen(); }
+    }
+
     async function protokolleLaden() {
         if (!aktuell || !aktuell.daten || aktuell.daten.protokolle) return;
         const id = aktuell.id, c = sb();
         const q = p => p.then(r => (r.error ? [] : r.data || [])).catch(() => []);
-        const [eingang, abnahme] = await Promise.all([
+        const [eingang, abnahme, einweisung] = await Promise.all([
             q(c.from('intake_protocols').select('*').eq('machine_id', id).order('created_at', { ascending: false })),
-            q(c.from('acceptance_protocols').select('*').eq('machine_id', id).order('created_at', { ascending: false }))
+            q(c.from('acceptance_protocols').select('*').eq('machine_id', id).order('created_at', { ascending: false })),
+            q(c.from('documents').select('id, name, url, created_at, attachments').eq('machine_id', id).eq('category', 'Übergabeprotokolle').order('created_at', { ascending: false }))
         ]);
-        if (aktuell && String(aktuell.id) === String(id) && aktuell.daten) { aktuell.daten.protokolle = { eingang, abnahme }; zeichnen(); }
+        if (aktuell && String(aktuell.id) === String(id) && aktuell.daten) { aktuell.daten.protokolle = { eingang, abnahme, einweisung }; zeichnen(); }
     }
 
     function uebersichtHtml(m, d) {
@@ -626,6 +696,14 @@
         </div>`;
     }
 
+    // Suche über alle Dokument-Zeilen (ohne Neuaufbau); bei aktiver Suche sind auch eingeklappte Zeilen sichtbar
+    function dokSuche(text) {
+        const box = document.getElementById('mz-fenster'); const tab = box && box.querySelector('.mz-tab'); if (!tab) return;
+        const s = String(text || '').trim().toLowerCase(); aktuell.dokSuchtext = String(text || '');
+        tab.classList.toggle('suchend', !!s);
+        tab.querySelectorAll('.mz-gruppe').forEach(g => { let k = 0; g.querySelectorAll('.mz-zeile').forEach(z => { const ok = !s || z.textContent.toLowerCase().includes(s); z.hidden = !ok; if (ok) k++; }); g.hidden = !!s && k === 0; });
+    }
+
     function zeichnen() {
         const box = document.getElementById('mz-fenster');
         if (!box || !aktuell) return;
@@ -637,6 +715,7 @@
         const scroll = box.scrollTop;
         box.querySelector('.mz-panel').innerHTML = kopfHtml(m) + reiterHtml(daten) + inhalt;
         box.scrollTop = scroll;
+        if (tab === 'berichte' && aktuell.dokSuchtext) dokSuche(aktuell.dokSuchtext);
         if (daten) {
             const z = box.querySelector('.mz-fotozahl');
             if (z && daten.fotos.length) { z.hidden = false; z.textContent = daten.fotos.length + ' Fotos'; }
@@ -657,6 +736,7 @@
             box.className = 'mz-overlay';
             box.innerHTML = '<div class="mz-panel" role="dialog" aria-modal="true" aria-label="Maschine"></div>';
             box.addEventListener('click', klick);
+            box.addEventListener('input', e => { if (e.target.matches('[data-mz-dok-suche]')) dokSuche(e.target.value); });
             box.addEventListener('mousedown', e => { if (e.target === box) box.dataset.zuKlick = '1'; });
             box.addEventListener('mouseup', e => { if (e.target === box && box.dataset.zuKlick === '1') schliessen(); box.dataset.zuKlick = ''; });
             box.addEventListener('change', e => { if (e.target.matches('[data-mz-datei]')) { dateienAnnehmen(e.target.dataset.ziel, e.target.files); e.target.value = ''; } });
@@ -710,7 +790,7 @@
         try {
             const mid = aktuell.id;
             aktuell.daten = await laden(mid);
-            if (aktuell.tab === 'berichte' || aktuell.tab === 'verlauf') { aktuell.daten.protokolle = null; protokolleLaden(); }
+            if (aktuell.tab === 'berichte' || aktuell.tab === 'verlauf') { aktuell.daten.protokolle = null; protokolleLaden(); if (aktuell.tab === 'berichte') anleitungenLaden(); }
             zeichnen();
         } catch (e) { console.warn('Maschinen-Zentrale: Neuladen fehlgeschlagen', e); }
     }
@@ -750,6 +830,8 @@
         if (was.startsWith('neu-')) {
             const art = was.slice(4);
             if (art === 'mietvereinbarung') return weiter(id => { window.currentSelectedMachineForService = id; window.openMietvereinbarung && window.openMietvereinbarung(id); });
+            if (art === 'einweisung') return window.openEinweisung && window.openEinweisung(m.id);
+            if (art === 'einweisung-neu') return window.openEinweisung && window.openEinweisung(m.id, 'neu');
             if (['servicebericht', 'eingangsprotokoll', 'abnahmeprotokoll', 'uvv-protokoll', 'mietvereinbarung'].includes(art)) return bericht(art);
             if (art === 'vorgang') return weiter(id => {
                 if (typeof window.openProcessAddModal === 'function') window.openProcessAddModal();
@@ -760,6 +842,7 @@
             });
             return verlaufFormular(art);   // note, phone, hours, photo, wartung (manuell)
         }
+        if (was === 'einweisung-bearbeiten') return window.openEinweisung && window.openEinweisung(m.id, a.dataset.id);
         if (was === 'ki') return weiter(id => window.openMachineSummary && window.openMachineSummary(id));
         if (was === 'bearbeiten') return weiter(id => window.openEditStammdaten && window.openEditStammdaten(id));
         if (was === 'wartung') return weiter(id => window.openMaintTerminModal && window.openMaintTerminModal(m.id));
@@ -773,6 +856,7 @@
         if (was.startsWith('tab-')) {
             aktuell.tab = was.slice(4);
             if (aktuell.tab === 'berichte' || aktuell.tab === 'verlauf') protokolleLaden();
+            if (aktuell.tab === 'berichte') anleitungenLaden();
             zeichnen();
             return;
         }
@@ -781,6 +865,8 @@
             else window.open(a.dataset.url, '_blank', 'noopener');
             return;
         }
+        if (was === 'dok-filter') { aktuell.dokFilter = a.dataset.f || 'alle'; zeichnen(); return; }
+        if (was === 'dok-mehr') { const g = a.closest('.mz-gruppe'); const k = a.dataset.g; aktuell.dokOffen = aktuell.dokOffen || {}; aktuell.dokOffen[k] = !aktuell.dokOffen[k]; if (g) g.classList.toggle('offen', aktuell.dokOffen[k]); a.textContent = aktuell.dokOffen[k] ? 'Weniger anzeigen' : 'Alle ' + g.querySelectorAll('.mz-zeile').length + ' anzeigen'; return; }
         if (was === 'ablage-weg') { aktuell.ablage = null; zeichnen(); return; }
         if (was === 'filter') { aktuell.filter = a.dataset.filter || 'alle'; zeichnen(); return; }
         if (was === 'foto') {

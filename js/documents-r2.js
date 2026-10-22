@@ -1047,7 +1047,7 @@ window.openDocumentUploadModal = async function() {
     selectedDocFiles = []; // Reset file array
     if (!docUploadFeld && document.getElementById('doc-upload-feld') && window.uploadFeld) {
         docUploadFeld = window.uploadFeld(document.getElementById('doc-upload-feld'), {
-            accept: '.pdf,image/*', multiple: true, maxMB: 10, kamera: true,
+            accept: '.pdf,image/*', multiple: true, maxMB: 25, kamera: true,
             text: 'Dateien hierher ziehen',
             onChange: (dateien) => {
                 selectedDocFiles = dateien;
