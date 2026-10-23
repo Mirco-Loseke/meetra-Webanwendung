@@ -70,6 +70,13 @@ Nichts an `style.css` anhängen. Ladereihenfolge in `index.html` nicht umsortier
 - Listen: höchstens ~60 Einträge zeichnen, ein `innerHTML` + Klick-Delegation, keine `machineList.find` in Schleifen.
 - Benutzertexte vor `innerHTML` escapen.
 
+## 5b. Schwebende Elemente (Vorschlagslisten, Dropdowns, Popover) — PFLICHT, Wunsch des Nutzers
+Der Nutzer will so etwas **nie selbst zuerst prüfen müssen**. Deshalb bei jedem Element, das über dem Inhalt schwebt:
+1. **Nicht auf `.menu-panel`/`.menu-list` verlassen** — dafür gibt es kein eigenes CSS (das Aussehen kommt nur über die Selektorliste in `css/components/dropdown-look.css`). Eigenes Panel ⇒ **explizit** stylen: `background: #0f172a`, Rahmen `rgba(255,255,255,.18)`, `--radius-lg`, Schatten `0 20px 60px rgba(0,0,0,.6)`, Einträge weiß, Hover/`.selected` grün. Vorbild: `.mt-panel` in `css/views/filter.css`.
+2. **z-index über jedem Fenster** (Fenster liegen bis ~20000, Login 1.000.000): `2147483000`. `position: fixed`, aus `getBoundingClientRect()` des Feldes berechnet, an `<body>` hängen (backdrop-filter-Falle).
+3. **Selbst ansehen, bevor „fertig“ gemeldet wird:** `preview_start static`, Seite laden, Panel mit Testdaten öffnen (Login-Overlay `#supabase-login-screen` liegt darüber ⇒ Testelement vorn einfügen, `document.body.prepend`, hohes z-index; **Vorsicht: gleiche ID im Markup doppelt ⇒ `getElementById` greift die versteckte**) und **Screenshot** machen: Hintergrund sichtbar? Text lesbar? Position unter dem Feld? Nicht verdeckt? Bei nicht sichtbarem Pane `tabs_select` auf den Tab.
+4. Native `<datalist>` nie verwenden (im Dark Mode unlesbar/abgeschnitten).
+
 ## 6. Abschluss — jedes Mal
 1. `node --check <datei>.js` für jede geänderte JS-Datei.
 2. Markup geändert → `node build.js`.

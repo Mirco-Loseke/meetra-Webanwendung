@@ -1,0 +1,114 @@
+/* Filter-Katalog: Einstellungsseite (#settings-filter) und Reiter "Filter" in der Maschinen-Zentrale (.mf-*) */
+.mf-hinweis { margin: var(--space-3) 0 var(--space-4); color: var(--text-3); font-size: var(--fs-sm); max-width: 70ch; }
+.mf-karte-seite { padding: var(--space-5); display: grid; gap: var(--space-4); }
+.mf-tabelle { display: grid; gap: var(--space-2); }
+.mf-zeile {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 2fr) minmax(0, 1.2fr);
+    gap: var(--space-4);
+    align-items: center;
+    width: 100%;
+    padding: var(--space-3) var(--space-4);
+    text-align: left;
+    color: var(--text-1);
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+}
+.mf-zeile:hover { background: rgba(255, 255, 255, 0.06); border-color: rgba(16, 185, 129, 0.4); }
+.mf-zeile b, .mf-z-haupt small { display: block; }
+.mf-zeile small, .mf-z-wofuer, .mf-z-iv { color: var(--text-3); font-size: var(--fs-xs); overflow-wrap: anywhere; }
+.mf-z-haupt b { font-size: var(--fs-sm); }
+
+.mf-formular { display: grid; gap: var(--space-4); padding: var(--space-4); border: 1px solid rgba(255, 255, 255, 0.10); border-radius: var(--radius-lg); background: rgba(255, 255, 255, 0.03); }
+.mf-formular h2 { font-size: var(--fs-lg); }
+.mf-raster { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3) var(--space-4); }
+.mf-raster label { display: grid; gap: var(--space-1); min-width: 0; }
+.mf-raster label > span { color: var(--text-3); font-size: var(--fs-xs); font-weight: var(--fw-semibold); }
+.mf-breit { grid-column: 1 / -1; }
+.mf-motoren { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
+.mf-motoren small { width: 100%; color: var(--text-3); font-size: var(--fs-xs); }
+.mf-fuss-rechts { display: flex; gap: var(--space-2); }
+.mf-formular .fenster-fuss { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); }
+
+/* Motortypen-Auswahl (Filter-Formular) und Vorschläge im Maschinen-Fenster */
+.mf-motorwahl { display: grid; gap: var(--space-2); }
+.mf-motorwahl-titel { color: var(--text-3); font-size: var(--fs-xs); font-weight: var(--fw-semibold); }
+.mf-motorwahl-titel small { margin-left: var(--space-2); font-weight: var(--fw-regular); }
+.mf-motorsuche { max-width: 360px; }
+.mf-chips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.mf-chip {
+    padding: 6px 12px;
+    color: var(--text-2, var(--text-1));
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-semibold);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+    transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+}
+.mf-chip:hover { border-color: rgba(16, 185, 129, 0.5); }
+.mf-chip.an { color: #fff; background: rgba(16, 185, 129, 0.28); border-color: var(--color-primary-green); box-shadow: 0 0 0 1px var(--color-primary-green), 0 0 14px rgba(16, 185, 129, 0.45); }
+.mf-chip-plus { border-style: dashed; color: var(--color-primary-green); }
+.mt-panel {
+    position: fixed;
+    z-index: 2147483000;
+    max-height: 280px;
+    overflow-y: auto;
+    padding: var(--space-2);
+    background: #0f172a;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+}
+.mt-eintrag { padding: 10px 14px; color: #fff; font-size: var(--fs-md); font-weight: var(--fw-semibold); border-radius: var(--radius-md); cursor: pointer; }
+.mt-eintrag:hover, .mt-eintrag.selected { background: rgba(16, 185, 129, 0.22); }
+.mt-neu { padding: 10px 14px; color: var(--text-3); font-size: var(--fs-xs); }
+.mt-neu b { color: #fff; }
+
+/* Gruppen nach Motor */
+.mf-kopfzeile { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; }
+.mf-kopfzeile #mf-suche { flex: 1 1 260px; min-width: 0; }
+.mf-kopfzeile .mz-filter-chip.an { background: rgba(16, 185, 129, 0.18); border-color: rgba(16, 185, 129, 0.5); color: var(--text-1); }
+.mf-gruppe { border: 1px solid rgba(255, 255, 255, 0.08); border-radius: var(--radius-lg); background: rgba(255, 255, 255, 0.02); }
+.mf-gruppe > summary { display: flex; align-items: baseline; gap: var(--space-3); padding: var(--space-3) var(--space-4); cursor: pointer; list-style: none; }
+.mf-gruppe > summary::-webkit-details-marker { display: none; }
+.mf-gruppe > summary::before { content: '▸'; color: var(--text-3); transition: transform var(--dur-fast) var(--ease-out); }
+.mf-gruppe[open] > summary::before { transform: rotate(90deg); }
+.mf-gruppe > summary b { font-size: var(--fs-md); }
+.mf-gruppe > summary small, .mf-motor-kopf h3 small { color: var(--text-3); font-size: var(--fs-xs); font-weight: var(--fw-regular); }
+.mf-motor { display: grid; gap: var(--space-2); padding: 0 var(--space-4) var(--space-4); }
+.mf-motor-kopf { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: var(--space-2); padding-top: var(--space-3); border-top: 1px solid rgba(255, 255, 255, 0.06); }
+.mf-motor-kopf h3 { font-size: var(--fs-sm); }
+.mf-motor-aktion { display: flex; gap: var(--space-2); }
+
+/* Import aus Foto */
+.mf-import { display: grid; gap: var(--space-3); padding: var(--space-4); border: 1px solid rgba(168, 85, 247, 0.35); border-radius: var(--radius-lg); background: rgba(168, 85, 247, 0.05); }
+.mf-imp-liste { display: grid; gap: var(--space-3); }
+.mf-imp-zeile { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: var(--space-2); padding: var(--space-3); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: var(--radius-md); background: rgba(255, 255, 255, 0.03); }
+.mf-imp-zeile.aus { opacity: 0.45; }
+.mf-imp-zeile .mf-breit { grid-column: span 3; }
+.mf-imp-an { grid-column: 1 / -1; display: flex; align-items: center; gap: var(--space-2); color: var(--text-3); font-size: var(--fs-xs); }
+.mf-ki { border-color: var(--warning); background: rgba(245, 158, 11, 0.10); }
+.mf-ki-marke { color: var(--warning); font-weight: var(--fw-semibold); }
+
+/* Reiter in der Maschinen-Zentrale */
+.mf-liste { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: var(--space-3); margin-top: var(--space-3); }
+.mf-karte { display: grid; gap: var(--space-2); align-content: start; }
+.mf-name { font-size: var(--fs-md); }
+.mf-kopie { margin-left: 6px; padding: 0 6px; min-height: 24px; color: var(--text-3); background: transparent; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: var(--radius-xs); cursor: pointer; }
+.mf-kopie:hover { color: var(--text-1); border-color: rgba(16, 185, 129, 0.5); }
+
+@media (max-width: 768px) {
+    .mf-zeile { grid-template-columns: 1fr; gap: var(--space-1); }
+    .mf-raster { grid-template-columns: 1fr; }
+    .mf-imp-zeile { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .mf-imp-zeile .mf-breit { grid-column: 1 / -1; }
+    .mf-liste { grid-template-columns: 1fr; }
+    .mf-kopie { min-width: 44px; min-height: 44px; }
+    .mf-chip { min-height: 44px; }
+    .mf-formular .fenster-fuss { flex-wrap: wrap; }
+}

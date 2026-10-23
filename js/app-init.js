@@ -146,6 +146,7 @@
                             'settings-outlook',
                             'settings-uvv-wartungsplaene',
                             'settings-etiketten',
+                            'settings-filter',
                             'users',
                             'categories',
                             'protocol-templates',
@@ -260,6 +261,8 @@
                     if (typeof window.loadUvvWartungsplaene === 'function') {
                         window.loadUvvWartungsplaene();
                     }
+                } else if (targetId === 'settings-filter') {
+                    if (typeof window.filterEinstellungenRender === 'function') window.filterEinstellungenRender();
                 } else if (targetId === 'settings-etiketten') {
                     if (typeof window.fetchLabelArticles === 'function') {
                         window.fetchLabelArticles();
@@ -3236,12 +3239,28 @@
             // Submit Logic
             
             // Helper to generate machine folder name in R2
+            // Der Ordner einer Maschine bleibt dauerhaft derselbe (machines.r2_ordner, Migration
+            // supabase_add_machine_r2_ordner.sql): beim ersten Gebrauch wird der Name festgehalten
+            // und danach nie mehr aus Hersteller/Typ/Seriennummer neu gebildet. Ohne die Spalte
+            // gilt der bisherige Weg (Name aus den aktuellen Daten).
             window.getMachineFolderName = function (id, manufacturer, name, serial, year) {
+                const cache = (window._r2OrdnerCache = window._r2OrdnerCache || {});
+                const m = id && typeof window.machineById === 'function' ? window.machineById(id) : null;
+                const fest = cache[id] || (m && m.r2_ordner);
+                if (fest) return fest;
                 const cleanMan = (manufacturer || '').trim().replace(/[^a-zA-Z0-9_\-]/g, '_');
                 const cleanName = (name || '').trim().replace(/[^a-zA-Z0-9_\-]/g, '_');
                 const serialStr = serial ? `_${(serial || '').trim().replace(/[^a-zA-Z0-9_\-]/g, '_')}` : '';
                 const yearStr = year ? `_Baujahr_${year}` : '';
-                return `Maschinen/${id}_${cleanMan}_${cleanName}${serialStr}${yearStr}`;
+                const ordner = `Maschinen/${id}_${cleanMan}_${cleanName}${serialStr}${yearStr}`;
+                if (id && !window._r2OrdnerFehlt && window.supabaseClient) {
+                    cache[id] = ordner;
+                    window.supabaseClient.from('machines').update({ r2_ordner: ordner }).eq('id', id).then(({ error }) => {
+                        if (error) { window._r2OrdnerFehlt = true; delete cache[id]; }
+                        else if (m) m.r2_ordner = ordner;
+                    }, () => { delete cache[id]; });
+                }
+                return ordner;
             }
 
             window.submitNewMachine = async function () {

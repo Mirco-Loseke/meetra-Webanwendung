@@ -1718,7 +1718,8 @@
             // JPEGs, das PDF haengt also direkt daran. ~123 dpi bleiben fuer
             // Bildschirm und Ausdruck lesbar. Wer es feiner braucht, dreht
             // hier hoch — es kostet unmittelbar Wartezeit beim Speichern.
-            const skala = 1.15;
+            // 2026-10-23: auf Wunsch wieder 2 (~210 dpi) — bei 1,15 war die Schrift unscharf.
+            const skala = 2;
 
             // Nur den Bogen klonen: html2canvas kopiert sonst die GANZE App
             // (alle Ansichten, Fenster, Listen) in ein unsichtbares Fenster und
@@ -1753,7 +1754,9 @@
             // ab etwa 32.000 Bildpunkten). Dann doch blattweise — lieber langsam
             // als abgeschnitten.
             const gesamtHoehe = pages.getBoundingClientRect().height * skala;
-            const amStueck = gesamtHoehe < 30000;
+            // Zusätzlich die Fläche begrenzen: Safari/iPhone erlaubt rund 16,7 Mio. Bildpunkte je Canvas.
+            const gesamtFlaeche = gesamtHoehe * pages.getBoundingClientRect().width * skala;
+            const amStueck = gesamtHoehe < 30000 && gesamtFlaeche < 12000000;
 
             const gesamt = amStueck
                 ? await window.html2canvas(pages, optionen)
@@ -1780,7 +1783,7 @@
                 }
                 let seitenBild;
                 try {
-                    seitenBild = canvas.toDataURL('image/jpeg', 0.74);
+                    seitenBild = canvas.toDataURL('image/jpeg', 0.9);
                 } catch (e) {
                     // "Tainted canvas": es hing doch noch ein fremdes Bild im
                     // Bogen. Zur Eingrenzung alle nicht-eingebetteten Quellen

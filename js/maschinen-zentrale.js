@@ -230,6 +230,7 @@
         ['berichte', 'Dokumente', d => d.berichte.length + abgelegteDateien(d).length + originaleAnzahl(d) + (d.protokolle ? d.protokolle.eingang.length + d.protokolle.abnahme.length + (d.protokolle.einweisung || []).length : 0) + (d.anleitungen ? d.anleitungen.length : 0)],
         ['fotos', 'Fotos & Videos', d => d.fotos.length + (d.videoAnz || 0)],
         ['miete', 'Miete', d => d.mieten.length],
+        ['filter', 'Filter', null],
         ['daten', 'Daten', null]
     ];
     function reiterHtml(d) {
@@ -466,7 +467,7 @@
             const neu = [];
             for (const f of dateien) {
                 const res = await window.FileUploadService.uploadFile(f, {
-                    path: 'maschinen/' + mid + '/' + ordner + '/' + Date.now() + '-' + sicherName(f.name),
+                    path: maschinenOrdner(mid) + '/' + ordner + '/' + Date.now() + '-' + sicherName(f.name),
                     provider: 'cloudflare-r2', compress: false
                 });
                 neu.push({ url: res.url, name: f.name, type: res.type || f.type || '', original: true });
@@ -503,6 +504,13 @@
     }
 
     function sicherName(n) { return String(n || 'datei').replace(/[^\w.\-]+/g, '_').slice(-80); }
+    // Gleicher Ordner wie alle anderen Uploads dieser Maschine (kein zweiter "maschinen/<id>").
+    function maschinenOrdner(id) {
+        const m = typeof window.machineById === 'function' ? window.machineById(id) : null;
+        return m && typeof window.getMachineFolderName === 'function'
+            ? window.getMachineFolderName(m.id, m.manufacturer, m.name, m.serial || m.serial_number, m.year)
+            : 'Maschinen/' + id;
+    }
     async function ablageSpeichern(form) {
         const w = aktuell && aktuell.ablage;
         if (!w || !w.dateien.length) return;
@@ -518,7 +526,7 @@
                 const f = w.dateien[i];
                 knopf.textContent = 'Lädt ' + (i + 1) + '/' + w.dateien.length + ' …';
                 const res = await window.FileUploadService.uploadFile(f, {
-                    path: 'maschinen/' + id + '/dokumente/' + Date.now() + '-' + i + '-' + sicherName(f.name),
+                    path: maschinenOrdner(id) + '/dokumente/' + Date.now() + '-' + i + '-' + sicherName(f.name),
                     provider: 'cloudflare-r2', compress: false
                 });
                 files.push({ url: res.url, name: f.name, type: res.type || f.type || '' });
@@ -709,7 +717,8 @@
         if (!box || !aktuell) return;
         const { m, daten } = aktuell;
         const tab = aktuell.tab || 'uebersicht';
-        const inhalt = !daten && tab !== 'daten' ? '<div class="mz-laedt">Lade …</div>'
+        const inhalt = tab === 'filter' && window.maschinenFilter ? window.maschinenFilter.tabHtml(m, () => { if (aktuell && aktuell.tab === 'filter') zeichnen(); })
+            : !daten && tab !== 'daten' ? '<div class="mz-laedt">Lade …</div>'
             : tab === 'verlauf' ? verlaufHtml(daten) : tab === 'berichte' ? berichteHtml(daten) : tab === 'fotos' ? fotosHtml(daten)
             : tab === 'miete' ? mieteHtml(daten) : tab === 'daten' ? datenHtml(m) : uebersichtHtml(m, daten);
         const scroll = box.scrollTop;

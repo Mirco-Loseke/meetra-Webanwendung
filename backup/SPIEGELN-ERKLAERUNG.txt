@@ -1,0 +1,115 @@
+﻿meetra - Dateien spiegeln (R2 -> Server-Laufwerk)
+==================================================
+Stand: 2026-10-23  |  Status: Skript fertig, noch NICHT auf dem Server getestet. Aufgabenplanung-Eintrag gibt es noch nicht.
+Nur die beiden Schalter-Dateien (STOPP / WIEDER-AN) gibt es schon.
+
+
+1. WAS PASSIERT HIER?
+---------------------
+Alle Dateien, die in der Webapp hochgeladen werden (Maschinenfotos, Dokumente,
+Mietvereinbarungen, Ablage an Adressen ...), liegen online im Cloudflare-Speicher "R2"
+(Bucket "dateien"). Das Spiegel-Skript legt davon eine KOPIE auf einem Ordner auf dem
+Server an - mit derselben Ordnerstruktur wie in R2.
+
+Nutzen:  - Sicherung der Fotos und Dateien (zweite Kopie ausserhalb von Cloudflare)
+         - uebersichtliche Ordner auf dem Laufwerk
+         - spaeter (Schritt 2) koennen Dateien von Hand im Ordner abgelegt und in die
+           App uebernommen werden
+
+Die Webapp selbst wird dadurch NICHT veraendert. Sie zeigt weiter nur das, was in R2 liegt.
+
+
+2. WAS DAS SKRIPT TUT - UND WAS NIE
+------------------------------------
+TUT:   - fragt R2 ueber die Supabase-Funktion "r2-sign" nach der Dateiliste (Aktion "list")
+       - laedt Dateien, die auf dem Laufwerk noch FEHLEN, herunter (Aktion "download")
+       - schreibt ein Protokoll (was kopiert, was uebersprungen, was fehlgeschlagen)
+
+TUT NIE: - nichts in R2 loeschen, aendern oder hochladen
+         - nichts auf dem Laufwerk loeschen oder ueberschreiben (vorhandene Datei = uebersprungen)
+         - nichts in der Datenbank aendern
+
+Folge: Wird eine Datei in der App geloescht, bleibt die Kopie auf dem Laufwerk
+bestehen (gewollt - das ist die Sicherung). Wird sie in der App ersetzt, bleibt die alte
+Fassung auf dem Laufwerk, solange der Dateiname gleich ist.
+
+
+3. DIE DATEIEN IM ORDNER "backup"
+---------------------------------
+dateien-spiegeln.ps1     (FERTIG, Test mit einer Maschine)
+    Das eigentliche Skript. Aufruf mit R2-Pfad und Zielordner, z. B. zuerst nur eine
+    Maschine zum Testen.
+
+backup-config.cmd        (gibt es schon, wird MITGENUTZT)
+    Das Skript liest daraus DB_URL (Namen von Maschine/Adresse) und die R2-Zugaenge
+    (nur Lesen). Kein neuer Nutzer noetig. Enthaelt Passwoerter -> nur auf dem Server lassen,
+    nie weitergeben, nie in OneDrive/Mail.
+
+Aufgabenplanung-Eintrag "meetra Dateien spiegeln"   (NOCH NICHT ANGELEGT)
+    Startet das Skript automatisch (Zeit wird beim Einrichten festgelegt).
+    Nur dieser Name wird von den Schalter-Dateien gefunden - nicht umbenennen.
+
+SPIEGELN-STOPP.bat       (FERTIG) -> auf den Server-Desktop legen
+    Notbremse. Doppelklick:
+      1. beendet die Aufgabe, falls sie gerade laeuft
+      2. beendet jeden Prozess, der dateien-spiegeln.ps1 ausfuehrt
+      3. schaltet die Aufgabe ab, damit sie nicht von selbst neu startet
+    Schaden durch Abbruch: keiner. Die Spiegelung kopiert nur; eine halbe Datei wird
+    beim naechsten Lauf erneut geholt (siehe Abschnitt 5).
+
+SPIEGELN-WIEDER-AN.bat   (FERTIG)
+    Schaltet die Aufgabe nach einem STOPP wieder ein.
+
+SPIEGELN-ERKLAERUNG.txt  (diese Datei)
+
+Nicht dazugehoerig (bestehendes DB-Backup): backup.bat, backup-config.cmd,
+taeglich-einrichten.bat, taeglich-entfernen.bat, ANLEITUNG.txt.
+
+
+4. DER GEPLANTE ABLAUF
+----------------------
+Schritt 1 (zuerst):  R2 -> Laufwerk, nur kopieren.
+    a) Test mit EINER Maschine (z. B. ein Maschinenordner mit Fotos). Ordner auf dem
+       Laufwerk ansehen, pruefen, ob Struktur und Dateien stimmen.
+    b) Wenn gut: alle Maschinen/Adressen, dann per Aufgabenplanung regelmaessig.
+
+Schritt 2 (spaeter, erst nach Freigabe):  Laufwerk -> App.
+    Dateien, die von Hand im richtigen Ordner abgelegt werden, werden nach R2 hochgeladen
+    und in der App an der passenden Stelle eingetragen (Maschine/Adresse ueber den
+    Ordnernamen). Nicht zuordenbare Dateien kommen in "Nicht zugeordnet".
+    Loeschen/Umbenennen auf dem Laufwerk wirkt NIE auf die App.
+    -> Dafuer muss die Ordnerstruktur eindeutig sein; sie wird in Schritt 1 so festgelegt.
+
+
+5. WENN ETWAS SCHIEF GEHT
+-------------------------
+- Sofort stoppen:  SPIEGELN-STOPP.bat doppelklicken.
+- Lauf unterbrochen (Strom, Neustart, Stopp): einfach erneut starten bzw. wieder
+  einschalten. Das Skript kopiert zuerst in eine temporaere Datei und benennt sie erst
+  nach vollstaendigem Download um - halbe Dateien werden dadurch nicht als fertig gezaehlt.
+- Anmeldung schlaegt fehl: Zugangsdaten in spiegeln-config.cmd pruefen.
+- Laufwerk voll / nicht erreichbar: Protokoll zeigt Fehler je Datei; nach Behebung
+  nochmal starten, bereits kopierte Dateien werden uebersprungen.
+- Ganz entfernen: STOPP ausfuehren, Aufgabe "meetra Dateien spiegeln" in der
+  Aufgabenplanung loeschen, Skript und Config loeschen. Die Kopien auf dem Laufwerk
+  und die App bleiben unberuehrt.
+
+
+6. SICHERHEIT / DATENSCHUTZ
+---------------------------
+- Das Skript bekommt KEINEN R2-Schluessel. Es meldet sich mit einem eigenen
+  Supabase-Nutzer an und nutzt die vorhandene Funktion r2-sign (gleicher Weg wie die App).
+- Zugangsdaten stehen nur in spiegeln-config.cmd auf dem Server.
+- Das Laufwerk enthaelt danach Kundendaten (Mietvertraege, Fotos, Unterschriften) als
+  zweite Kopie. Wer den Ordner oeffnen darf, bestimmen die Rechte des Laufwerks ->
+  Zugriff auf Berechtigte beschraenken.
+- Die R2-Dateien sind ueber ihre oeffentliche Adresse abrufbar, wer den genauen Pfad
+  kennt. Das ist bereits heute so und wird durch die Spiegelung nicht veraendert.
+
+
+7. OFFEN, BEVOR ES LOSGEHT
+--------------------------
+[x] Zielpfad: \\MEETRA-SA\Sammelmappen\Web-Spiegel (NICHT in den vorhandenen Ordner "Maschinen")
+[x] Test: Maschine "JT 580" bei Adresse "Emsland"
+[x] kein eigener Nutzer noetig (backup-config.cmd wird genutzt)
+[ ] Probelauf (-NurAnzeigen), dann echter Lauf mit der Test-Maschine, Ordner pruefen

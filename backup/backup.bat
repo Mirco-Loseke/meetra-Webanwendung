@@ -49,7 +49,7 @@ for /f "delims=" %%i in ('powershell -NoProfile -Command "Get-Date -Format yyyy-
 set "DBZIEL=%ZIEL%\datenbank"
 if not exist "%DBZIEL%" mkdir "%DBZIEL%" 2>nul
 if not exist "%DBZIEL%" (
-    echo [FEHLER] Zielordner laesst sich nicht anlegen: %DBZIEL%
+    echo [FEHLER] Zielordner laesst sich nicht anlegen: "%DBZIEL%"
     goto :ende
 )
 
@@ -57,7 +57,7 @@ echo.
 echo ==========================================================
 echo  1/2  Datenbank sichern
 echo ==========================================================
-echo Ziel: %DBZIEL%
+echo Ziel: "%DBZIEL%"
 echo.
 
 rem --- a) Wiederherstellungs-Format (komprimiert) -----------
@@ -67,7 +67,9 @@ if errorlevel 1 (
     echo [FEHLER] pg_dump ist fehlgeschlagen. Siehe Meldung oben.
     echo          Haeufigste Ursachen: falsches Passwort, falsche URI,
     echo          oder pg_dump ist aelter als der Server ^(ANLEITUNG.txt^).
-    goto :ende
+    echo          Die Dokumente werden trotzdem gesichert.
+    set "DBFEHLER=1"
+    goto :dokumente
 )
 
 rem --- b) Lesbare SQL-Fassung: LOKAL aus der .dump-Datei erzeugt (kein zweiter Abruf, spart Egress) ---
@@ -75,6 +77,17 @@ echo [2] Lesbare Fassung (.sql) wird lokal erzeugt ...
 set "PGRESTORE=%PGDUMP:pg_dump.exe=pg_restore.exe%"
 call "%PGRESTORE%" --no-owner --no-privileges --file="%DBZIEL%\meetra_%STAMP%.sql" "%DBZIEL%\meetra_%STAMP%.dump"
 if errorlevel 1 echo [WARNUNG] Die lesbare Fassung konnte nicht erstellt werden.
+
+rem --- c) Benutzerkonten (auth) + Storage-Einstellungen: fuer einen spaeteren Umzug ---
+echo [3] Benutzerkonten und Storage-Einstellungen werden gesichert ...
+call "%PGDUMP%" "%DB_URL%" --format=custom --compress=9 --no-owner --no-privileges --schema=auth --schema=storage --file="%DBZIEL%\meetra_auth_%STAMP%.dump"
+if errorlevel 1 echo [WARNUNG] auth/storage konnten nicht gesichert werden.
+
+rem --- d) Erweiterungen + Live-Aktualisierung (Realtime) als SQL-Liste ---
+echo [4] Erweiterungen und Realtime-Liste werden gesichert ...
+set "PSQL=%PGDUMP:pg_dump.exe=psql.exe%"
+call "%PSQL%" "%DB_URL%" -At -c "select format('create extension if not exists %%I;', extname) from pg_extension union all select format('alter publication %%I add table %%I.%%I;', pubname, schemaname, tablename) from pg_publication_tables" > "%DBZIEL%\meetra_einstellungen_%STAMP%.sql"
+if errorlevel 1 echo [WARNUNG] Die Einstellungsliste konnte nicht erstellt werden.
 
 for %%f in ("%DBZIEL%\meetra_%STAMP%.dump") do set "GROESSE=%%~zf"
 echo.
@@ -85,9 +98,11 @@ if not "%AUFHEBEN_TAGE%"=="" (
     echo Raeume Sicherungen aelter als %AUFHEBEN_TAGE% Tage auf ...
     forfiles /p "%DBZIEL%" /m meetra_*.dump /d -%AUFHEBEN_TAGE% /c "cmd /c del @path" 2>nul
     forfiles /p "%DBZIEL%" /m meetra_*.sql  /d -%AUFHEBEN_TAGE% /c "cmd /c del @path" 2>nul
+    forfiles /p "%DBZIEL%" /m meetra_auth_*.dump /d -%AUFHEBEN_TAGE% /c "cmd /c del @path" 2>nul
 )
 
 rem ---------- Dokumente aus R2 ------------------------------
+:dokumente
 echo.
 echo ==========================================================
 echo  2/2  Dokumente (Cloudflare R2)
@@ -115,9 +130,10 @@ set "RCLONE_CONFIG_R2_NO_CHECK_BUCKET=true"
 
 set "DOKZIEL=%ZIEL%\dokumente"
 if not exist "%DOKZIEL%" mkdir "%DOKZIEL%" 2>nul
-echo Gleiche R2-Bucket "%R2_BUCKET%" mit %DOKZIEL% ab ...
+echo Gleiche R2-Bucket "%R2_BUCKET%" mit "%DOKZIEL%" ab ...
 rem copy statt sync: es wird nur nachgeladen, nie lokal geloescht.
-rclone copy "R2:%R2_BUCKET%" "%DOKZIEL%" --progress --transfers=8 --checkers=16
+rem --local-case-sensitive: R2 unterscheidet Gross-/Kleinschreibung (z. B. Serviceberichte und serviceberichte), Windows nicht. Ohne das Flag fielen Dateien einer der beiden Schreibweisen weg.
+rclone copy "R2:%R2_BUCKET%" "%DOKZIEL%" --local-case-sensitive --progress --transfers=8 --checkers=16
 if errorlevel 1 (
     echo [WARNUNG] rclone meldete einen Fehler.
 ) else (
@@ -126,11 +142,11 @@ if errorlevel 1 (
 
 
 :fertig
-set "ERGEBNIS=OK"
+if not defined DBFEHLER set "ERGEBNIS=OK"
 echo.
 echo ==========================================================
 echo  Sicherung abgeschlossen.
-echo  Ordner: %ZIEL%
+echo  Ordner: "%ZIEL%"
 echo ==========================================================
 echo.
 if "%AUTO%"=="1" goto :ende

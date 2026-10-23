@@ -996,22 +996,26 @@ window.renderPdfThumbnail = async function(url, canvasId, docId) {
         pdf = await loadingTask.promise;
         const page = await pdf.getPage(1);
         
+        if (!document.getElementById(canvasId)) return;
+
+        // Erst auf eine eigene Zeichenfläche rendern, dann ins sichtbare Canvas kopieren:
+        // Die Liste wird mehrfach neu gezeichnet, die Canvas haben dann dieselbe ID, und zwei
+        // pdf.js-Läufe auf derselben Fläche verstellten sich gegenseitig die Transformation
+        // (Vorschau stand auf dem Kopf / gespiegelt).
+        const viewport = page.getViewport({ scale: 0.5 });
+        const puffer = document.createElement('canvas');
+        puffer.width = Math.ceil(viewport.width);
+        puffer.height = Math.ceil(viewport.height);
+        await page.render({ canvasContext: puffer.getContext('2d'), viewport: viewport }).promise;
+
         const canvas = document.getElementById(canvasId);
         if (!canvas) return;
-        
+        canvas.width = puffer.width;
+        canvas.height = puffer.height;
         const context = canvas.getContext('2d');
-        const viewport = page.getViewport({ scale: 0.5 });
-        
-        canvas.height = viewport.height;
-        canvas.width = viewport.width;
-        
-        const renderContext = {
-            canvasContext: context,
-            viewport: viewport
-        };
-        
-        await page.render(renderContext).promise;
-        
+        context.setTransform(1, 0, 0, 1, 0, 0);
+        context.drawImage(puffer, 0, 0);
+
         // Hide placeholder once rendered
         const placeholder = document.getElementById(`placeholder-${docId}`);
         if (placeholder) placeholder.style.display = 'none';

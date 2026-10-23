@@ -36,6 +36,7 @@ lassen als eine Migration auszulassen.
 | Datei | Wofür |
 |---|---|
 | `supabase_add_machine_coords.sql` | Koordinaten-Cache je Maschine (Routenplaner Umkreissuche) |
+| `supabase_add_machine_r2_ordner.sql` | Fester R2-Ordnername je Maschine (`machines.r2_ordner`), verhindert einen zweiten Ordner nach Umbenennen. **MUSS laufen** (2026-10-23) |
 | `supabase_add_service_location_snapshot.sql` | Standort **pro Servicebericht** (`location_snapshot`), überschreibt den Maschinen-Stammsatz nicht mehr |
 | `supabase_add_service_signed_flag.sql` | Generierte Spalten `customer_signed`/`tech_signed` — die Berichte-Liste zeigt „Unterschrieben", ohne das Unterschriftsbild zu laden |
 
@@ -61,6 +62,7 @@ lassen als eine Migration auszulassen.
 | `supabase_add_task_due_dates.sql` | Erinnerungen/Fälligkeiten an Vorgängen und Schritten |
 | `supabase_add_tasks_realtime.sql` | Live-Aktualisierung von `tasks`/`subtasks` (Anzeigetafel in der Werkstatt) |
 | `supabase_add_workshop_tasks.sql` | Werkstatt-Liste (schnelle kleine Aufgaben) |
+| `supabase_add_maschinen_filter.sql` | Filter-Katalog (`machine_filters`: OEM-/Alternativnummern, Intervall, Zuordnung nach Motortyp) — Einstellungen → Filter, Reiter „Filter“ in der Maschinen-Zentrale. **MUSS laufen** |
 | `supabase_add_invoice_todos.sql` | Rechnungsliste („wem muss noch eine Rechnung geschrieben werden") — ausklappbar rechts unter Vorgänge, Sichtbarkeit je Benutzer |
 | `supabase_add_todo_listen.sql` | Persönliche To-do-Liste (Knopf neben dem KI-Chat, gefüllt aus dem Briefing) — eine Zeile je Benutzer. Ohne Migration nur je Browser (2026-10-02) |
 | `supabase_add_foto_eingang.sql` | Foto-Eingang: `foto_geraete` (Schlüssel je Handy) + `foto_eingang` (hochgeladene Fotos, Zuordnung), Realtime. Dazu Function `foto-eingang` ausrollen (2026-10-07) |
