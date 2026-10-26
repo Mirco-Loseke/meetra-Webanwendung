@@ -809,9 +809,10 @@
         Array.from(restBox.children).forEach(n => n.remove());
         // Zeilen, die nur auf dem ersten Teil stehen sollen (Fortschritt,
         // Kamera-Knopf), im Fortsetzungsteil entfernen.
-        // Ausnahme: die Weiteren Bilder (Zusatz) wandern ganz in den Fortsetzungsteil
-        // (siehe unten) und behalten dort ihre Überschrift samt „+ Bilder hinzufügen".
-        rest.querySelectorAll("[data-nurerste],[data-ersteseite]").forEach(n => { if (!n.closest('.miet-zusatzbilder')) n.remove(); });
+        // Ausnahme: die Weiteren Bilder (Zusatz) und die Unterschriften unter den Fotos
+        // wandern ganz in den Fortsetzungsteil (siehe unten) und behalten dort ihre
+        // Überschrift samt „+ Bilder hinzufügen".
+        rest.querySelectorAll("[data-nurerste],[data-ersteseite]").forEach(n => { if (!n.closest('.miet-zusatzbilder, .miet-foto-sign')) n.remove(); });
         const titel = rest.querySelector('.miet-block-title');
         // Der Titel bleibt unveraendert — auf dem Papier soll nicht
         // "(Fortsetzung)" stehen, die Tabelle laeuft schlicht weiter.
@@ -855,11 +856,10 @@
             while (restBox.firstChild) box.insertBefore(restBox.firstChild, anker);
             return null;
         }
-        // Die Weiteren Bilder (Zusatz) stehen nur einmal: hinter dem LETZTEN Foto,
-        // also im Fortsetzungsteil. Der Zwilling trägt sie schon (cloneNode), der
-        // erste Teil gibt sie ab — sonst standen sie auf beiden Blättern.
-        const zusatzErsterTeil = block.querySelector('.miet-zusatzbilder');
-        if (zusatzErsterTeil) zusatzErsterTeil.remove();
+        // Die Weiteren Bilder (Zusatz) und die Unterschriften stehen nur einmal: hinter
+        // dem LETZTEN Foto, also im Fortsetzungsteil. Der Zwilling trägt sie schon
+        // (cloneNode), der erste Teil gibt sie ab — sonst standen sie auf beiden Blättern.
+        block.querySelectorAll('.miet-zusatzbilder, .miet-foto-sign').forEach(n => n.remove());
         return rest;
     }
 
