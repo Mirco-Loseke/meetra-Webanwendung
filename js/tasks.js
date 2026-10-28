@@ -91,6 +91,14 @@
        zweiten Durchgang ausgeglichen (wie in js/dropdown-position.js). */
     function menuFreistellen(trigger, menu) {
         const setz = (p, v) => menu.style.setProperty(p, v, 'important');
+        // An <body> h�ngen, solange offen: im Modal (backdrop-filter, Scroll-Beobachter)
+        // sprang es und war halb durchsichtig. Beim Schlie�en zur�ck an den alten Platz.
+        if (menu.parentElement !== document.body) {
+            menu._heim = menu.parentElement;
+            document.body.appendChild(menu);
+            menu.classList.add('menu-schwebend');
+            menu.onclick = (e) => e.stopPropagation();
+        }
         const RAND = 12, LUFT = 6;
 
         setz('position', 'fixed');
@@ -98,7 +106,7 @@
         setz('right', 'auto');
         setz('bottom', 'auto');
         setz('min-width', '0');
-        setz('z-index', '100000');
+        setz('z-index', '2147483000');
 
         const t0 = trigger.getBoundingClientRect();
         const platzUnten = window.innerHeight - t0.bottom - LUFT - RAND;
@@ -131,6 +139,7 @@
     }
 
     function menuLoesen(menu) {
+        if (menu._heim && menu.parentElement === document.body) { menu._heim.appendChild(menu); menu.classList.remove('menu-schwebend'); }
         ['position', 'left', 'top', 'right', 'bottom', 'width', 'min-width',
             'margin', 'max-height', 'overflow-y', 'z-index']
             .forEach(p => menu.style.removeProperty(p));
@@ -544,6 +553,7 @@
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                     </div>
                     ${task.machines ? `<span class="task-card-machine" style="color: var(--color-primary-green); font-weight: 800; font-size: 1.35rem; white-space:normal; line-height: 1.2;" title="${getMachineLabel(task.machines)}">${getMachineLabel(task.machines)}</span>` : ''}
+                    ${task.machines && task.workshop_order_number ? `<span class="task-card-machine task-card-wa" title="Werkstattauftrag ${task.workshop_order_number}">Werkstattauftrag ${task.workshop_order_number}</span>` : ''}
                     ${!task.machines && task.workshop_order_number ? `<span class="task-card-machine" style="color: #60a5fa; font-weight: 800; font-size: 1.05rem; white-space:normal; line-height: 1.2;" title="Werkstattauftrag ${task.workshop_order_number}">Werkstattauftrag ${task.workshop_order_number}</span>` : ''}
                     ${(task.address_id || task.customer_id || (task.description && task.description.includes('[Adresse:'))) ? `<span class="task-card-machine" style="color: #a78bfa; background: rgba(167, 139, 250, 0.15); border: 1px solid rgba(167, 139, 250, 0.4); padding: 2px 8px; border-radius: 999px; font-weight: 800; font-size: 0.72rem; letter-spacing: 0.04em;" title="Aus Ansprechpartner/Adresse erstellt">📍 ADRESSE</span>` : ''}
                 </div>
@@ -1051,12 +1061,6 @@
             machineSearch.value = getMachineLabel(task.machines);
             machineSearch.style.color = 'var(--color-primary-green)';
         } else if (task.workshop_order_number) {
-            const match = task.workshop_order_number.match(/^202(\d)-40(\d{1,3})$/);
-            if (match) {
-                document.getElementById('task-workshop-year-digit').value = match[1];
-                document.getElementById('task-workshop-order-suffix').value = match[2];
-            }
-            document.getElementById('task-workshop-order-wrapper').style.display = 'block';
             if (machineSearch) {
                 machineSearch.value = 'Werkstattauftrag';
                 machineSearch.style.color = '#60a5fa';
@@ -1065,6 +1069,8 @@
             machineSearch.value = '';
             machineSearch.style.color = '';
         }
+        // Werkstattauftrag steht immer im Fenster (auch zusammen mit einer Maschine)
+        window.setTaskWorkshopOrder(task.workshop_order_number);
 
         const compInfo = document.getElementById('task-completion-info');
         if (compInfo) {
@@ -1264,11 +1270,11 @@
             return;
         }
 
-        const workshopWrapper = document.getElementById('task-workshop-order-wrapper');
+        // Werkstattauftrag ist optional (auch neben einer Maschine): leer = keiner, halb = Fehler
         let workshopOrderNumber = null;
-        if (workshopWrapper && workshopWrapper.style.display !== 'none') {
-            const yearDigit = document.getElementById('task-workshop-year-digit').value.trim();
-            const suffix = document.getElementById('task-workshop-order-suffix').value.trim();
+        const yearDigit = document.getElementById('task-workshop-year-digit').value.trim();
+        const suffix = document.getElementById('task-workshop-order-suffix').value.trim();
+        if (yearDigit || suffix) {
             if (!yearDigit || !suffix) {
                 window.showToast('Bitte eine vollständige Werkstattauftragsnummer eingeben.');
                 return;
@@ -1496,7 +1502,7 @@
         const dropdown = document.getElementById('task-machine-dropdown-portal');
         if (dropdown) dropdown.style.display = 'none';
 
-        window.hideWorkshopOrderInput();
+        // Werkstattauftrag bleibt stehen: eine Aufgabe kann Maschine UND Auftrag haben
 
         // Trigger detail section and template loading
         if (typeof window.onMachineSelected === 'function') {
@@ -1504,13 +1510,29 @@
         }
     };
 
+    // Feld ist immer sichtbar; „hide“ leert es nur noch (Name bleibt für andere Module)
     window.hideWorkshopOrderInput = function () {
-        const wrapper = document.getElementById('task-workshop-order-wrapper');
-        if (wrapper) wrapper.style.display = 'none';
         const yearDigit = document.getElementById('task-workshop-year-digit');
         const suffix = document.getElementById('task-workshop-order-suffix');
         if (yearDigit) yearDigit.value = '';
         if (suffix) suffix.value = '';
+    };
+
+    // Nummer „2026-40128“ ins Feld setzen (leer/unpassend = leeren)
+    window.setTaskWorkshopOrder = function (nr) {
+        window.hideWorkshopOrderInput();
+        const match = String(nr || '').match(/^202(\d)-0*40(\d{1,3})$/);
+        if (!match) return;
+        document.getElementById('task-workshop-year-digit').value = match[1];
+        document.getElementById('task-workshop-order-suffix').value = match[2];
+    };
+
+    // Neue Aufgabe für einen Werkstattaufenthalt: normales Fenster, Maschine + Auftrag vorbelegt
+    window.openTaskModalFuerAuftrag = async function (machineId, nr) {
+        await window.openTaskModal(null);
+        const m = (window.machineById && window.machineById(machineId)) || null;
+        if (m) window.selectMachine(m.id, getMachineLabel(m));
+        window.setTaskWorkshopOrder(nr);
     };
 
     window.selectWorkshopOrderMode = function () {
@@ -1585,6 +1607,10 @@
         const container = document.getElementById('task-user-options');
         const labelContainer = document.getElementById('task-assigned-users-label');
         if (!container || !labelContainer) return;
+        // Beim Abhaken nicht an den Listenanfang springen
+        const menuEl = document.getElementById('task-user-select-menu');
+        const gerollt = menuEl ? menuEl.scrollTop : 0;
+        if (menuEl) requestAnimationFrame(() => { menuEl.scrollTop = gerollt; });
 
         container.innerHTML = '';
         if (window.userList && window.userList.length > 0) {

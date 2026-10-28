@@ -16,10 +16,11 @@
 param(
     [string]$Server = 'Meetra-SA',
     [string]$Db     = 'OLMeetra',
-    [ValidateSet('alles','adressen','angebote','rechnungen','pdf')]
+    [ValidateSet('alles','adressen','angebote','rechnungen','werkstatt','pdf')]
     [string]$Nur    = 'alles',
     [string]$AngeboteAb = '2026-01-01',
     [string]$RechnungenAb = '2023-01-01',
+    [string]$WerkstattAb = '2024-01-01',
     [int]$IntervallMin = 30,   # Takt der geplanten Aufgabe (Mo-Fr 07:30-17:00) - fuer "naechste Aktualisierung"
     [string]$ZeitVon = "07:30",
     [string]$ZeitBis = "17:00",
@@ -590,6 +591,101 @@ ORDER BY 1
     if ($Schreiben) {
         if ($neu.Count -gt 0) { SupaInsert 'rechnungen' $neu }
         if ($geaendert.Count -gt 0) { SupaAendern 'rechnungen' $geaendert }
+    }
+}
+
+# ==========================================================
+# WERKSTATTAUFTRAEGE: Positionen je Beleg (Belegart 'Werkstattauftrag')
+# ==========================================================
+# Eine Zeile je Beleg in werkstatt_positionen, Positionen als Liste. Die App sucht
+# ueber auftragsnummer "<Jahr>-<Nummer>" (z. B. 2026-40128) - dieselbe Schreibweise
+# wie bei Aufgaben/Maschinen. PosType: 1 = Artikel, 0 = Ueberschrift/Text,
+# 2 = Zwischensumme (weggelassen), 3 = Leerzeile (nur mit Text behalten).
+if ($Nur -eq 'alles' -or $Nur -eq 'werkstatt') {
+    Sag ""
+    Sag "-- Werkstattauftraege --" 'Cyan'
+
+    $sqlWa = @"
+SELECT b.BelID, b.Belegnummer, b.Belegjahr, b.Belegdatum, b.A0AdressNr, b.A0Matchcode, b.Nettobetrag,
+       p.[Index] AS Idx, p.Position, p.PosType, p.Artikelnummer, p.Bezeichnung1, p.Bezeichnung2,
+       p.Menge, p.Mengeneinheit, p.Einzelpreis, p.Gesamtpreis
+FROM dbo.KHKVKBelege b
+LEFT JOIN dbo.KHKVKBelegePositionen p ON p.BelID = b.BelID
+WHERE b.Belegart = 'Werkstattauftrag' AND b.Belegdatum >= '$WerkstattAb'
+ORDER BY b.BelID, p.[Index]
+"@
+    $belege = [ordered]@{}
+    foreach ($r in (SageFrage $sqlWa)) {
+        $id = [string]$r.BelID
+        if (-not $belege.Contains($id)) {
+            $datum = $null
+            if ($r.Belegdatum -is [DateTime]) { $datum = $r.Belegdatum.ToString('yyyy-MM-dd') }
+            $netto = Zahl $r.Nettobetrag
+            $belege[$id] = [ordered]@{
+                sage_bel_id     = [int]$r.BelID
+                auftragsnummer  = ("{0}-{1}" -f $r.Belegjahr, $r.Belegnummer)
+                belegdatum      = $datum
+                address_number  = Text $r.A0AdressNr
+                kundenmatchcode = Text $r.A0Matchcode
+                netto           = $(if ($null -eq $netto) { $null } else { [Math]::Round($netto, 2) })
+                positionen      = New-Object System.Collections.ArrayList
+            }
+        }
+        if ($r.PosType -is [DBNull]) { continue }
+        $typ = [int]$r.PosType
+        $text = Text $r.Bezeichnung1
+        if ($typ -eq 2) { continue }
+        if ($typ -ne 1 -and -not $text) { continue }
+        $menge = Zahl $r.Menge; $preis = Zahl $r.Einzelpreis; $gesamt = Zahl $r.Gesamtpreis
+        [void]$belege[$id].positionen.Add([ordered]@{
+            nr      = Text $r.Position
+            typ     = $(if ($typ -eq 1) { 'artikel' } else { 'text' })
+            artikel = Text $r.Artikelnummer
+            text    = $text
+            text2   = Text $r.Bezeichnung2
+            menge   = $(if ($typ -eq 1 -and $null -ne $menge) { [Math]::Round($menge, 3) } else { $null })
+            einheit = Text $r.Mengeneinheit
+            preis   = $(if ($typ -eq 1 -and $null -ne $preis) { [Math]::Round($preis, 2) } else { $null })
+            gesamt  = $(if ($typ -eq 1 -and $null -ne $gesamt) { [Math]::Round($gesamt, 2) } else { $null })
+        })
+    }
+    Sag ("  Sage: {0} Werkstattauftraege ab {1}" -f $belege.Count, $WerkstattAb)
+
+    $vorhanden = SupaHolen 'werkstatt_positionen'
+    $nachId = @{}
+    foreach ($a in $vorhanden) { $nachId[[string]$a.sage_bel_id] = $a }
+
+    # Vergleichsschluessel unabhaengig von der JSON-Schreibweise (1 vs 1.0)
+    function PosSig($liste) {
+        $z = { param($v) if ($null -eq $v -or "$v" -eq '') { '' } else { ([decimal]$v).ToString('0.###', [Globalization.CultureInfo]::InvariantCulture) } }
+        return (@($liste) | ForEach-Object { "{0}|{1}|{2}|{3}|{4}|{5}|{6}|{7}|{8}" -f $_.nr, $_.typ, $_.artikel, $_.text, $_.text2, (& $z $_.menge), $_.einheit, (& $z $_.preis), (& $z $_.gesamt) }) -join "`n"
+    }
+
+    $neu = @(); $geaendert = @(); $gleich = 0
+    foreach ($id in $belege.Keys) {
+        $zeile = $belege[$id]
+        $zeile.positionen = @($zeile.positionen)
+        $alt = $nachId[$id]
+        if (-not $alt) { $neu += $zeile; continue }
+        $felder = [ordered]@{}
+        foreach ($f in 'auftragsnummer', 'belegdatum', 'address_number', 'kundenmatchcode') { if ("$($zeile[$f])" -ne "$($alt.$f)") { $felder[$f] = $zeile[$f] } }
+        if ("$($zeile.netto)" -ne '' -or "$($alt.netto)" -ne '') {
+            if ($null -eq $zeile.netto -or $null -eq $alt.netto -or [decimal]$zeile.netto -ne [decimal]$alt.netto) { $felder['netto'] = $zeile.netto }
+        }
+        if ((PosSig $zeile.positionen) -ne (PosSig $alt.positionen)) { $felder['positionen'] = $zeile.positionen }
+        if ($felder.Count -eq 0) { $gleich++ }
+        else {
+            $felder['aktualisiert_am'] = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+            $geaendert += ,@($alt.id, $felder, $zeile.auftragsnummer)
+        }
+    }
+    Sag ("  -> {0} neu, {1} geaendert, {2} unveraendert" -f $neu.Count, $geaendert.Count, $gleich) 'Yellow'
+    foreach ($b in @($neu | Select-Object -First 5)) { Sag ("     NEU: {0}  {1}  {2} Positionen" -f $b.auftragsnummer, $b.kundenmatchcode, @($b.positionen).Count) }
+    foreach ($g in @($geaendert | Select-Object -First 5)) { Sag ("     GEAENDERT: {0}  -> {1}" -f $g[2], (($g[1].Keys | Where-Object { $_ -ne 'aktualisiert_am' }) -join ', ')) }
+
+    if ($Schreiben) {
+        if ($neu.Count -gt 0) { SupaInsert 'werkstatt_positionen' $neu }
+        if ($geaendert.Count -gt 0) { SupaAendern 'werkstatt_positionen' $geaendert }
     }
 }
 

@@ -65,14 +65,12 @@
 
         // Werkstattauftragsnummer nur mitschreiben, wenn sie vollständig ist —
         // halb getippt ergäbe eine kaputte Nummer.
-        const wrapper = el('task-workshop-order-wrapper');
-        if (wrapper && wrapper.style.display !== 'none') {
-            const yearDigit = v('task-workshop-year-digit').trim();
-            const suffix = v('task-workshop-order-suffix').trim();
-            if (yearDigit && suffix) {
-                payload.workshop_order_number = `202${yearDigit}-40${suffix.padStart(3, '0')}`;
-            }
-        } else {
+        // Feld ist immer sichtbar (optional): beide leer = kein Auftrag.
+        const yearDigit = v('task-workshop-year-digit').trim();
+        const suffix = v('task-workshop-order-suffix').trim();
+        if (yearDigit && suffix) {
+            payload.workshop_order_number = `202${yearDigit}-40${suffix.padStart(3, '0')}`;
+        } else if (!yearDigit && !suffix) {
             payload.workshop_order_number = null;
         }
 

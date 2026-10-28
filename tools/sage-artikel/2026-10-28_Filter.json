@@ -1,0 +1,24 @@
+{
+  "quelle": "AB Spatz & Heitmüller 3265299 + AB Elsässer 2625234 vom 27.10.2026",
+  "artikel": [
+    { "nr": "00004730", "bez1": "Ölfilter", "bez2": "Volvo 24063074", "bez1En": "Oil filter", "bez2En": "Volvo 24063074",
+      "gruppe": "4.1.1.", "herstellerNr": "24063074", "gewicht": 0.32, "vk": 43.99 },
+    { "nr": "00004731", "bez1": "Sieb (AdBlue)", "bez2": "Volvo 21954674", "bez1En": "Strainer (AdBlue)", "bez2En": "Volvo 21954674",
+      "gruppe": "4.1.5.", "herstellerNr": "21954674", "gewicht": 0.001, "vk": 19.82 },
+    { "nr": "00004732", "bez1": "R2.0922-06 EXAPOR R.GO Element", "bez2": "Hydraulikfilter Ø88/40,4 x 220 mm, Glasfaser 10 µm", "bez1En": "R2.0922-06 EXAPOR R.GO element", "bez2En": "Hydraulic filter Ø88/40.4 x 220 mm, glass fibre 10 µm",
+      "gruppe": "4.1.3.", "herstellerNr": "R2.0922-06", "gewicht": 0.67, "vk": 68.70 },
+    { "nr": "00004733", "bez1": "CF 1640 Luftfilterelement (Sekundär)", "bez2": "Ø156 x 455 mm, Sekundär NLG28-28", "bez1En": "CF 1640 air filter element (secondary)", "bez2En": "Ø156 x 455 mm, secondary NLG28-28",
+      "gruppe": "4.1.4.", "herstellerNr": "CF 1640", "gewicht": 0.624, "vk": 47.40 }
+  ],
+  "lieferanten": [
+    { "lieferant": "70219", "nr": "00004730", "bestellnr": "24063074V", "bez": "ÖLFILTER", "ek": 34.50, "rabatt": 15 },
+    { "lieferant": "70219", "nr": "00004731", "bestellnr": "21954674V", "bez": "SIEB", "ek": 15.54, "rabatt": 15 },
+    { "lieferant": "70017", "nr": "00004732", "bestellnr": "R2.0922-06", "bez": "EXAPOR R.GO Element", "ek": 45.80, "rabatt": 0 },
+    { "lieferant": "70017", "nr": "00004733", "bestellnr": "CF 1640", "bez": "Luftfilterelement (sekundär NLG28-28)", "ek": 31.60, "rabatt": 0 },
+    { "lieferant": "70219", "nr": "00001985", "bestellnr": "21377909V", "bez": "LUFTFILTEREINSATZ", "ek": 159.80, "rabatt": 15 },
+    { "lieferant": "70219", "nr": "00001986", "bestellnr": "21746575V", "bez": "KRAFTSTOFFFILTER", "ek": 53.50, "rabatt": 15 },
+    { "lieferant": "70219", "nr": "00001987", "bestellnr": "21538975V", "bez": "KRAFTSTOFFFILTER", "ek": 86.40, "rabatt": 15 },
+    { "lieferant": "70219", "nr": "00001989", "bestellnr": "23381562V", "bez": "FILTER (AdBlue)", "ek": 83.30, "rabatt": 15 },
+    { "lieferant": "70219", "nr": "00001990", "bestellnr": "21743197V", "bez": "LUFTFILTER", "ek": 40.31, "rabatt": 15 }
+  ]
+}

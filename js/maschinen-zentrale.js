@@ -257,13 +257,25 @@
 
     function verlaufEintraege(d) {
         const katFarbe = b => { const k = (window.categoryList || []).find(c => Array.isArray(b.category_ids) && b.category_ids.map(String).includes(String(c.id))); return (k && k.color) || FARBE.service; };
+        // Werkstattaufenthalt: Beginn und Ende je Auftragsnummer, damit beide Einträge denselben Zeitraum zeigen
+        const waNrVon = b => ((/Auftrag:\s*(\S+)/i.exec(b.description || '') || [])[1] || '');
+        const waZeit = {};
+        d.berichte.forEach(b => {
+            const nr = /^werkstattaufenthalt/i.test(b.title || '') && waNrVon(b); if (!nr) return;
+            const z = waZeit[nr] = waZeit[nr] || {};
+            if (/beginn/i.test(b.title)) z.von = b.date; else if (/ende/i.test(b.title)) z.bis = b.date;
+        });
+        const waZeitraum = nr => { const z = waZeit[nr]; if (!z) return ''; return (z.von ? datum(z.von) : '?') + ' – ' + (z.bis ? datum(z.bis) : 'laufend'); };
         const liste = d.berichte.map(b => {
             const werk = /werkstatt/i.test(b.title || '');
+            const waNr = werk && /^werkstattaufenthalt/i.test(b.title || '') ? waNrVon(b) : '';
             return { quelle: 'bericht', wann: b.date || b.datum_von || b.created_at, sym: werk ? '🔧' : '📄', farbe: werk ? FARBE.werkstatt : katFarbe(b),
                 art: werk ? 'Werkstatt' : (b.title === INTERN ? 'Intern' : 'Servicebericht'), titel: b.title || 'Servicebericht',
                 text: b.description || '', techniker: techNamen(b.technicians),
                 stunden: (() => { const z = Array.isArray(b.zaehler) ? b.zaehler : []; const l = []; if (b.operating_hours) l.push({ label: z[1] ? (z[0] && z[0].name) || 'Zähler 1' : '', wert: b.operating_hours }); if (z[1] && z[1].wert) l.push({ label: z[1].name || 'Zähler 2', wert: z[1].wert }); return l; })(),
-                sub: b.is_finalized ? 'abgeschlossen' : 'offen', final: !!b.is_finalized,
+                sub: werk ? '' : (b.is_finalized ? 'abgeschlossen' : 'offen'), final: !!b.is_finalized,
+                // Werkstattaufenthalt Beginn/Ende: Aufgaben + Sage-Positionen füllt js/werkstatt-aufenthalt.js nach
+                waNr, zeitraum: waNr ? waZeitraum(waNr) : '',
                 id: b.id, pdf: b.pdf_url || '', originale: originaleVon(b), origArt: 'bericht' };
         }).concat(d.verlauf.map(v => {
             const dateien = dateiListe(v);
@@ -290,7 +302,7 @@
     const darfDatum = () => { const u = window.activeUser; return !!(u && (u.name === 'Mirco Loseke' || (u.permissions && u.permissions.users))); };
     const ymd = w => { if (!w) return ''; const t = String(w); if (/^\d{4}-\d{2}-\d{2}$/.test(t)) return t; const d = new Date(t); if (isNaN(d)) return ''; const p = n => String(n).padStart(2, '0'); return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()); };
     function datumKopf(x) {
-        const t = esc(datum(x.wann));
+        const t = esc(x.zeitraum || datum(x.wann));
         // Abgeschlossene Serviceberichte sind in der Datenbank gesperrt (supabase_protect_finalized_reports.sql)
         if (darfDatum() && ['bericht', 'verlauf', 'prot'].includes(x.quelle) && x.id != null && !(x.quelle === 'bericht' && x.final))
             return `<span class="mz-v-datum mz-v-datum-edit" title="Datum ändern (klicken)"><span>${t}</span><input type="date" value="${esc(ymd(x.wann))}" data-mz-datum data-quelle="${esc(x.quelle)}" data-typ="${esc(x.typ || '')}" data-id="${esc(x.id)}"></span>`;
@@ -333,7 +345,7 @@
                 const fotos = x.bilder && x.bilder.length ? (aktuell.gal['v' + x.id] = x.bilder, aktuell.galT['v' + x.id] = x.titel + ' · ' + datum(x.wann), `<div class="mz-fotos mz-fotos-klein">${x.bilder.slice(0, 8).map((u, i) => `<button type="button" class="mz-foto" data-mz="foto" data-g="v${esc(x.id)}" data-i="${i}"><img src="${esc(u)}" alt="" loading="lazy" onerror="this.parentElement.hidden=true"></button>`).join('')}</div>`) : '';
                 const videos = x.videos && x.videos.length && window.videoKachelHtml ? `<div class="mz-fotos mz-fotos-klein mz-videos">${x.videos.map(u => window.videoKachelHtml(u)).join('')}</div>` : '';
                 const dateien = x.dateien && x.dateien.length ? `<div class="mz-dateien">${x.dateien.map(f => `<button type="button" class="mz-datei" data-mz="datei" data-url="${esc(f.url)}" data-name="${esc(f.name || '')}" data-typ="${esc(f.type || '')}">📎 ${esc(f.name || 'Datei')}</button>`).join('')}</div>` : '';
-                const knopf = x.quelle === 'bericht' ? `<button type="button" class="knopf knopf--sekundaer knopf--klein" data-mz="oeffnen" data-typ="bericht" data-id="${esc(x.id)}">Öffnen</button>`
+                const knopf = x.quelle === 'bericht' ? `<button type="button" class="knopf knopf--sekundaer knopf--klein" data-mz="oeffnen" data-typ="bericht" data-id="${esc(x.id)}">${/^werkstattaufenthalt/i.test(x.titel || '') ? 'Aufgaben' : 'Öffnen'}</button>`
                     : x.quelle === 'dok' ? `<button type="button" class="knopf knopf--bearbeiten knopf--klein" data-mz="einweisung-bearbeiten" data-id="${esc(x.id)}">Bearbeiten</button>`
                     : x.quelle === 'prot' ? `<button type="button" class="knopf knopf--sekundaer knopf--klein" data-mz="prot-oeffnen" data-typ="${x.typ}" data-id="${esc(x.id)}">Öffnen</button>`
                     : `<button type="button" class="knopf knopf--sekundaer knopf--klein" data-mz="oeffnen" data-typ="eintrag" data-id="${esc(x.id)}">Bearbeiten</button>`;
@@ -343,7 +355,7 @@
                         <div class="mz-v-kopf"><div><span class="mz-v-art">${esc(x.art)}</span>${x.ohneTitel || String(x.titel || '').trim().toLowerCase() === String(x.art || '').trim().toLowerCase() ? '' : `<b>${esc(x.titel)}</b>`}
                             ${datumKopf(x)}${metaZeilen(x)}</div>
                             <div class="mz-v-knoepfe">${(x.originale || []).map((f, i) => `<button type="button" class="knopf knopf--sekundaer knopf--klein mz-original" data-mz="datei" data-url="${esc(f.url)}" data-name="${esc(f.name || 'Original')}" data-typ="${esc(f.type || '')}">📎 Original${x.originale.length > 1 ? ' ' + (i + 1) : ''}</button>`).join('')}${x.pdf ? `<button type="button" class="knopf knopf--text knopf--klein" data-mz="pdf" data-url="${esc(x.pdf)}">PDF</button>` : ''}${knopf}</div></div>
-                        ${x.text ? `<p class="mz-v-text">${esc(x.text)}</p>` : ''}${fotos}${videos}${dateien}${x.origArt ? originalZone(x.origArt, x.id, (x.originale || []).length) : ''}
+                        ${x.text ? `<p class="mz-v-text${x.waNr ? ' wa-v-nr' : ''}">${esc(x.text)}</p>` : ''}${x.waNr ? `<div class="mz-wa-info" data-mid="${esc(aktuell.id)}" data-nr="${esc(x.waNr)}"></div>` : ''}${fotos}${videos}${dateien}${x.origArt ? originalZone(x.origArt, x.id, (x.originale || []).length) : ''}
                     </div>
                 </article>`;
             }).join('')}</div></div>`;
@@ -898,6 +910,9 @@
         if (was === 'oeffnen') {
             const typ = a.dataset.typ, id = a.dataset.id;
             if (typ === 'vorgang') return weiter(() => window.openEditProcessModal && window.openEditProcessModal(id));
+            // Werkstattaufenthalt Beginn/Ende ist kein Bericht: immer zu den Aufgaben des Aufenthalts
+            const werkB = typ === 'bericht' && aktuell.daten && (aktuell.daten.berichte || []).find(b => String(b.id) === String(id) && /^werkstattaufenthalt/i.test(b.title || ''));
+            if (werkB) return weiter(mid => window.openWerkstattAufenthalt && window.openWerkstattAufenthalt(mid, werkB));
             if (typ === 'bericht') return weiter(() => window.openEditServicebericht && window.openEditServicebericht(id));
             if (typ === 'eintrag') { if (window.openEintragAnlegen) window.openEintragAnlegen(aktuell.id, null, { id }); return; }
             aktuell.tab = 'verlauf'; zeichnen(); return;

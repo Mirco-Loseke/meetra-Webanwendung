@@ -978,5 +978,13 @@
         if (window.currentActiveView === 'foto-eingang') laden(); else zahlLaden();
     }
 
-    window.fotoEingang = { laden, extern, zuordnen, loeschen, handys, auswahlLeeren: () => { S.gewaehlt.clear(); zeichnen(); } };
+    // Ziehen ins Outlook-Programm blockiert die Organisation ("von der Organisation
+    // blockiert") — deshalb: Mail-Ansicht der App mit den Dateien als echte Anhänge.
+    function alsMail() {
+        const liste = gewaehlteZeilen();
+        if (!liste.length) { toast('Erst Fotos auswählen.'); return; }
+        if (typeof window.mailSchreiben !== 'function') { toast('Mail-Ansicht nicht verfügbar.', 'error'); return; }
+        window.mailSchreiben('', '', '', liste.map(x => ({ name: dateiname(x), url: x.url, type: x.typ || 'image/jpeg' })));
+    }
+    window.fotoEingang = { laden, extern, zuordnen, loeschen, handys, alsMail, auswahlLeeren: () => { S.gewaehlt.clear(); zeichnen(); } };
 })();

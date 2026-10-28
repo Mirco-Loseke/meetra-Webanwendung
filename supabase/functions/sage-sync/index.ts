@@ -41,6 +41,10 @@ const SPALTEN: Record<string, { lesen: string[]; schreiben: string[] }> = {
         lesen: ['id', 'sage_bel_id', 'belegart', 'belegnummer', 'belegjahr', 'belegdatum', 'address_number', 'customer_id', 'kundenmatchcode', 'netto', 'mwst', 'brutto', 'zahlungsbedingung', 'zahlungsziel_tage', 'faellig_am'],
         schreiben: ['sage_bel_id', 'belegart', 'belegnummer', 'belegjahr', 'belegdatum', 'address_number', 'customer_id', 'kundenmatchcode', 'netto', 'mwst', 'brutto', 'zahlungsbedingung', 'zahlungsziel_tage', 'faellig_am', 'aktualisiert_am'],
     },
+    werkstatt_positionen: {
+        lesen: ['id', 'sage_bel_id', 'auftragsnummer', 'belegdatum', 'address_number', 'kundenmatchcode', 'netto', 'positionen'],
+        schreiben: ['sage_bel_id', 'auftragsnummer', 'belegdatum', 'address_number', 'kundenmatchcode', 'netto', 'positionen', 'aktualisiert_am'],
+    },
 };
 const MAX_ZEILEN = 500;
 

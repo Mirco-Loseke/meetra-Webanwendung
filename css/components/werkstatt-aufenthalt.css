@@ -1,0 +1,69 @@
+/* Werkstattaufenthalt beenden (js/werkstatt-aufenthalt.js). Rahmen kommt von .ea-overlay/.ea-panel, Blöcke von .ew-block. */
+.wa-body { display: flex; flex-direction: column; gap: var(--space-3); }
+
+/* Sage-Positionen des Werkstattauftrags im Aufgaben-Fenster (#task-sage-positionen) */
+.wa-sage { margin-top: var(--space-2); border: 1px solid rgba(96, 165, 250, 0.35); border-radius: var(--radius-md); background: rgba(96, 165, 250, 0.06); }
+.wa-sage > summary { cursor: pointer; padding: var(--space-2) var(--space-3); color: #60a5fa; font-weight: var(--fw-semibold); font-size: var(--fs-sm); transition: color var(--dur-fast) var(--ease-out); }
+.wa-sage > summary:hover { color: #93c5fd; }
+.wa-sage-tab { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); color: var(--text-1); }
+.wa-sage-tab td { padding: var(--space-1) var(--space-3); border-top: 1px solid rgba(255, 255, 255, 0.06); vertical-align: top; }
+.wa-sage-tab small { display: block; color: var(--text-3); font-size: var(--fs-xs); }
+.wa-sage-menge, .wa-sage-preis { white-space: nowrap; text-align: right; }
+.wa-sage-art { color: var(--text-3); font-size: var(--fs-xs); white-space: nowrap; }
+.wa-sage-ueber td { font-weight: var(--fw-bold); color: var(--text-2); }
+.wa-sage-leer, .wa-sage-stand { padding: var(--space-2) var(--space-3); color: var(--text-3); font-size: var(--fs-xs); }
+@media (max-width: 768px) {
+    .wa-sage-art { display: none; }
+    .wa-sage-tab td { padding: var(--space-1) var(--space-2); }
+}
+
+/* Vorhandene Aufgaben zum Werkstattauftrag im Fenster „Neue Aufgabe“ (#task-wa-vorhanden) */
+.wa-vorh { margin-top: var(--space-3); padding: var(--space-3); border: 1px solid rgba(96, 165, 250, 0.35); border-radius: var(--radius-md); background: rgba(96, 165, 250, 0.06); }
+.wa-vorh-kopf { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); flex-wrap: wrap; color: #60a5fa; }
+.wa-vorh-titel { margin: var(--space-3) 0 var(--space-1); color: var(--text-3); font-size: var(--fs-xs); font-weight: var(--fw-bold); text-transform: uppercase; letter-spacing: var(--ls-wide, 0.04em); }
+.wa-vorh-zeile { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); padding: var(--space-1) 0; border-top: 1px solid rgba(255, 255, 255, 0.06); color: var(--text-1); font-size: var(--fs-sm); }
+.wa-vorh-zeile small { display: block; color: var(--text-3); font-size: var(--fs-xs); }
+.wa-vorh-zeile.erledigt > span { color: var(--text-3); text-decoration: line-through; }
+.wa-vorh-leer { margin-top: var(--space-2); color: var(--text-3); font-size: var(--fs-xs); }
+
+/* Verlauf der Maschinen-Zentrale: Eintrag „Werkstattaufenthalt Beginn“ (.mz-wa-info) */
+.mz-wa-info { margin-top: var(--space-2); }
+.wa-v-kurz { color: var(--text-2); font-size: var(--fs-sm); }
+.wa-v-kurz b { color: var(--text-1); }
+.wa-v-kurz i { color: var(--text-3); font-style: normal; }
+.wa-v-details { margin-top: var(--space-2); }
+.wa-v-details > summary { cursor: pointer; color: #60a5fa; font-size: var(--fs-sm); font-weight: var(--fw-semibold); transition: color var(--dur-fast) var(--ease-out); }
+.wa-v-details > summary:hover { color: #93c5fd; }
+.wa-v-aufgabe { padding: var(--space-2) 0; border-bottom: 1px solid rgba(255, 255, 255, 0.06); font-size: var(--fs-sm); color: var(--text-1); }
+.wa-v-titel small { color: var(--text-3); font-size: var(--fs-xs); }
+.wa-v-aufgabe.erledigt .wa-v-titel { color: var(--text-3); }
+.wa-v-aufgabe ul { list-style: none; margin: var(--space-1) 0 0 var(--space-4); padding: 0; color: var(--text-2); }
+.wa-v-aufgabe li.erledigt { color: var(--text-3); text-decoration: line-through; }
+.wa-v-knoepfe { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-top: var(--space-2); }
+.wa-v-zeile { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); flex-wrap: wrap; }
+
+/* Sage-Positionen im Verlauf (.wa-v-sage): ohne Aufklappen, gut lesbar */
+.wa-v-sage { margin-top: var(--space-3); border: 1px solid rgba(96, 165, 250, 0.35); border-radius: var(--radius-md); background: rgba(96, 165, 250, 0.07); overflow: hidden; }
+.wa-v-sage-kopf { padding: var(--space-2) var(--space-3); color: #93c5fd; font-weight: var(--fw-bold); font-size: var(--fs-base); border-bottom: 1px solid rgba(96, 165, 250, 0.25); }
+.wa-v-sage-kopf span { margin-left: var(--space-2); color: var(--text-2); font-weight: var(--fw-medium); font-size: var(--fs-sm); }
+.wa-v-sage table { width: 100%; border-collapse: collapse; font-size: var(--fs-base); color: var(--text-1); }
+.wa-v-sage td { padding: var(--space-2) var(--space-3); border-top: 1px solid rgba(255, 255, 255, 0.06); vertical-align: top; }
+.wa-v-sage tr:first-child td { border-top: 0; }
+.wa-v-sage td small { display: block; color: var(--text-3); font-size: var(--fs-sm); }
+.wa-v-sage-menge { white-space: nowrap; text-align: right; font-weight: var(--fw-semibold); width: 1%; }
+.wa-v-sage-art { white-space: nowrap; color: var(--text-3); font-size: var(--fs-sm); width: 1%; }
+.wa-v-sage-ueber td { font-weight: var(--fw-bold); color: var(--text-2); }
+@media (max-width: 768px) {
+    .wa-v-sage-art { display: none; }
+    .wa-v-sage td { padding: var(--space-2); }
+}
+
+/* Verlauf: Kurzzeile größer; Sage-Kasten zugeklappt wie „Aufgaben anzeigen“ */
+.mz-wa-info .wa-v-kurz { font-size: var(--fs-base); }
+.wa-v-sage > summary { cursor: pointer; list-style: revert; border-bottom: 0; transition: color var(--dur-fast) var(--ease-out); }
+.wa-v-sage > summary:hover { color: #bfdbfe; }
+.wa-v-sage[open] > summary { border-bottom: 1px solid rgba(96, 165, 250, 0.25); }
+.wa-v-details > summary { font-size: var(--fs-base); }
+
+/* Verlauf: „Auftrag: 2026-40128“ am Werkstatt-Eintrag blau */
+.mz-zeitleiste .mz-v-text.wa-v-nr, .mz-v-text.wa-v-nr { color: #60a5fa; font-weight: var(--fw-bold); font-size: var(--fs-base); }

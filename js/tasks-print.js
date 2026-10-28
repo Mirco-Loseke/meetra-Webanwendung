@@ -130,6 +130,21 @@
             </div>
 
             <div class="tp-section">
+                <label class="tp-row tp-row-extra">
+                    <input type="checkbox" id="tp-pos-on" ${tasks.some(t => t.workshop_order_number) ? 'checked' : 'disabled'} onchange="document.getElementById('tp-pos-n').disabled = !this.checked">
+                    <span class="tp-row-body">
+                        <span class="tp-row-title">Werkstattauftrags-Positionen mitdrucken</span>
+                        <span class="tp-row-sub">${tasks.some(t => t.workshop_order_number) ? 'Material aus Sage mit Feld „Ist-Menge“ zum Eintragen, ohne Preise' : 'keine Aufgabe mit Werkstattauftrag'}</span>
+                    </span>
+                    <span class="tp-extra-count">
+                        <input type="number" id="tp-pos-n" min="0" max="10" value="3" ${tasks.some(t => t.workshop_order_number) ? '' : 'disabled'}
+                               onclick="event.preventDefault(); event.stopPropagation();">
+                        <span>Leerzeilen</span>
+                    </span>
+                </label>
+            </div>
+
+            <div class="tp-section">
                 <label class="tp-row tp-row-workshop">
                     <input type="checkbox" id="tp-workshop" ${werkstatt.length ? '' : 'disabled'}>
                     <span class="tp-row-body">
@@ -192,7 +207,7 @@
     }
 
     // { kopf, kopfFortsetzung, teile: [{ art: 'gruppe'|'zeile', html }] }
-    function buildTask(task, extra) {
+    function buildTask(task, extra, pos) {
         const kopf = taskHeadline(task);
         const titel = task.title || 'Ohne Titel';
         const bild = task.machines && task.machines.image_url ? task.machines.image_url : null;
@@ -202,6 +217,7 @@
             <header class="p-card-head">
                 <div class="p-card-headtext">
                     ${kopf ? `<div class="p-machine">${esc(kopf)}</div>` : ''}
+                    ${task.machines && task.workshop_order_number ? `<div class="p-wa">Werkstattauftrag ${esc(task.workshop_order_number)}</div>` : ''}
                     <div class="p-title">${esc(titel)}</div>
                 </div>
                 ${bild ? `<img class="p-thumb" src="${esc(bild)}" alt="">` : ''}
@@ -239,6 +255,23 @@
         if (extra) {
             teile.push({ art: 'gruppe', name: 'Ergänzungen', html: gruppenTitel('Ergänzungen', '(bitte zusätzliche Arbeiten hier ergänzen)') });
             for (let i = 0; i < extra; i++) teile.push({ art: 'zeile', html: leerzeileHtml() });
+        }
+
+        // Werkstattauftrags-Positionen aus Sage (js/werkstatt-aufenthalt.js), nach den Ergänzungen:
+        // Soll-Menge + Feld für die Ist-Menge, darunter Leerzeilen für weiteres Material
+        if (pos && (pos.liste.length || pos.leer)) {
+            teile.push({ art: 'gruppe', name: 'Material', html: gruppenTitel('Material laut Werkstattauftrag ' + task.workshop_order_number, '(tatsächlich verbrauchte Menge eintragen)') });
+            teile.push({ art: 'zeile', html: '<div class="p-pos p-pos-kopf"><span>Bezeichnung</span><span>Soll</span><span>Ist-Menge</span></div>' });
+            pos.liste.forEach(p => {
+                const menge = p.menge == null ? '' : Number(p.menge).toLocaleString('de-DE', { maximumFractionDigits: 3 });
+                teile.push({ art: 'zeile', html: `<div class="p-pos"><span class="p-pos-text">${esc(p.text || '')}` +
+                    `${p.text2 || p.artikel ? `<small>${esc([p.text2, p.artikel ? 'Art.-Nr. ' + p.artikel : ''].filter(Boolean).join(' · '))}</small>` : ''}</span>` +
+                    `<span class="p-pos-soll">${esc(menge)} ${esc(p.einheit || '')}</span>` +
+                    `<span class="p-pos-ist"><i></i>${esc(p.einheit || '')}</span></div>` });
+            });
+            for (let i = 0; i < pos.leer; i++) {
+                teile.push({ art: 'zeile', html: '<div class="p-pos p-pos-frei"><span class="p-pos-text"><i></i></span><span class="p-pos-soll"></span><span class="p-pos-ist"><i></i></span></div>' });
+            }
         }
 
         teile.push({
@@ -338,6 +371,7 @@
         .p-card-headtext { min-width: 0; }
         .p-machine { font-size: ${cols === 1 ? '15.5pt' : (cols === 2 ? '13.5pt' : '12pt')}; font-weight: bold; text-transform: uppercase;
                      letter-spacing: 0.3pt; color: #10a068; }
+        .p-wa { font-weight: bold; color: #1d4ed8; margin-top: 0.5mm; }
         .p-title { font-weight: bold; margin-top: 1mm; line-height: 1.25; font-size: ${titelG}; }
         .p-thumb { width: ${bildG}mm; height: ${bildG}mm; object-fit: cover; border: 0.7pt solid #999;
                    border-radius: 1.5mm; flex-shrink: 0; }
@@ -363,6 +397,17 @@
                  line-height: 3.8mm; font-size: 8.5pt; }
         .p-sub-leer { padding: 1.2mm 0; }
         .p-leerzeile { flex: 1; border-bottom: 0.5pt dotted #999; height: ${cols === 1 ? '6mm' : '4.5mm'}; }
+        .p-pos { display: grid; grid-template-columns: ${cols === 3 ? '1fr 13mm 20mm' : '1fr 20mm 30mm'}; gap: 2mm; align-items: end;
+                 padding: 1.3mm 1mm; font-size: ${textG}; line-height: 1.3; border-bottom: 0.4pt solid #ddd; }
+        .p-pos:nth-child(odd) { background: rgba(0, 0, 0, 0.025); }
+        .p-pos-kopf { font-size: ${cols === 3 ? '7pt' : '8pt'}; font-weight: bold; text-transform: uppercase; letter-spacing: 0.3pt;
+                      color: #555; background: none !important; border-bottom: 0.7pt solid #999; padding-top: 0.5mm; }
+        .p-pos-kopf span:nth-child(n+2) { text-align: right; }
+        .p-pos-text small { display: block; color: #666; font-size: ${cols === 3 ? '7pt' : '8pt'}; }
+        .p-pos-soll { text-align: right; white-space: nowrap; color: #333; }
+        .p-pos-ist { display: flex; align-items: flex-end; gap: 1mm; justify-content: flex-end; white-space: nowrap; color: #555; }
+        .p-pos-ist i { display: inline-block; flex: 1; min-width: 12mm; height: 5mm; border-bottom: 0.8pt solid #333; }
+        .p-pos-frei .p-pos-text i { display: block; height: 5mm; border-bottom: 0.5pt dotted #999; }
         .p-notes { margin-top: 2.5mm; }
         .p-notes-title { font-size: 8.5pt; text-transform: uppercase; letter-spacing: 0.4pt; color: #666; }
         .p-lines span { display: block; border-bottom: 0.5pt dotted #999; height: ${cols === 1 ? '7mm' : '5mm'}; }
@@ -476,7 +521,7 @@
         return seiten;
     }
 
-    window.runTaskPrint = function () {
+    window.runTaskPrint = async function () {
         const modal = document.getElementById(MODAL_ID);
         if (!modal) return;
 
@@ -499,7 +544,19 @@
             ? Math.min(30, Math.max(1, parseInt(modal.querySelector('#tp-extra-n')?.value || '3', 10) || 3))
             : 0;
 
-        const dokumente = gewaehlt.map(t => buildTask(t, extra));
+        // Werkstattauftrags-Positionen: nur Artikel/Überschriften, ohne Preise; Leerzeilen zum Ergänzen per Hand
+        const posAn = !!modal.querySelector('#tp-pos-on')?.checked;
+        const posLeer = posAn ? Math.min(10, Math.max(0, parseInt(modal.querySelector('#tp-pos-n')?.value || '3', 10) || 0)) : 0;
+        const positionen = {};
+        if (posAn && typeof window.werkstattSagePositionen === 'function') {
+            const nummern = [...new Set(gewaehlt.map(t => t.workshop_order_number).filter(Boolean))];
+            await Promise.all(nummern.map(async nr => {
+                const d = await window.werkstattSagePositionen(nr);
+                positionen[nr] = (d && Array.isArray(d.positionen) ? d.positionen : []).filter(p => p.typ === 'artikel');
+            }));
+        }
+        const dokumente = gewaehlt.map(t => buildTask(t, extra,
+            posAn && t.workshop_order_number ? { liste: positionen[t.workshop_order_number] || [], leer: posLeer } : null));
         if (werkstatt.length) dokumente.push(buildWorkshop(werkstatt, extra));
 
         const datum = new Date().toLocaleDateString('de-DE', {

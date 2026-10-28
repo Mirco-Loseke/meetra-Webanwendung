@@ -1,0 +1,9 @@
+{
+  "quelle": "Test Ergänzung: Englisch, Gewicht (AB Spatz 3265299), Herstellernummer — alle übrigen Werte wie in Sage",
+  "artikel": [
+    { "nr": "00001986", "match": "Kraftstofffilter", "bez1": "Kraftstofffilter", "bez2": "Volvo Kraftstofffilter",
+      "bez1En": "Fuel filter", "bez2En": "Volvo fuel filter",
+      "gruppe": "4.1.1.", "herstellerNr": "21746575", "gewicht": 0.21, "vk": 74.07 }
+  ],
+  "lieferanten": []
+}

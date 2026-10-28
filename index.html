@@ -172,7 +172,7 @@
     <link rel="stylesheet" href="css/components/sprachwahl.css?v=1">
     <link rel="stylesheet" href="css/views/documents.css?v=3">
     <link rel="stylesheet" href="css/views/protocols.css?v=2">
-    <link rel="stylesheet" href="css/views/tasks.css?v=6">
+    <link rel="stylesheet" href="css/views/tasks.css?v=9">
     <link rel="stylesheet" href="css/views/service-reports.css?v=8">
     <link rel="stylesheet" href="css/views/machines.css?v=1">
     <link rel="stylesheet" href="css/views/timeline.css?v=55">
@@ -203,6 +203,7 @@
     <link rel="stylesheet" href="css/components/wartung-import.css?v=1">
     <link rel="stylesheet" href="css/components/eintrag-anlegen.css?v=2">
     <link rel="stylesheet" href="css/components/einweisung.css?v=3">
+    <link rel="stylesheet" href="css/components/werkstatt-aufenthalt.css?v=10">
     <link rel="stylesheet" href="css/views/routenplanung.css?v=8">
     <!-- Quill-Editor (Mail schreiben, Signatur) — vor mail.css, damit dessen Umfärbung gewinnt -->
     <link rel="stylesheet" href="lib/quill.snow.css?v=1">
@@ -328,7 +329,7 @@
          gewinnt. Diese Zeile loeschen = alles wie vorher. -->
     <link rel="stylesheet" href="css/components/dropdown-look.css?v=6">
     <!-- MIETVEREINBARUNG (1/3) — eigenstaendig, diese Zeile loeschen = weg -->
-    <link rel="stylesheet" href="css/views/mietvereinbarung.css?v=79">
+    <link rel="stylesheet" href="css/views/mietvereinbarung.css?v=80">
     <link rel="stylesheet" href="css/views/einstellungen.css?v=18">
     <!-- KNÖPFE — einheitliches System + Angleichung der alten Klassen. Bleibt LETZTES Stylesheet im head. -->
     <!-- MASCHINEN-ZENTRALE (Probe) — diese Zeile + die Script-Zeile unten löschen = weg -->
@@ -803,9 +804,19 @@
                                 </a>
                             </li>
                             <li>
-                                <!-- Kalender und Timeline sind eine Ansicht. Die Wartungsliste
-                                     (#calendar) hängt als zweite Darstellung daran und wird über
-                                     den Knopf „Wartung & Ereignisse" im Kalenderkopf geöffnet. -->
+                                <a href="#calendar" class="nav-link" data-target="calendar">
+                                    <!-- Kalender Icon -->
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+                                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                                    </svg>
+                                    <span>Wartungen</span>
+                                </a>
+                            </li>
+                            <li>
                                 <a href="#timeline" class="nav-link" data-target="timeline">
                                     <!-- Gantt-Balken Icon -->
                                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -2040,6 +2051,7 @@
                     <div class="fe-leiste" id="fe-leiste" hidden>
                         <span id="fe-auswahl-text"></span>
                         <button type="button" class="btn-primary" onclick="window.fotoEingang.zuordnen()">Zuordnen …</button>
+                        <button type="button" class="btn-secondary" onclick="window.fotoEingang.alsMail()" title="Neue Mail mit den gewählten Dateien als Anhang">✉ Als Mail</button>
                         <button type="button" class="btn-secondary" onclick="window.fotoEingang.auswahlLeeren()">Abwählen</button>
                         <button type="button" class="btn-secondary fe-loeschen delete-permission-required" data-del-area="fotos" onclick="window.fotoEingang.loeschen()">Löschen</button>
                     </div>
@@ -4081,15 +4093,7 @@
                             </svg>Listen</h1>
                     </div>
                     <div class="view-header-right">
-                        <button id="angebote-reminder-bell" type="button" onclick="window.toggleAngeboteReminderPanel(event)" title="Angebots-Erinnerungen: fällige Nachfass-Termine dieser Liste. Eigene fälligen Erinnerungen stehen zusätzlich in „Meine Liste“." aria-label="Angebots-Erinnerungen"
-                            style="position:relative; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12); border-radius:12px; min-width:42px; height:42px; padding:0 12px; gap:8px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#fff; flex-shrink:0; transition: all 0.3s ease; font-weight:700; font-size:0.85rem;">
-                            <svg id="angebote-reminder-bell-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-                                <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-                            </svg>
-                            <span class="angebote-bell-text">Nachfassen</span>
-                            <span id="angebote-reminder-badge" class="hidden" style="position:absolute; top:-4px; right:-4px; background:#ef4444; color:#fff; font-size:0.65rem; font-weight:700; min-width:18px; height:18px; border-radius:9px; display:flex; align-items:center; justify-content:center; padding:0 4px; border:2px solid rgba(15,23,42,1);">0</span>
-                        </button>
+                
                     </div>
                 </div>
             </div>
@@ -6646,8 +6650,8 @@
                         </div>
 
                         <!-- Werkstattauftrag ohne Maschinenbezug -->
-                        <div id="task-workshop-order-wrapper" style="display:none; margin-top: 12px;">
-                            <label style="color: #60a5fa; font-weight: 800; display: block; margin-bottom: 6px;">Werkstattauftragsnummer</label>
+                        <div id="task-workshop-order-wrapper" style="margin-top: 12px;">
+                            <label style="color: #60a5fa; font-weight: 800; display: block; margin-bottom: 6px;">Werkstattauftragsnummer (optional)</label>
                             <div class="glass-form-input" style="display: flex; align-items: center; gap: 4px; padding: 0.5rem 1rem; border-radius: 12px; background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.1); width: 100%; box-sizing: border-box;">
                                 <span style="color: white; font-weight: 600; font-size: 1.1rem; user-select: none;">202</span>
                                 <input type="text" id="task-workshop-year-digit" maxlength="1" style="background: transparent; border: none; outline: none; color: white; font-size: 1.1rem; font-weight: 600; width: 15px; padding: 0; text-align: center;" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
@@ -6758,16 +6762,16 @@
     <!-- MIETVEREINBARUNG (2/3) — eigenstaendig, diese Zeile loeschen = weg -->
     <script src="js/mietvereinbarung-vorlagen.js?v=27"></script>
     <script src="js/einstellungen.js?v=1"></script>
-    <script src="js/mietvereinbarung.js?v=104"></script>
+    <script src="js/mietvereinbarung.js?v=106"></script>
     <script src="js/mietvereinbarung-liste.js?v=8"></script>
 
     </main>
     </div><!-- End main-wrapper -->
 
-    <script src="js/tasks.js?v=39"></script>
+    <script src="js/tasks.js?v=42"></script>
     <script src="js/workshop-tasks.js?v=4"></script>
     <script src="js/rechnungsliste.js?v=3"></script>
-    <script src="js/tasks-print.js?v=13"></script>
+    <script src="js/tasks-print.js?v=18"></script>
     <script src="js/task_templates.js?v=103"></script>
     <!-- Spracheingabe für die KI-Felder — muss vor den KI-Modulen stehen,
          die beim Aufbau ihrer Modals window.micButtonHtml() aufrufen. -->
@@ -6831,6 +6835,7 @@
     <script src="js/wartung-import.js?v=3"></script>
     <script src="js/eintrag-anlegen.js?v=6"></script>
     <script src="js/einweisung.js?v=10"></script>
+    <script src="js/werkstatt-aufenthalt.js?v=12"></script>
     <script src="js/zaehler.js?v=1"></script>
 
     <!-- Modal: History Timeline -->
@@ -7530,7 +7535,7 @@
     <script src="js/addressbook-live.js?v=5"></script>
     <script src="js/adressen-zusammenfuehren.js?v=4"></script>
     <script src="js/process-autosave.js?v=4"></script>
-    <script src="js/task-autosave.js?v=5"></script>
+    <script src="js/task-autosave.js?v=6"></script>
     <script src="js/task-drafts.js?v=1"></script>
     <script src="js/process-open-hints.js?v=5"></script>
     <script src="js/vorgang-sicher.js?v=1"></script>
@@ -7544,7 +7549,7 @@
     <!-- MASCHINEN-ZENTRALE (Probe) — diese Zeile + die CSS-Zeile oben löschen = weg -->
     <script src="js/motor-typen.js?v=2"></script>
     <script src="js/maschinen-filter.js?v=14"></script>
-    <script src="js/maschinen-zentrale.js?v=45"></script>
+    <script src="js/maschinen-zentrale.js?v=50"></script>
     <!-- KNOPF-FARBEN: Bearbeiten blau, Löschen rot (js/knopf-farben.js) -->
     <script src="js/knopf-farben.js?v=5"></script>
     <!-- Termine mit Teilnehmern: liefert die Bausteine, die Benachrichtigungen,
@@ -8524,7 +8529,7 @@
 <script src="js/voice-dictation.js?v=2"></script>
 <script src="js/handy-check.js?v=8"></script>
 <script src="js/globale-suche.js?v=9"></script>
-<script src="js/foto-eingang.js?v=20"></script>
+<script src="js/foto-eingang.js?v=21"></script>
 <script src="js/nichts-verlieren.js?v=4"></script>
 </body>
 

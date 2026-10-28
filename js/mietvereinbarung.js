@@ -820,6 +820,14 @@
 
         const beweglich = () => Array.from(box.children).filter(n => n.hasAttribute('data-split'));
 
+        // Weitere Bilder + Unterschriften wandern ohnehin hinter das letzte Foto.
+        // Beim Messen dürfen sie den ersten Teil nicht belegen — sonst passten nur
+        // 3 Fotos auf das Blatt und der Rest der Seite blieb leer.
+        const extras = Array.from(block.querySelectorAll('.miet-zusatzbilder, .miet-foto-sign'))
+            .map(n => ({ n, eltern: n.parentNode, danach: n.nextSibling }));
+        extras.forEach(e => e.n.remove());
+        const extrasZurueck = () => extras.slice().reverse().forEach(e => e.eltern.insertBefore(e.n, e.danach));
+
         /* Wie viele Zeilen vom Ende müssen weg, damit die Seite passt?
            Früher Zeile für Zeile verschoben und jedes Mal gemessen — über
            1.000 Messungen (jede ein Layout), erstes Öffnen ~6 s. Jetzt per
@@ -852,14 +860,17 @@
         // Bleibt vom Block nur noch ein Stummel auf der Seite, lohnt das
         // Auftrennen nicht — dann lieber den ganzen Block umbrechen.
         // Alles zurueckschieben und aufgeben.
-        if (!bewegt || beweglich().length < (mindestRest || 1)) {
+        // Passen alle Fotos, nur Zusatz/Unterschriften nicht: diese allein auf das
+        // Folgeblatt schieben (der Zwilling trägt sie schon).
+        const nurExtras = !bewegt && extras.length && L > 0 && !laeuftUeber(seite);
+        if ((!bewegt && !nurExtras) || (bewegt && beweglich().length < (mindestRest || 1))) {
             while (restBox.firstChild) box.insertBefore(restBox.firstChild, anker);
+            extrasZurueck();
             return null;
         }
         // Die Weiteren Bilder (Zusatz) und die Unterschriften stehen nur einmal: hinter
         // dem LETZTEN Foto, also im Fortsetzungsteil. Der Zwilling trägt sie schon
-        // (cloneNode), der erste Teil gibt sie ab — sonst standen sie auf beiden Blättern.
-        block.querySelectorAll('.miet-zusatzbilder, .miet-foto-sign').forEach(n => n.remove());
+        // (cloneNode), der erste Teil hat sie oben abgegeben.
         return rest;
     }
 
@@ -2780,6 +2791,17 @@
         const f = vorlage.felder || {};
         const pfad = u ? 'unterschriften.u_datum' : 'unterschriften.r_datum';
         const wert = daten.unterschriften[u ? 'u_datum' : 'r_datum'] || '';
+        // Haken nur, wenn in dieser Phase keine Fotos hinterlegt sind (sonst stehen sie ja im Ausdruck)
+        const satz = daten.fotos[welche] || {};
+        const hatFotos = fotoPositionen().some(p => satz[p]) || zusatzListe(welche).length > 0;
+        const akey = u ? 'u_anwesend' : 'r_anwesend';
+        const anwesend = !!daten.unterschriften[akey];
+        const anwesendZeile = hatFotos || (ausgabe && !anwesend) ? '' : `
+            <label class="miet-anwesend">
+                <input type="checkbox" ${anwesend ? 'checked' : ''} ${ausgabe ? 'disabled' : ''}
+                       onchange="window.mietFeld('unterschriften.${akey}', this.checked)">
+                <span>Bilder wurden in Anwesenheit des Kunden gemacht</span>
+            </label>`;
         return `
         <!-- data-ersteseite statt data-nurerste: beim Umbruch soll der Block
              nur auf dem ersten Teil stehen — aber im PDF und auf dem Papier
@@ -2787,6 +2809,7 @@
              für Bedienknöpfe gedacht), damit fehlten die Unterschriften. -->
         <div class="miet-foto-sign" data-ersteseite>
             ${u && f.hinweis_anleitung ? `<div class="miet-hinweis-anleitung"><strong>Hinweis zur Betriebsanleitung</strong><br>${esc(f.hinweis_anleitung)}</div>` : ''}
+            ${anwesendZeile}
             <div class="miet-sign-row">
                 ${feldUnterschrift(u ? 'u_vermieter' : 'r_vermieter', f.unterschrift_vermieter || 'Unterschrift Vermieter', pfad, wert)}
                 ${feldUnterschrift(u ? 'u_mieter' : 'r_mieter', f.unterschrift_mieter || 'Unterschrift Mieter', pfad, wert)}

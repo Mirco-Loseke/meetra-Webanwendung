@@ -172,3 +172,10 @@ Ein fest gesetztes `customer_id bigint` scheitert entweder am Fremdschlüssel
 | Datei | Wofür |
 |---|---|
 | `supabase_vorgaenge_zusammenfuehren.sql` | **MUSS laufen.** Funktion `vorgaenge_zusammenfuehren_loeschen(ziel, quellen)` (security definer): beim Kombinieren dürfen alle angemeldeten Nutzer die alten Vorgänge löschen, unabhängig vom Löschrecht „Vorgänge“ — nur wenn das Ziel existiert und keine Angebote mehr an den alten hängen. Ohne sie fällt die App auf das normale Löschen zurück (bleibt bei fehlendem Recht stehen) |
+
+## Werkstattaufenthalt (2026-10-28)
+
+| Datei | Wofür |
+|---|---|
+| `supabase_add_werkstatt_aufenthalte.sql` | **MUSS laufen.** Tabelle `werkstatt_aufenthalte` (Beginn/Ende, Auftragsnummer, Stunden, Bemerkung, KI-Text, PDF) für `js/werkstatt-aufenthalt.js`. Ohne sie funktionieren Aufgaben, Beenden und PDF trotzdem; nur die Eckdaten werden nicht abgelegt und der Beginn kommt aus dem Verlauf |
+| `supabase_add_werkstatt_positionen.sql` | **MUSS laufen.** Tabelle `werkstatt_positionen`: Positionen der Sage-Werkstattaufträge (Belegart „Werkstattauftrag“), gefüllt vom Sage-Abgleich. Dazu Edge Function `sage-sync` neu ausrollen und `tools/sage-sync.ps1` nach `C:\meetra-sync` auf Meetra-SA kopieren |

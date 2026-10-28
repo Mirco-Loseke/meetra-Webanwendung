@@ -2816,3 +2816,6 @@ textarea.miet-in {
 .miet-pages .miet-page .miet-fit > .miet-block:nth-child(-n+2) .miet-table td,
 .miet-pages .miet-page .miet-fit > .miet-block:nth-child(-n+2) .miet-table th { padding-top: 1px !important; padding-bottom: 1px !important; line-height: 1.2 !important; }
 .miet-pages .miet-page .miet-fit > .miet-block:nth-child(-n+2) .miet-in { line-height: 1.2 !important; min-height: 0 !important; }
+
+.miet-anwesend { display:flex; align-items:center; gap:8px; margin:6px 0; font-size:12px; cursor:pointer; }
+.miet-anwesend input { width:16px; height:16px; margin:0; }
