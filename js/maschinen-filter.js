@@ -29,6 +29,23 @@
         return liste;
     }
 
+    const SCHUTZ = 'Schutzbelüftung';
+    // Gruppen: gespeichert in machine_filters.gruppe, sonst aus der Art abgeleitet; Reihenfolge innerhalb über sortierung
+    const GRUPPEN = ['Motor', 'Luftfilter', 'Hydraulik', 'Schutzbelüftung (optional)', 'Riemen', 'Sonstige'];
+    const gruppeVon = f => {
+        if (f.gruppe) return f.gruppe;
+        const a = String(f.art || '');
+        if (a === SCHUTZ) return GRUPPEN[3];
+        if (/^Riemen/.test(a)) return 'Riemen';
+        if (/^Luftfilter/.test(a)) return 'Luftfilter';
+        if (/Hydraulik/.test(a)) return 'Hydraulik';
+        if (/^(Ölfilter|Dieselfilter|Kraftstofffilter|Wasserfilter|Wasserabscheider)/.test(a)) return 'Motor';
+        return 'Sonstige';
+    };
+    const gruppenRang = g => { const i = GRUPPEN.indexOf(g); return i < 0 ? 50 : i; };
+    const nachGruppe = (a, b) => gruppenRang(gruppeVon(a)) - gruppenRang(gruppeVon(b)) || gruppeVon(a).localeCompare(gruppeVon(b), 'de')
+        || (a.sortierung == null ? 1e9 : a.sortierung) - (b.sortierung == null ? 1e9 : b.sortierung) || String(a.bezeichnung).localeCompare(String(b.bezeichnung), 'de');
+    const gruppenKopf = g => `<h3 class="mf-gruppen-kopf" data-mf-gruppe="${esc(g)}">${esc(g)}</h3>`;
     const arr = v => (Array.isArray(v) ? v : []).map(x => String(x || '').trim()).filter(Boolean);
     const kategorieName = m => ((window.categoryList || []).find(k => String(k.id) === String(m.category_id)) || {}).name || '';
 
@@ -74,12 +91,14 @@
         }
         return `<div class="mz-tab">${kopf}
             <p class="mz-leer">${m.motor_type ? 'Motor: ' + esc(m.motor_type) + ' · ' : ''}${treffer.length} passende${treffer.length === 1 ? 'r' : ''} Filter</p>
-            <div class="mf-liste">${treffer.map(f => {
+            <div class="mf-liste">${[...treffer].sort(nachGruppe).map((f, i, l) => {
                 const alt = arr(f.alternativen);
+                const gruppe = i === 0 || gruppeVon(l[i - 1]) !== gruppeVon(f) ? gruppenKopf(gruppeVon(f)) : '';
                 const iv = intervallText(f);
-                return `<section class="mz-karte mf-karte">
+                return `${gruppe}<section class="mz-karte mf-karte">
                     <b class="mf-name">${esc(f.bezeichnung)}</b>
                     <dl class="mz-daten">
+                        ${f.sage_artikelnr ? `<dt>Sage-Art.-Nr.</dt><dd><b>${esc(f.sage_artikelnr)}</b> <button type="button" class="mf-kopie" data-mf-kopie="${esc(f.sage_artikelnr)}" title="Nummer kopieren" aria-label="Nummer kopieren">⧉</button></dd>` : ''}
                         ${f.oem_nr ? `<dt>OEM-Nr.</dt><dd>${esc(f.oem_nr)} <button type="button" class="mf-kopie" data-mf-kopie="${esc(f.oem_nr)}" title="Nummer kopieren" aria-label="Nummer kopieren">⧉</button></dd>` : ''}
                         ${alt.map((a, i) => `<dt>Alternativ ${i + 1}</dt><dd>${esc(a)} <button type="button" class="mf-kopie" data-mf-kopie="${esc(a)}" title="Nummer kopieren" aria-label="Nummer kopieren">⧉</button></dd>`).join('')}
                         ${f.menge ? `<dt>Menge</dt><dd>${esc(f.menge)}</dd>` : ''}
@@ -100,8 +119,8 @@
 
     function zeileHtml(f, ohneMotor) {
         const wofuer = [ohneMotor ? '' : arr(f.motor_typen).join(', '), f.hersteller, f.maschinentyp].filter(Boolean).join(' · ');
-        return `<button type="button" class="mf-zeile" data-mf-bearbeiten="${esc(f.id)}">
-            <span class="mf-z-haupt"><b>${esc(f.bezeichnung)}</b><small>${[f.oem_nr ? 'OEM ' + esc(f.oem_nr) : '', arr(f.alternativen).length ? arr(f.alternativen).length + ' Alt.' : ''].filter(Boolean).join(' · ')}</small></span>
+        return `<button type="button" class="mf-zeile" data-mf-bearbeiten="${esc(f.id)}" data-mf-zid="${esc(f.id)}" draggable="true" title="Ziehen, um die Reihenfolge zu ändern">
+            <span class="mf-z-haupt"><b>${esc(f.bezeichnung)}</b><small>${[f.sage_artikelnr ? esc(f.sage_artikelnr) : '', f.oem_nr ? 'OEM ' + esc(f.oem_nr) : '', arr(f.alternativen).length ? arr(f.alternativen).length + ' Alt.' : ''].filter(Boolean).join(' · ')}</small></span>
             <span class="mf-z-wofuer">${esc(wofuer) || '<i>nicht zugeordnet</i>'}</span>
             <span class="mf-z-iv">${esc(intervallText(f).replace('(was zuerst eintritt)', '').trim())}</span></button>`;
     }
@@ -130,10 +149,10 @@
             const offen = suchend || offeneGruppen.has('h:' + k);
             return `<details class="mf-gruppe" data-mf-g="h:${esc(k)}" ${offen ? 'open' : ''}>
                 <summary><b>${esc(h.name)}</b><small>${ms.length} Motor${ms.length === 1 ? '' : 'en'} · ${anz} Filter</small></summary>
-                ${ms.map(m => `<div class="mf-motor">
+                ${ms.map(m => `<div class="mf-motor" data-mf-m="${esc(m.name)}">
                     <div class="mf-motor-kopf"><h3>${esc(m.name)} <small>${m.filter.length} Filter</small></h3>
                         <span class="mf-motor-aktion"><button type="button" class="knopf knopf--text knopf--klein" data-mf-motor-neu="${esc(m.name)}">+ Filter für diesen Motor</button><button type="button" class="knopf knopf--text knopf--klein" data-mf-motor-umbenennen="${esc(m.name)}">Umbenennen</button></span></div>
-                    ${m.filter.map(f => zeileHtml(f, true)).join('')}
+                    ${[...m.filter].sort(nachGruppe).map((f, i, l) => (i === 0 || gruppeVon(l[i - 1]) !== gruppeVon(f) ? gruppenKopf(gruppeVon(f)) : '') + zeileHtml(f, true)).join('')}
                 </div>`).join('')}
             </details>`;
         }).join('');
@@ -147,7 +166,7 @@
         const box = $('mf-liste'); if (!box) return;
         document.querySelectorAll('[data-mf-ansicht]').forEach(b => b.classList.toggle('an', b.dataset.mfAnsicht === ansicht));
         const such = norm(($('mf-suche') || {}).value);
-        const zeilen = (liste || []).filter(f => !such || norm([f.bezeichnung, f.oem_nr, arr(f.alternativen).join(' '), arr(f.motor_typen).join(' '), f.hersteller, f.maschinentyp].join(' ')).includes(such));
+        const zeilen = (liste || []).filter(f => !such || norm([f.bezeichnung, f.oem_nr, f.sage_artikelnr, arr(f.alternativen).join(' '), arr(f.motor_typen).join(' '), f.hersteller, f.maschinentyp].join(' ')).includes(such));
         if (!zeilen.length) { box.innerHTML = `<p class="mz-leer mz-leer-gross">${(liste || []).length ? 'Kein Treffer.' : 'Noch keine Filter angelegt. Mit „Neuer Filter“ anfangen.'}</p>`; return; }
         box.innerHTML = ansicht === 'motor' ? gruppenHtml(zeilen, !!such) : zeilen.map(f => zeileHtml(f, false)).join('');
     }
@@ -174,6 +193,45 @@
         if (a) { ansicht = a.dataset.mfAnsicht; try { localStorage.setItem('meetra_filter_ansicht', ansicht); } catch (x) { /* egal */ } zeichneListe(); return; }
         const n = e.target.closest('[data-mf-motor-neu]'); if (n) { formularOeffnen({ motor_typen: [n.dataset.mfMotorNeu] }); return; }
         const u = e.target.closest('[data-mf-motor-umbenennen]'); if (u) motorUmbenennen(u.dataset.mfMotorUmbenennen);
+    });
+
+    // Ziehen: Reihenfolge und Gruppe je Motor ändern (Zeile auf Zeile oder Gruppenüberschrift)
+    let zieh = null;
+    const zielVon = e => e.target.closest && e.target.closest('[data-mf-zid],[data-mf-gruppe]');
+    document.addEventListener('dragstart', e => { const z = e.target.closest && e.target.closest('[data-mf-zid]'); if (!z) return; zieh = z; e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', z.dataset.mfZid); } catch (x) { /* egal */ } z.classList.add('mf-zieht'); });
+    document.addEventListener('dragend', () => { if (zieh) zieh.classList.remove('mf-zieht'); zieh = null; document.querySelectorAll('.mf-ziel').forEach(x => x.classList.remove('mf-ziel')); });
+    document.addEventListener('dragover', e => {
+        if (!zieh) return; const z = zielVon(e);
+        if (!z || z === zieh || z.closest('[data-mf-m]') !== zieh.closest('[data-mf-m]')) return;
+        e.preventDefault(); document.querySelectorAll('.mf-ziel').forEach(x => x.classList.remove('mf-ziel')); z.classList.add('mf-ziel');
+    });
+    document.addEventListener('drop', async e => {
+        if (!zieh) return; const z = zielVon(e); const cont = zieh.closest('[data-mf-m]');
+        if (!z || z === zieh || !cont || z.closest('[data-mf-m]') !== cont) return;
+        e.preventDefault();
+        const r = z.getBoundingClientRect();
+        if (z.dataset.mfGruppe !== undefined) z.after(zieh); else if (e.clientY > r.top + r.height / 2) z.after(zieh); else z.before(zieh);
+        await reihenfolgeSpeichern(cont);
+    });
+    async function reihenfolgeSpeichern(cont) {
+        let g = '', i = 0; const ops = [];
+        [...cont.children].forEach(k => {
+            if (k.dataset.mfGruppe !== undefined) { g = k.dataset.mfGruppe; return; }
+            if (!k.dataset.mfZid) return;
+            const f = (liste || []).find(x => String(x.id) === k.dataset.mfZid); i += 10;
+            if (f && (f.sortierung !== i || gruppeVon(f) !== g)) ops.push({ id: f.id, gruppe: g, sortierung: i });
+        });
+        for (const o of ops) {
+            const { error } = await sb().from('machine_filters').update({ gruppe: o.gruppe, sortierung: o.sortierung }).eq('id', o.id);
+            if (error) { toast(/column|spalte/i.test(error.message) ? 'Reihenfolge speichern geht erst nach der Migration supabase_add_filter_gruppen.sql.' : 'Speichern fehlgeschlagen: ' + error.message, 'error'); break; }
+        }
+        await laden(true); zeichneListe();
+    }
+    document.addEventListener('change', async e => {
+        const sel = e.target.closest && e.target.closest('[data-mf-gruppenwahl]'); if (!sel || sel.value !== '__neu__') return;
+        const n = await window.appEingabe('Name der neuen Gruppe:', '');
+        if (!n || !String(n).trim()) { sel.selectedIndex = 0; return; }
+        const o = document.createElement('option'); o.value = o.textContent = String(n).trim(); sel.insertBefore(o, sel.lastElementChild); sel.value = o.value;
     });
 
     // Motortypen im Formular: antippen = auswählen (leuchtet), "+" legt einen neuen Typ an, Suchfeld grenzt die Auswahl ein
@@ -204,8 +262,10 @@
             <h2>${bearb.id ? 'Filter bearbeiten' : 'Neuer Filter'}</h2>
             <div class="mf-raster">
                 <label class="mf-breit"><span>Bezeichnung *</span><input class="glass-form-input" name="bezeichnung" required value="${esc(bearb.bezeichnung)}" placeholder="z. B. Motorölfilter Deutz TCD 2012"></label>
+                <label><span>Gruppe</span><select class="glass-form-input" name="gruppe" data-no-enhance data-mf-gruppenwahl>${[...new Set([...GRUPPEN, ...(liste || []).map(gruppeVon), bearb.gruppe].filter(Boolean))].map(g => `<option value="${esc(g)}" ${(bearb.id || bearb.gruppe) && g === gruppeVon(bearb) ? 'selected' : ''}>${esc(g)}</option>`).join('')}<option value="__neu__">+ Neue Gruppe …</option></select></label>
                 <label><span>Menge je Wechsel</span><input class="glass-form-input" name="menge" value="${esc(bearb.menge)}" placeholder="z. B. 1 Stück"></label>
                 <label><span>OEM-Nummer</span><input class="glass-form-input" name="oem_nr" value="${esc(bearb.oem_nr)}"></label>
+                <label><span>Sage-Artikelnummer</span><input class="glass-form-input" name="sage_artikelnr" inputmode="numeric" maxlength="8" value="${esc(bearb.sage_artikelnr)}" placeholder="z. B. 00004545"></label>
                 <label><span>Alternativnummer 1</span><input class="glass-form-input" name="alt0" value="${esc(alt[0])}" placeholder="z. B. Mann W 719/30"></label>
                 <label><span>Alternativnummer 2</span><input class="glass-form-input" name="alt1" value="${esc(alt[1])}"></label>
                 <label><span>Alternativnummer 3</span><input class="glass-form-input" name="alt2" value="${esc(alt[2])}"></label>
@@ -233,13 +293,14 @@
         const t = k => String(fd.get(k) || '').trim();
         const zahl = k => { const n = parseInt(t(k), 10); return Number.isFinite(n) && n > 0 ? n : null; };
         const zeile = {
-            bezeichnung: t('bezeichnung'), oem_nr: t('oem_nr') || null,
+            bezeichnung: t('bezeichnung'), oem_nr: t('oem_nr') || null, sage_artikelnr: t('sage_artikelnr') || null,
             alternativen: ['alt0', 'alt1', 'alt2'].map(t).filter(Boolean),
             intervall_stunden: zahl('intervall_stunden'), intervall_monate: zahl('intervall_monate'),
             motor_typen: t('motor_typen').split(/[,;\n]/).map(s => s.trim()).filter(Boolean),
             hersteller: t('hersteller') || null, maschinentyp: t('maschinentyp') || null, menge: t('menge') || null, notiz: t('notiz') || null,
             updated_at: new Date().toISOString()
         };
+        if ((liste || []).some(x => 'gruppe' in x)) zeile.gruppe = t('gruppe') && t('gruppe') !== '__neu__' ? t('gruppe') : null;
         if (!zeile.bezeichnung) { toast('Bitte eine Bezeichnung eintragen.'); return; }
         const c = sb();
         const q = bearb && bearb.id ? c.from('machine_filters').update(zeile).eq('id', bearb.id) : c.from('machine_filters').insert(zeile);
@@ -267,8 +328,8 @@
         if (window.motorTypen) window.motorTypen.laden();
         const zone = $('mf-foto-zone');
         if (zone && !zone.firstChild && typeof window.uploadFeld === 'function') {
-            window.uploadFeld(zone, { accept: 'image/*', multiple: true, kamera: true, nurZone: true, maxMB: 25,
-                text: 'Foto einer Filterliste hierher ziehen oder antippen — die KI liest alle Zeilen ein',
+            window.uploadFeld(zone, { accept: 'image/*,application/pdf', multiple: true, kamera: true, nurZone: true, maxMB: 25,
+                text: 'Foto oder PDF einer Filterliste hierher ziehen oder antippen — die KI liest alle Zeilen ein',
                 onFiles: files => fotoEinlesen(files) });
         }
         const box = $('mf-liste'); if (box) box.innerHTML = '<p class="mz-leer mz-leer-gross">Lade …</p>';
@@ -350,6 +411,21 @@
         });
     }
 
+    // PDF (Teilekatalog/Wartungsplan als Datei): die ersten Seiten als Bilder, damit auch Scans gelesen werden
+    async function pdfSeiten(file, max) {
+        if (!window.pdfjsLib && window.loadPDFReader) await window.loadPDFReader();
+        if (!window.pdfjsLib) throw new Error('PDF-Leser nicht geladen.');
+        const pdf = await window.pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+        const out = [];
+        for (let n = 1; n <= Math.min(pdf.numPages, Math.max(1, max)); n++) {
+            const pg = await pdf.getPage(n), v = pg.getViewport({ scale: 1.8 });
+            const c = document.createElement('canvas'); c.width = v.width; c.height = v.height;
+            await pg.render({ canvasContext: c.getContext('2d'), viewport: v }).promise;
+            out.push(c.toDataURL('image/jpeg', 0.8));
+        }
+        return out;
+    }
+
     // JSON tolerant lesen; bei abgeschnittener Antwort die vollständigen Zeilen retten
     function jsonLesen(roh) {
         const t = String(roh || '').replace(/^```(?:json)?\s*|\s*```$/g, '').trim();
@@ -393,7 +469,7 @@
     function importStatus(text) { const b = $('mf-import'); if (b) { b.hidden = false; b.innerHTML = `<p class="mz-leer mz-leer-gross">${esc(text)}</p>`; } }
 
     async function fotoEinlesen(files) {
-        const bilder = [...files].filter(f => /^image\//.test(f.type)).slice(0, 6);
+        const bilder = [...files].filter(f => /^image\//.test(f.type) || /pdf/i.test(f.type)).slice(0, 6);
         if (!bilder.length) return;
         if (typeof window.groqFetch !== 'function') { toast('KI nicht verfügbar.', 'error'); return; }
         formularSchliessen();
@@ -401,7 +477,7 @@
         try {
             const bekannt = bekannteMotoren();
             const urls = [];
-            for (const f of bilder) urls.push(await verkleinern(f, 2200));
+            for (const f of bilder) { if (/pdf/i.test(f.type)) urls.push(...await pdfSeiten(f, 6 - urls.length)); else urls.push(await verkleinern(f, 2200)); if (urls.length >= 6) break; }
             const content = [{ type: 'text', text: 'Lies alle Filter aus diesen ' + urls.length + ' Foto(s).' }].concat(urls.map(u => ({ type: 'image_url', image_url: { url: u } })));
             const payload = { model: VISION_MODEL, temperature: 0.1, max_tokens: 8192, response_format: { type: 'json_object' },
                 messages: [{ role: 'system', content: PROMPT + (bekannt.length ? ' BEKANNTE MOTORTYPEN (aus der Maschinenliste): ' + bekannt.slice(0, 200).join(' | ') + '. Gehört eine Zeile erkennbar zu einem dieser Motoren (auch bei abweichender Schreibweise, Leerzeichen, Zusatz wie L4), schreibe in motor_typen GENAU diese bekannte Schreibweise. Nur wenn kein bekannter Motor passt, den Text vom Foto verwenden.' : '') }, { role: 'user', content }] };

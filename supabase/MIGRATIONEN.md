@@ -63,6 +63,8 @@ lassen als eine Migration auszulassen.
 | `supabase_add_tasks_realtime.sql` | Live-Aktualisierung von `tasks`/`subtasks` (Anzeigetafel in der Werkstatt) |
 | `supabase_add_workshop_tasks.sql` | Werkstatt-Liste (schnelle kleine Aufgaben) |
 | `supabase_add_maschinen_filter.sql` | Filter-Katalog (`machine_filters`: OEM-/Alternativnummern, Intervall, Zuordnung nach Motortyp) — Einstellungen → Filter, Reiter „Filter“ in der Maschinen-Zentrale. **MUSS laufen** |
+| `supabase_add_filter_sage_artikel.sql` | Spalte `sage_artikelnr` an `machine_filters` + 5 Beispiel-Filter BACKHUS 15.50 (6CTA). MUSS laufen. |
+| `supabase_add_filter_gruppen.sql` | Spalten `gruppe` und `sortierung` an `machine_filters` (Gruppenüberschriften, Ziehen der Reihenfolge). MUSS laufen. |
 | `supabase_add_invoice_todos.sql` | Rechnungsliste („wem muss noch eine Rechnung geschrieben werden") — ausklappbar rechts unter Vorgänge, Sichtbarkeit je Benutzer |
 | `supabase_add_todo_listen.sql` | Persönliche To-do-Liste (Knopf neben dem KI-Chat, gefüllt aus dem Briefing) — eine Zeile je Benutzer. Ohne Migration nur je Browser (2026-10-02) |
 | `supabase_add_foto_eingang.sql` | Foto-Eingang: `foto_geraete` (Schlüssel je Handy) + `foto_eingang` (hochgeladene Fotos, Zuordnung), Realtime. Dazu Function `foto-eingang` ausrollen (2026-10-07) |
@@ -179,3 +181,9 @@ Ein fest gesetztes `customer_id bigint` scheitert entweder am Fremdschlüssel
 |---|---|
 | `supabase_add_werkstatt_aufenthalte.sql` | **MUSS laufen.** Tabelle `werkstatt_aufenthalte` (Beginn/Ende, Auftragsnummer, Stunden, Bemerkung, KI-Text, PDF) für `js/werkstatt-aufenthalt.js`. Ohne sie funktionieren Aufgaben, Beenden und PDF trotzdem; nur die Eckdaten werden nicht abgelegt und der Beginn kommt aus dem Verlauf |
 | `supabase_add_werkstatt_positionen.sql` | **MUSS laufen.** Tabelle `werkstatt_positionen`: Positionen der Sage-Werkstattaufträge (Belegart „Werkstattauftrag“), gefüllt vom Sage-Abgleich. Dazu Edge Function `sage-sync` neu ausrollen und `tools/sage-sync.ps1` nach `C:\meetra-sync` auf Meetra-SA kopieren |
+
+## KI-Index technischer Dokumente (2026-10-28)
+
+| Datei | Wofür |
+|---|---|
+| `supabase_add_dokument_index.sql` | **MUSS laufen.** Tabellen `dokument_index` (Status je Dokument), `dokument_seiten` (Text je Seite), `dokument_fakten` (Füllmengen, Gewichte, Intervalle …, mit Variante und Bestätigung) für `js/dokument-index.js`. Eingelesen werden nur technische Dokumente (Positivliste im Code), nie Berichte/Mietvereinbarungen/Protokolle/Rechnungen/Mails |

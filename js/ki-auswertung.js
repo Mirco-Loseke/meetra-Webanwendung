@@ -51,7 +51,10 @@
         const m = maschine(id);
         if (m) return m;
         const q = String(v).toLowerCase();
-        return maschinen().find(x => [x.name, x.manufacturer, x.serial, x.serial_number].join(' ').toLowerCase().includes(q)) || null;
+        const text = x => [x.name, x.manufacturer, x.serial, x.serial_number].join(' ').toLowerCase();
+        // erst als Ganzes, dann Wort für Wort (Hersteller „ARJES IMPAKTOR“ + Typ „250 EVO II“ ergibt sonst nie „Impaktor 250 EVO II“)
+        const worte = q.split(/\s+/).filter(Boolean);
+        return maschinen().find(x => text(x).includes(q)) || (worte.length ? maschinen().find(x => worte.every(w => text(x).includes(w))) : null) || null;
     }
     function kundeAus(v, refs) {
         if (!v) return null;
@@ -194,6 +197,13 @@
                 'Offene je Mitarbeiter:\n' + zeilen(zaehle(offen, t => (Array.isArray(t.assigned_to) && t.assigned_to.length ? t.assigned_to : ['niemand']).map(nutzer)), 12),
                 'Maschinen mit den meisten offenen Aufgaben:\n' + zeilen(zaehle(offen.filter(t => t.machine_id), t => mName(t.machine_id)), 8)].join('\n\n');
         },
+        // Technische Daten aus Betriebsanleitung/Plänen/Ersatzteilkatalog (nur eingelesene technische Dokumente, js/dokument-index.js)
+        async technische_daten(p, refs) {
+            const m = maschineAus(p.maschine, refs);
+            if (!m) return 'Maschine nicht gefunden: ' + p.maschine;
+            if (!window.dokIndex) return 'Dokument-Index nicht geladen.';
+            return `Technische Dokumente zu ${mName(m.id)}:\n` + await window.dokIndex.technischeDaten(m, p.frage || p.stichwort || '');
+        },
         async techniker_statistik(p) {
             const mon = p.monate || 12, l = await service(mon);
             const je = new Map();
@@ -220,6 +230,7 @@
 - maschinen_bestand {} — Maschinen je Hersteller, Typ, Baujahr, Kunde
 - aufgaben_statistik {} — Aufgaben je Status und Mitarbeiter
 - techniker_statistik {monate} — Berichte, km und Fahrzeit je Techniker
+- technische_daten {maschine:"mID oder Name", frage:"Stichwörter der Frage, z. B. Hydrauliköl Füllmenge"} — Herstellerangaben aus Betriebsanleitung/Plänen/Ersatzteilkatalog (Füllmengen, Gewichte, Intervalle, Filter, Drehmomente). Keine aktuellen Messwerte der Maschine.
 Standard: monate 12. Mehrere Abfragen auf einmal sind erlaubt (max. 4).`;
 
     async function ausfuehren(abfragen, refs) {

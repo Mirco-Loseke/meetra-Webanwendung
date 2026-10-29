@@ -431,7 +431,7 @@
         const anleitungZeile = v => `<div class="mz-zeile">
             <span class="mz-dot" style="background:${FARBE.anleitung}"></span>
             <div><b>${esc(v.name || 'Dokument')}</b><small>${esc([v.category, String(v.machine_id) === String(aktuell.id) ? 'nur diese Maschine' : (v.machine_series ? 'Serie ' + v.machine_series : 'Kategorie')].filter(Boolean).join(' · '))}</small></div>
-            <div class="mz-v-knoepfe"><button type="button" class="knopf knopf--sekundaer knopf--klein" data-mz="datei" data-url="${esc(v.url)}" data-name="${esc(v.name || '')}" data-typ="${esc(v.mime_type || '')}">Öffnen</button></div></div>`;
+            <div class="mz-v-knoepfe">${window.dokIndex ? window.dokIndex.knopfHtml(v) : ''}<button type="button" class="knopf knopf--sekundaer knopf--klein" data-mz="datei" data-url="${esc(v.url)}" data-name="${esc(v.name || '')}" data-typ="${esc(v.mime_type || '')}">Öffnen</button></div></div>`;
         // Abgelegte Dateien (keine Bilder) aus dem Verlauf
         const abgelegt = abgelegteDateien(d);
         const dateiZeile = ({ f, v }) => `<div class="mz-zeile">
@@ -453,8 +453,7 @@
         return `<div class="mz-tab mz-gruppen">
             <div class="mz-filter mz-dok-filter">${chips.map(([k, txt, z]) => `<button type="button" class="mz-filter-chip${F === k ? ' an' : ''}" data-mz="dok-filter" data-f="${k}">${esc(txt)} ${z}</button>`).join('')}</div>
             <input type="search" class="glass-input mz-dok-suche" data-mz-dok-suche placeholder="In allen Dokumenten suchen …" value="${esc(aktuell.dokSuchtext || '')}" autocomplete="off">
-            ${gruppe('anleitung', 'Technische Dokumente', '', d.anleitungen, anleitungZeile)}
-            ${gruppe('bericht', 'Serviceberichte', 'servicebericht', service, berichtZeile)}
+            ${gruppe('anleitung', 'Technische Dokumente', '', d.anleitungen, anleitungZeile)}            ${gruppe('bericht', 'Serviceberichte', 'servicebericht', service, berichtZeile)}
             ${gruppe('bericht', 'Interne UVV & Wartung', 'uvv-protokoll', intern, berichtZeile)}
             ${gruppe('bericht', 'Wartungen (manuell eingetragen)', '', wartungen, wartungZeile)}
             ${gruppe('protokoll', 'Einweisungserklärungen', 'einweisung-neu', p && p.einweisung, einweisungZeile)}
@@ -466,6 +465,7 @@
                 <b>Datei ablegen</b> — hierher ziehen oder <u>auswählen</u><small>PDF, Bilder, Word, Excel … — danach Titel und Datum eingeben</small>
             </label>
             ${ablageFormHtml()}
+            ${window.dokIndex && (F === 'alle' || F === 'anleitung') ? window.dokIndex.blockHtml(aktuell.m, d.anleitungen, () => { if (aktuell && aktuell.tab === 'berichte') zeichnen(); }) : ''}
         </div>`;
     }
 
@@ -611,7 +611,9 @@
             <div class="mz-daten-raster">
                 <section class="mz-karte"><h3>Maschine</h3><dl class="mz-daten">${z('Hersteller', m.manufacturer)}${z('Typ', m.name)}${z('Serie', m.machine_series)}${z('Seriennummer', m.serial)}${z('Baujahr', m.year)}${z('Interne Nr.', m.internal_id)}${z('Betriebsstunden', m.hours)}</dl></section>
                 <section class="mz-karte"><h3>Motor</h3><dl class="mz-daten">${z('Motortyp', m.motor_type)}${z('Motor-Nr.', m.motor_serial)}${z('Leistung', m.power)}</dl></section>
+                ${window.dokIndex ? window.dokIndex.datenKarten(m, () => { if (aktuell && aktuell.tab === 'daten') zeichnen(); }) : ''}
                 <section class="mz-karte"><h3>Wartung</h3><dl class="mz-daten">${z('Zuletzt', datum(m.last_maintenance || m.last_maintenance_date))}${z('Nächste', datum(m.next_maintenance || m.next_maintenance_date))}${z('Intervall', m.maintenance_interval_months ? m.maintenance_interval_months + ' Monate' : '')}${z('Notiz', m.last_maintenance_note)}</dl></section>
+                ${window.dokIndex ? window.dokIndex.wartungsplanKarte(m) : ''}
                 <section class="mz-karte"><h3>Betreiber &amp; Standort</h3><dl class="mz-daten">${z('Betreiber', m.company)}${z('Kd.-Nr.', m.customer_number)}${z('Anschrift', adr(m.operator_street, [m.operator_zip, m.operator_city].filter(Boolean).join(' ')))}${z('Standort', m.location_company)}${z('Standort-Adresse', adr(m.location_street, [m.location_zip, m.location_city].filter(Boolean).join(' ')) || m.location)}</dl></section>
             </div></div>`;
     }

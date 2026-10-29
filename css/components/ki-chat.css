@@ -363,3 +363,4 @@ body.kic-offen #kic-fab { transform: scale(0.9); opacity: 0; pointer-events: non
 .kic-mb-wahl { gap: 10px; }
 .kic-mb { display: grid; gap: 4px; justify-items: center; font-size: var(--fs-xs); color: var(--text-2, inherit); cursor: pointer; }
 .kic-mb span { display: inline-flex; align-items: center; gap: 4px; }
+.kic-hinweis { margin-top: 4px; font-size: 0.66rem; color: var(--text-3, #94a3b8); opacity: 0.8; }

@@ -112,3 +112,9 @@
     .mf-chip { min-height: 44px; }
     .mf-formular .fenster-fuss { flex-wrap: wrap; }
 }
+
+
+.mf-gruppen-kopf { grid-column: 1 / -1; margin: var(--space-5, 20px) 0 var(--space-1); padding-bottom: var(--space-1); font-size: var(--fs-md, 1rem); font-weight: var(--fw-semibold, 600); color: var(--text-1); border-bottom: 1px solid rgba(255, 255, 255, 0.12); }
+.mf-zeile[draggable="true"] { cursor: grab; }
+.mf-zieht { opacity: 0.4; }
+.mf-ziel { outline: 2px dashed rgba(16, 185, 129, 0.7); outline-offset: 2px; }

@@ -1,0 +1,22 @@
+/* KI-Index technischer Dokumente: Status am Dokument + Karte „Technische Daten aus Dokumenten“ (js/dokument-index.js) */
+.di-status { font-size: var(--fs-xs); color: var(--text-2); white-space: nowrap; }
+.di-fertig { color: var(--success); }
+.di-laeuft { color: var(--info); }
+.di-abgelehnt { color: var(--warning); }
+.di-karte { margin: var(--space-3) 0; padding: var(--space-3) var(--space-4); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: var(--radius-md); background: rgba(255, 255, 255, 0.03); }
+.di-fakt { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); padding: 6px 0; border-top: 1px solid rgba(255, 255, 255, 0.06); font-size: var(--fs-sm); }
+.di-fakt small { display: block; color: var(--text-3); }
+.di-fakt em { color: var(--text-2); font-style: normal; font-size: var(--fs-xs); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: var(--radius-sm); padding: 0 6px; margin-left: 4px; }
+.di-fakt > span { display: flex; gap: 2px; flex-shrink: 0; }
+.di-ok i { color: var(--success); font-style: normal; padding: 0 var(--space-2); }
+.di-karte summary { cursor: pointer; font-size: var(--fs-sm); color: var(--text-2); }
+.di-karte summary small { color: var(--text-3); margin-left: var(--space-2); }
+.di-karte[open] summary { margin-bottom: var(--space-2); }
+.di-var { display: block; color: var(--text-3); font-size: var(--fs-xs); }
+.di-hinweis { font-size: var(--fs-xs); color: var(--text-3); }
+.di-hinweis-breit { grid-column: 1 / -1; margin: 0; }
+.di-plan { grid-column: 1 / -1; }
+.di-plan h4 { margin: var(--space-3) 0 var(--space-1); font-size: var(--fs-sm); color: var(--success); }
+.di-plan ul { margin: 0; padding-left: 18px; font-size: var(--fs-sm); }
+.di-plan li { margin: 2px 0; }
+.di-stellung { margin: var(--space-3) 0 var(--space-1); font-size: var(--fs-base, 0.9375rem); color: var(--success); text-transform: none; }

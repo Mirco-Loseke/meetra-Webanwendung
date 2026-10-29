@@ -770,7 +770,7 @@ ${kontext}`;
                 return `<div class="kic-msg kic-user">${m.bilder.length ? `<div class="kic-msg-bilder">${m.bilder.map(nr => `<img src="${alleBilder[nr].url}" alt="Bild ${nr}" data-kic="bild" data-nr="${nr}">`).join('')}</div>` : ''}${m.text ? `<div class="kic-blase">${esc(m.text)}</div>` : ''}</div>`;
             }
             if (m.laedt) return `<div class="kic-msg kic-ki"><div class="kic-blase kic-tippt"><span></span><span></span><span></span>${m.status ? `<em class="kic-status">${esc(m.status)}</em>` : ''}</div></div>`;
-            return `<div class="kic-msg kic-ki"><div class="kic-blase${m.fehler ? ' kic-fehler' : ''}">${mdKlein(m.text)}${m.abfragen && m.abfragen.length ? `<div class="kic-quelle">📊 Ausgewertet: ${m.abfragen.map(a => esc(a.name.replace(/_/g, ' ')) + (a.monate ? ' (' + esc(a.monate) + ' Mon.)' : '')).join(', ')} — Zahlen aus der Datenbank, nur die Ergebnisse gingen an die KI</div>` : ''}</div>${(m.aktionen || []).map((a, ai) => karte(a, mi, ai)).join('')}</div>`;
+            return `<div class="kic-msg kic-ki"><div class="kic-blase${m.fehler ? ' kic-fehler' : ''}">${mdKlein(m.text)}${m.abfragen && m.abfragen.length ? `<div class="kic-quelle">📊 Ausgewertet: ${m.abfragen.map(a => esc(a.name.replace(/_/g, ' ')) + (a.monate ? ' (' + esc(a.monate) + ' Mon.)' : '')).join(', ')} — Zahlen aus der Datenbank, nur die Ergebnisse gingen an die KI</div>` : ''}${m.fehler ? '' : '<div class="kic-hinweis">KI kann Fehler machen — bitte selbst prüfen.</div>'}</div>${(m.aktionen || []).map((a, ai) => karte(a, mi, ai)).join('')}</div>`;
         }).join('');
         datalistsFuellen();
         el.scrollTop = el.scrollHeight;
