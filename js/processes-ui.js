@@ -1723,7 +1723,7 @@
                 const k = u && u.step_id ? schritte.findIndex(s => s.id === u.step_id) : -1;
                 if (k < 0) return '';
                 const tx = (schritte[k].text || '').trim();
-                return `<div class="stand-schritt-chip" title="Gehört zu Schritt ${k + 1}">Schritt ${k + 1}: ${esc(tx.length > 50 ? tx.slice(0, 47) + '…' : tx)}</div>`;
+                return `<div class="stand-schritt-chip" title="${esc(tx)}">Schritt ${k + 1}</div>`;
             };
             const html = list.map((u, i) => `
                 <div style="padding:10px 12px; border-radius:10px; background:${i === 0 ? 'rgba(96,165,250,0.12)' : 'rgba(255,255,255,0.04)'}; border:1px solid ${i === 0 ? 'rgba(96,165,250,0.35)' : 'rgba(255,255,255,0.08)'};">
