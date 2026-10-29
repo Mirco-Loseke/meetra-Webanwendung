@@ -118,3 +118,8 @@
 .mf-zeile[draggable="true"] { cursor: grab; }
 .mf-zieht { opacity: 0.4; }
 .mf-ziel { outline: 2px dashed rgba(16, 185, 129, 0.7); outline-offset: 2px; }
+
+.mf-edit { display: inline-block; min-width: 3.5em; padding: 1px 6px; margin: -1px -6px; border-radius: var(--radius-sm, 6px); border-bottom: 1px dashed rgba(255, 255, 255, 0.18); cursor: text; outline: none; }
+.mf-edit:empty::before { content: attr(data-ph); color: var(--text-3); font-style: italic; }
+.mf-edit:hover { background: rgba(255, 255, 255, 0.06); }
+.mf-edit:focus { background: rgba(16, 185, 129, 0.12); border-bottom-color: rgba(16, 185, 129, 0.8); }

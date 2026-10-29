@@ -35,3 +35,8 @@ Motorliste (app_settings `motor_typen`) enthält alle Gruppennamen.
 - **Arjes Impaktor 350 EVO II (TAD583VE) und 250 EVO II (TAD581):** gleiche 9 Filter; Motor `VOLVO Penta TAD581` an den Zeilen ergänzt. Sage: P954869 → 00000718, P956170 → 00000717, P959849 → 00002179, R2.0922-06 → 00004732. **Ohne Sage:** SO 7327, SD 70490, E106U, P553227, C 26 980.
 - **Intervalle aus Betriebsanleitung (Seiten 118/119/134):** Motorölfilter, Kraftstofffilter, Hydraulikfilter (Saug-Rücklauf), 3 Harnstofffilter: alle 500 Std. oder halbjährlich; Luftfilter-Hauptelement: mindestens halbjährlich. Sicherheitselement (alle 2 Jahre) ist keine eigene Zeile.
 - **Gruppen / Ziehen:** Spalten `gruppe`, `sortierung` (Migration `supabase_add_filter_gruppen.sql`, MUSS laufen).
+
+## Nachtrag 3: Arjes 350 EVO II Anleitung
+- Dokument „Zerkleinerer IMPAKTOR_Final_(2026_01_28) EVOI & II_INDEX B“ (Serie 350 EVO II) per KI eingelesen: 142 Seiten, 123 Fakten, Wartungsplan und Stammdaten; Anzeige in Zentrale → Daten (Tokens: 170.018 ein / 76.916 aus, 36 Aufrufe).
+- Die Anleitung enthält **keine** Ersatzteilnummern der Filter (nur Bauteilnamen, S. 22–25).
+- Volvo-OEM-Nummern TAD583VE: nicht eingetragen, Websuche ohne gesicherten Treffer (nur Hinweis: Volvo Kraftstofffilter 21538975 soll auf TAD580–83VE passen, Zuordnung zu P553227/P959849 nicht belegt).

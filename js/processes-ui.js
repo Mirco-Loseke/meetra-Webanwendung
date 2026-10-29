@@ -554,6 +554,7 @@
                 ? proc.steps.map(s => ({ id: s.id || genStepId(), text: s.text || '', done: !!s.done, created_at: s.created_at || null, created_by: s.created_by || null, done_at: s.done_at || null, done_by: s.done_by || null, assigned_to: s.assigned_to || null, assigned_id: s.assigned_id || null, remind_at: s.remind_at || null }))
                 : [];
             window.renderProcessSteps('edit-process');
+            window.standSchrittFuellen('edit-process-status', proc);
             if (typeof window.updateProcessAttachButton === 'function') window.updateProcessAttachButton();
             window.updateEmailBodyVisibility('edit-process');
 
@@ -854,6 +855,8 @@
                 const hg = n ? 'rgba(56,189,248,0.18)' : 'transparent';
                 return `<button type="button" onclick="window.openProcessAttachments('${procIdFuerAnhang}','${stepId}', event)" title="${n ? n + ' Dokument(e)' : 'Dokument hinzufügen'}" style="flex-shrink:0; width:24px; height:24px; border-radius:50%; border:${rahmen}; background:${hg}; color:${farbe}; cursor:pointer; display:flex; align-items:center; justify-content:center; margin-top:1px; font-size:0.7rem; font-weight:800;">${n ? n : '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>'}</button>`;
             };
+            const standProc = procIdFuerAnhang ? (window.eventsState.processes || []).find(p => String(p.id) === String(procIdFuerAnhang)) : null;
+            const standListe = Array.isArray(standProc && standProc.status_updates) ? standProc.status_updates : [];
             list.innerHTML = steps.map((s, i) => {
                 const createdMeta = (s.created_by || s.created_at) ? `erstellt${s.created_by ? ` von ${escStepAttr(s.created_by)}` : ''}${s.created_at ? ` am ${fmtDT(s.created_at)}` : ''}` : '';
                 const doneMeta = s.done ? `✓ erledigt${s.done_by ? ` von ${escStepAttr(s.done_by)}` : ''}${s.done_at ? ` am ${fmtDT(s.done_at)}` : ''}` : '';
@@ -863,6 +866,8 @@
                 const assignBtn = s.assigned_to
                     ? `<button type="button" onclick="window.openStepAssigneeMenu('${prefix}','${s.id}', event)" title="Zuständig: ${escStepAttr(s.assigned_to)}" style="flex-shrink:0; width:24px; height:24px; border-radius:50%; border:none; background:${assignColor}; color:#fff; font-size:0.62rem; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; margin-top:1px;">${assignInitials}</button>`
                     : `<button type="button" onclick="window.openStepAssigneeMenu('${prefix}','${s.id}', event)" title="Zuständigen zuweisen" style="flex-shrink:0; width:24px; height:24px; border-radius:50%; border:1px dashed rgba(255,255,255,0.35); background:transparent; color:rgba(255,255,255,0.4); cursor:pointer; display:flex; align-items:center; justify-content:center; margin-top:1px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></button>`;
+                const standN = standListe.filter(u => u && u.step_id && u.step_id === s.id);
+                const standMeta = standN.length ? `${standN.length} ${standN.length > 1 ? 'Stände' : 'Stand'} · zuletzt: ${escStepAttr((standN[0].text || '').slice(0, 60))}` : '';
                 const assignMeta = s.assigned_to ? `zuständig: ${escStepAttr(s.assigned_to)}` : '';
                 let remBtn, remindMeta = '';
                 if (s.remind_at) {
@@ -898,9 +903,10 @@
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                         </button>
                     </div>
-                    ${(createdMeta || doneMeta || assignMeta || remindMeta) ? `<div style="padding-left:80px; display:flex; flex-wrap:wrap; align-items:center; gap:12px;">
+                    ${(createdMeta || doneMeta || assignMeta || remindMeta || standMeta) ? `<div style="padding-left:80px; display:flex; flex-wrap:wrap; align-items:center; gap:12px;">
                         ${remindMeta ? `<span style="font-size:0.78rem; font-weight:600; color:#93c5fd; display:inline-flex; align-items:center; gap:4px;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><polyline points="12 7 12 12 15 14"></polyline></svg>${remindMeta}</span>` : ''}
                         ${assignMeta ? `<span style="font-size:0.78rem; font-weight:600; color:${assignColor};">${assignMeta}</span>` : ''}
+                        ${standMeta ? `<span class="stand-schritt-meta">${standMeta}</span>` : ''}
                         ${createdMeta ? `<span style="font-size:0.78rem; color:rgba(255,255,255,0.5);">${createdMeta}</span>` : ''}
                         ${doneMeta ? `<span style="font-size:0.78rem; color:rgba(16,185,129,0.75);">${doneMeta}</span>` : ''}
                     </div>` : ''}
@@ -1211,6 +1217,7 @@
                         <a href="#" onclick="event.preventDefault(); event.stopPropagation(); window.vorgangZumAngebotSpringen('${a.id}', '${angEsc(a.belegnummer || '')}')" title="Angebot in der Angebotsliste öffnen"
                            style="font-size:0.72rem; font-weight:800; color:#facc15; text-transform:uppercase; letter-spacing:0.5px; text-decoration:underline; text-underline-offset:3px;">Angebot ${angEsc(a.belegnummer || '')} ↗</a>
                         ${datum ? `<span style="font-size:0.72rem; color:rgba(255,255,255,0.45);">vom ${datum}</span>` : ''}
+                        ${modus === 'modal' ? `<button type="button" class="knopf-x proc-angebot-x" title="Angebot samt PDF entfernen" aria-label="Angebot entfernen" onclick="event.stopPropagation(); window.procAngebotEntfernen('${a.id}', '${proc.id}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>` : ''}
                         ${modus === 'card' ? `<span onclick="window.switchView('listen'); window.switchListenTab && window.switchListenTab('angebote');" title="Zur Angebotsliste" style="margin-left:auto; font-size:0.72rem; color:#facc15; cursor:pointer; text-decoration:underline;">Liste</span>` : ''}
                     </div>
                     <div class="ang-felder" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(110px, 1fr)); gap:8px;">
@@ -1235,6 +1242,52 @@
             if (modal && !modal.classList.contains('hidden') && typeof window.closeEditProcessModal === 'function') window.closeEditProcessModal();
             if (typeof window.navigateToAngebot === 'function') window.navigateToAngebot(angebotId, belegnummer);
             else { window.switchView('listen'); window.switchListenTab && window.switchListenTab('angebote'); }
+        };
+
+        // Angebot aus dem Vorgang entfernen: löscht das Angebot UND sein PDF-Dokument
+        // (Datei im Speicher + Eintrag in attachments). Der Vorgang bleibt bestehen.
+        window.procAngebotEntfernen = async function (angebotId, processId) {
+            if (typeof window.canDelete === 'function' && !window.canDelete('Angeboten')) return;
+            const proc = (window.eventsState.processes || []).find(p => String(p.id) === String(processId));
+            if (!proc || !window.supabaseClient) return;
+            const pid = String(processId);
+            const liste = ((window.angeboteListeByProcess && window.angeboteListeByProcess[pid]) || []).slice();
+            const frisch = window.angeboteByProcess && window.angeboteByProcess[pid];
+            if (frisch && !liste.some(x => String(x.id) === String(frisch.id))) liste.push(frisch);
+            const a = liste.find(x => String(x.id) === String(angebotId));
+            const nr = a && a.belegnummer ? String(a.belegnummer) : '';
+            if (!await window.appFrage('Angebot ' + nr + ' wirklich entfernen? Das Angebot und sein PDF-Dokument werden gelöscht. Das kann nicht rückgängig gemacht werden.', { gefahr: true, ja: 'Entfernen' })) return;
+            const andere = liste.filter(x => String(x.id) !== String(angebotId));
+            // Gehört das Dokument zu diesem Angebot? Bei mehreren Angeboten am Vorgang nur über die Belegnummer im Dateinamen.
+            const gehoert = f => !f.step_id && (!andere.length || (nr && (String(f.name || '') + ' ' + String(f.path || '')).includes(nr)));
+            const alt = Array.isArray(proc.attachments) ? proc.attachments : [];
+            const weg = alt.filter(gehoert);
+            try {
+                const { error } = await window.supabaseClient.from('angebote').delete().eq('id', angebotId);
+                if (error) throw error;
+                if (weg.length) {
+                    const rest = alt.filter(f => !gehoert(f));
+                    const r2 = await window.supabaseClient.from('internal_processes').update({ attachments: rest }).eq('id', processId);
+                    if (r2.error) throw r2.error;
+                    proc.attachments = rest;
+                    for (const f of weg) {
+                        try { if (window.FileUploadService && f.path) await window.FileUploadService.deleteFile(f.path, { provider: 'cloudflare-r2' }); }
+                        catch (e) { console.warn('Datei blieb im Speicher liegen:', e); }
+                    }
+                }
+            } catch (e) {
+                console.error('Angebot entfernen fehlgeschlagen:', e);
+                window.showToast('Fehler beim Entfernen: ' + (e.message || e));
+                return;
+            }
+            if (window.angeboteListeByProcess) window.angeboteListeByProcess[pid] = andere;
+            if (window.angeboteByProcess) { if (andere.length) window.angeboteByProcess[pid] = andere[0]; else delete window.angeboteByProcess[pid]; }
+            const box = document.getElementById('edit-process-angebot-block');
+            if (box) box.innerHTML = window.renderProcessAngebotBlock(proc, 'modal');
+            if (typeof window.updateProcessAttachButton === 'function') window.updateProcessAttachButton();
+            if (typeof window.renderProcesses === 'function') window.renderProcesses();
+            if (typeof window.fetchAngebote === 'function') window.fetchAngebote(true);
+            window.showToast('Angebot ' + nr + ' entfernt.');
         };
 
         // Angebot suchen und an diesen Vorgang hängen.
@@ -1495,6 +1548,7 @@
             const when = document.getElementById('status-update-when');
             if (when) when.value = window.isoToLocalInput(null);
             window.renderProcessStatusHistory(proc);
+            window.standSchrittFuellen('status-update', proc);
             const modal = document.getElementById('process-status-update-modal');
             if (!modal) return;
             modal.classList.remove('hidden');
@@ -1664,6 +1718,13 @@
                 return;
             }
             const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            const schritte = Array.isArray(proc.steps) ? proc.steps : [];
+            const chip = u => {
+                const k = u && u.step_id ? schritte.findIndex(s => s.id === u.step_id) : -1;
+                if (k < 0) return '';
+                const tx = (schritte[k].text || '').trim();
+                return `<div class="stand-schritt-chip" title="Gehört zu Schritt ${k + 1}">Schritt ${k + 1}: ${esc(tx.length > 50 ? tx.slice(0, 47) + '…' : tx)}</div>`;
+            };
             const html = list.map((u, i) => `
                 <div style="padding:10px 12px; border-radius:10px; background:${i === 0 ? 'rgba(96,165,250,0.12)' : 'rgba(255,255,255,0.04)'}; border:1px solid ${i === 0 ? 'rgba(96,165,250,0.35)' : 'rgba(255,255,255,0.08)'};">
                     <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px; flex-wrap:wrap;">
@@ -1673,6 +1734,7 @@
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path></svg>
                         </button>
                     </div>
+                    ${chip(u)}
                     <div contenteditable="true" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault(); this.blur();}" onfocus="this.style.background='rgba(255,255,255,0.08)'" onblur="this.style.background='transparent'; window.updateProcessStatusUpdateText(${i}, this.textContent)" title="Klicken zum Bearbeiten" style="color:#fff; font-size:0.9rem; white-space:pre-wrap; word-break:break-word; outline:none; border-radius:4px; padding:2px 4px; cursor:text;">${esc(u.text)}</div>
                 </div>`).join('');
             boxes.forEach(b => { b.innerHTML = html; });
@@ -1723,6 +1785,55 @@
             try { await pendingStatusEdit; } catch (e) { /* Fehler meldet der Aufrufer schon */ }
         }
 
+        // „Zu Schritt": Stand einem vorhandenen Schritt zuordnen oder daraus einen neuen anlegen.
+        // Gespeichert wird die Schritt-ID im Stand-Eintrag (status_updates[].step_id).
+        window.standSchrittFuellen = function(p, proc) {
+            const sel = document.getElementById(p + '-step');
+            if (!sel) return;
+            const steps = Array.isArray(proc && proc.steps) ? proc.steps : [];
+            const lokal = (p === 'edit-process-status' && window.processSteps && window.processSteps['edit-process']) || [];
+            steps.forEach((s, i) => { if (!s.id) { s.id = (lokal[i] && lokal[i].id) || genStepId(); proc._stepsIdNeu = true; } });
+            const kurz = (s, i) => { const t = (s.text || '').trim(); return (i + 1) + '. ' + (t.length > 60 ? t.slice(0, 57) + '…' : (t || '(leer)')); };
+            sel.innerHTML = '<option value="">Kein Schritt</option>'
+                + steps.map((s, i) => `<option value="${escStepAttr(s.id)}">${escStepAttr(kurz(s, i))}</option>`).join('')
+                + '<option value="__neu">＋ Neuer Schritt …</option>';
+            sel.value = '';
+            window.standSchrittWahl(p);
+        };
+
+        window.standSchrittWahl = function(p) {
+            const sel = document.getElementById(p + '-step');
+            const inp = document.getElementById(p + '-step-new');
+            if (!sel || !inp) return;
+            inp.hidden = sel.value !== '__neu';
+            if (!inp.hidden) inp.focus();
+        };
+
+        // Liefert die Schritt-ID (oder null); legt bei „Neuer Schritt" den Schritt an und speichert die Schritte.
+        async function standSchrittAufloesen(p, proc, standText) {
+            const sel = document.getElementById(p + '-step');
+            const v = sel ? sel.value : '';
+            if (!v) return null;
+            const steps = Array.isArray(proc.steps) ? proc.steps.slice() : [];
+            let id = v;
+            if (v === '__neu') {
+                const inp = document.getElementById(p + '-step-new');
+                const txt = ((inp && inp.value.trim()) || standText).trim();
+                id = genStepId();
+                const neu = { id: id, text: txt, done: false, created_at: new Date().toISOString(), created_by: (window.activeUser && window.activeUser.name) || null, done_at: null, done_by: null, assigned_to: null, assigned_id: null, remind_at: null };
+                steps.push(neu);
+                const lokal = window.processSteps && window.processSteps['edit-process'];
+                if (p === 'edit-process-status' && Array.isArray(lokal)) { lokal.push({ ...neu }); window.renderProcessSteps('edit-process'); }
+            } else if (!proc._stepsIdNeu) {
+                return id;
+            }
+            const { error } = await window.supabaseClient.from('internal_processes').update({ steps: steps }).eq('id', proc.id);
+            if (error) throw error;
+            proc.steps = steps;
+            proc._stepsIdNeu = false;
+            return id;
+        }
+
         window.saveProcessStatusUpdate = async function() {
             const proc = currentStatusProcess();
             if (!proc) return;
@@ -1745,14 +1856,15 @@
             const when = document.getElementById('status-update-when');
             const at = window.localInputToIso(when ? when.value : '') || new Date().toISOString();
             const list = (Array.isArray(proc.status_updates) ? proc.status_updates.slice() : []);
-            list.unshift({
-                text: text,
-                by: (window.activeUser && window.activeUser.name) || 'Unbekannt',
-                by_id: (window.activeUser && window.activeUser.id) || null,
-                at: at
-            });
-            list.sort((a, b) => new Date(b.at || 0) - new Date(a.at || 0));
             try {
+                const stepId = await standSchrittAufloesen('status-update', proc, text);
+                list.unshift(Object.assign({
+                    text: text,
+                    by: (window.activeUser && window.activeUser.name) || 'Unbekannt',
+                    by_id: (window.activeUser && window.activeUser.id) || null,
+                    at: at
+                }, stepId ? { step_id: stepId } : {}));
+                list.sort((a, b) => new Date(b.at || 0) - new Date(a.at || 0));
                 await persistStatusUpdates(proc, list);
                 window.closeProcessStatusUpdateModal();
                 window.fetchProcesses();
@@ -1859,16 +1971,18 @@
             const text = (ta ? ta.value : '').trim();
             if (!text) { window.showToast('Bitte einen Stand eingeben.'); return; }
             const list = (Array.isArray(proc.status_updates) ? proc.status_updates.slice() : []);
-            list.unshift({
-                text: text,
-                by: (window.activeUser && window.activeUser.name) || 'Unbekannt',
-                by_id: (window.activeUser && window.activeUser.id) || null,
-                at: new Date().toISOString()
-            });
-            list.sort((a, b) => new Date(b.at || 0) - new Date(a.at || 0));
             try {
+                const stepId = await standSchrittAufloesen('edit-process-status', proc, text);
+                list.unshift(Object.assign({
+                    text: text,
+                    by: (window.activeUser && window.activeUser.name) || 'Unbekannt',
+                    by_id: (window.activeUser && window.activeUser.id) || null,
+                    at: new Date().toISOString()
+                }, stepId ? { step_id: stepId } : {}));
+                list.sort((a, b) => new Date(b.at || 0) - new Date(a.at || 0));
                 await persistStatusUpdates(proc, list);
                 if (ta) ta.value = '';
+                window.standSchrittFuellen('edit-process-status', proc);
                 window.renderProcessStatusHistory(proc);
                 window.updateProcessNoteHint(proc);
                 window.renderProcesses();

@@ -286,6 +286,7 @@
             </div>
             <textarea id="status-update-text" rows="3" class="glass-form-input" placeholder="z. B. Ersatzteil bestellt, Liefertermin KW 34" style="width: 100%; resize: vertical;"></textarea>
             <div class="mic-status" data-mic-status-for="status-update-text" style="margin-bottom: 10px;"></div>
+            <div class="stand-schritt"><label class="form-label-caps" for="status-update-step">Zu Schritt</label><select id="status-update-step" class="glass-form-input" data-no-enhance onchange="window.standSchrittWahl('status-update')"></select><input type="text" id="status-update-step-new" class="glass-form-input" hidden placeholder="Neuer Schritt (leer = Text des Stands)"></div>
             <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 14px;">
                 <div class="form-label-caps" style="margin: 0;">Zeitpunkt</div>
                 <input type="datetime-local" id="status-update-when" class="glass-form-input" onclick="try{this.showPicker()}catch(e){}" style="flex: 1; max-width: 260px; color: #fff; color-scheme: dark; cursor: pointer;">
@@ -425,6 +426,7 @@
                         </div>
                     </div>
                     <div class="mic-status" data-mic-status-for="edit-process-status-text"></div>
+                    <div class="stand-schritt"><label class="form-label-caps" for="edit-process-status-step">Zu Schritt</label><select id="edit-process-status-step" class="glass-form-input" data-no-enhance onchange="window.standSchrittWahl('edit-process-status')"></select><input type="text" id="edit-process-status-step-new" class="glass-form-input" hidden placeholder="Neuer Schritt (leer = Text des Stands)"></div>
                     <div id="edit-process-status-history" class="proc-note-history"></div>
                 </div>
 

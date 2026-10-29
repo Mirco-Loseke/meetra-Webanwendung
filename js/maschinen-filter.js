@@ -74,12 +74,42 @@
         return t.length ? t.join(' oder ') + (t.length > 1 ? ' (was zuerst eintritt)' : '') : '';
     };
 
+    // Direkt im Reiter änderbares Feld: anklicken, tippen, Enter/wegklicken speichert in machine_filters (gilt für alle Maschinen mit diesem Filter)
+    const kopierKnopf = w => w ? ` <button type="button" class="mf-kopie" data-mf-kopie="${esc(w)}" title="Nummer kopieren" aria-label="Nummer kopieren">⧉</button>` : '';
+    const editFeld = (f, key, label, wert, platzhalter, kopie) => `<dt>${label}</dt><dd><span class="mf-edit" contenteditable="plaintext-only" spellcheck="false" role="textbox" aria-label="${esc(label)}" data-mf-edit="${key}" data-mf-id="${esc(f.id)}" data-mf-alt="${esc(wert || '')}" data-ph="${esc(platzhalter)}">${esc(wert || '')}</span>${kopie ? kopierKnopf(wert) : ''}</dd>`;
+    async function inlineSpeichern(el) {
+        const key = el.dataset.mfEdit, id = el.dataset.mfId, alt = el.dataset.mfAlt || '';
+        let v = el.textContent.replace(/\s+/g, ' ').trim();
+        if (v === alt) { el.textContent = alt; return; }
+        let wert = v || null;
+        if (key === 'intervall_stunden' || key === 'intervall_monate') {
+            const n = parseInt(v, 10);
+            if (v && !(n > 0)) { toast('Bitte eine ganze Zahl eingeben.', 'error'); el.textContent = alt; return; }
+            wert = v ? n : null; v = v ? String(n) : '';
+        }
+        if (key === 'sage_artikelnr' && v) {
+            if (!/^\d{1,8}$/.test(v)) { toast('Sage-Artikelnummern bestehen aus bis zu 8 Ziffern.', 'error'); el.textContent = alt; return; }
+            v = v.padStart(8, '0'); wert = v;
+        }
+        const { error } = await sb().from('machine_filters').update({ [key]: wert, updated_at: new Date().toISOString() }).eq('id', id);
+        if (error) { toast('Speichern fehlgeschlagen: ' + error.message, 'error'); el.textContent = alt; return; }
+        el.textContent = v; el.dataset.mfAlt = v;
+        const z = (liste || []).find(x => String(x.id) === String(id)); if (z) z[key] = wert;
+        toast('Gespeichert – gilt für alle Maschinen mit diesem Filter.', 'success');
+    }
+    document.addEventListener('focusout', e => { const el = e.target.closest && e.target.closest('[data-mf-edit]'); if (el) inlineSpeichern(el); });
+    document.addEventListener('keydown', e => {
+        const el = e.target.closest && e.target.closest('[data-mf-edit]'); if (!el) return;
+        if (e.key === 'Enter') { e.preventDefault(); el.blur(); }
+        else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); el.textContent = el.dataset.mfAlt || ''; el.blur(); }
+    }, true);
+
     // ---------------------------------------------------- Reiter in der Maschinen-Zentrale
     function tabHtml(m, neuZeichnen) {
         // Katalog frisch halten: nach 15 s beim Öffnen/Neuzeichnen neu holen (sonst fehlen gerade angelegte Filter); danach einmal neu zeichnen
         if (!liste || Date.now() - geladenAm > 15000) {
             const erst = !liste;
-            laden(true).then(() => { if (typeof neuZeichnen === 'function') neuZeichnen(); });
+            laden(true).then(() => { const a = document.activeElement; if (typeof neuZeichnen === 'function' && !(a && a.dataset && a.dataset.mfEdit)) neuZeichnen(); });
             if (erst) return '<div class="mz-laedt">Lade …</div>';
         }
         const treffer = passende(m);
@@ -94,17 +124,17 @@
             <div class="mf-liste">${[...treffer].sort(nachGruppe).map((f, i, l) => {
                 const alt = arr(f.alternativen);
                 const gruppe = i === 0 || gruppeVon(l[i - 1]) !== gruppeVon(f) ? gruppenKopf(gruppeVon(f)) : '';
-                const iv = intervallText(f);
                 return `${gruppe}<section class="mz-karte mf-karte">
                     <b class="mf-name">${esc(f.bezeichnung)}</b>
                     <dl class="mz-daten">
-                        ${f.sage_artikelnr ? `<dt>Sage-Art.-Nr.</dt><dd><b>${esc(f.sage_artikelnr)}</b> <button type="button" class="mf-kopie" data-mf-kopie="${esc(f.sage_artikelnr)}" title="Nummer kopieren" aria-label="Nummer kopieren">⧉</button></dd>` : ''}
-                        ${f.oem_nr ? `<dt>OEM-Nr.</dt><dd>${esc(f.oem_nr)} <button type="button" class="mf-kopie" data-mf-kopie="${esc(f.oem_nr)}" title="Nummer kopieren" aria-label="Nummer kopieren">⧉</button></dd>` : ''}
-                        ${alt.map((a, i) => `<dt>Alternativ ${i + 1}</dt><dd>${esc(a)} <button type="button" class="mf-kopie" data-mf-kopie="${esc(a)}" title="Nummer kopieren" aria-label="Nummer kopieren">⧉</button></dd>`).join('')}
-                        ${f.menge ? `<dt>Menge</dt><dd>${esc(f.menge)}</dd>` : ''}
-                        ${iv ? `<dt>Intervall</dt><dd>${esc(iv)}</dd>` : ''}
+                        ${editFeld(f, 'sage_artikelnr', 'Sage-Art.-Nr.', f.sage_artikelnr, 'Nummer eintragen', true)}
+                        ${editFeld(f, 'oem_nr', 'OEM-Nr.', f.oem_nr, 'Nummer eintragen', true)}
+                        ${alt.map((a, i) => `<dt>Alternativ ${i + 1}</dt><dd>${esc(a)}${kopierKnopf(a)}</dd>`).join('')}
+                        ${editFeld(f, 'menge', 'Menge', f.menge, 'z. B. 1 Stück', false)}
+                        ${editFeld(f, 'intervall_stunden', 'Wechsel alle (Std.)', f.intervall_stunden, 'Betriebsstunden', false)}
+                        ${editFeld(f, 'intervall_monate', 'Wechsel alle (Monate)', f.intervall_monate, 'Monate', false)}
                     </dl>
-                    ${f.notiz ? `<small class="mz-notiz">📝 ${esc(f.notiz)}</small>` : ''}
+                    <small class="mz-notiz">📝 <span class="mf-edit" contenteditable="plaintext-only" spellcheck="false" role="textbox" aria-label="Notiz" data-mf-edit="notiz" data-mf-id="${esc(f.id)}" data-mf-alt="${esc(f.notiz || '')}" data-ph="Notiz eintragen">${esc(f.notiz || '')}</span></small>
                 </section>`;
             }).join('')}</div>
         </div>`;
@@ -121,7 +151,7 @@
         const wofuer = [ohneMotor ? '' : arr(f.motor_typen).join(', '), f.hersteller, f.maschinentyp].filter(Boolean).join(' · ');
         return `<button type="button" class="mf-zeile" data-mf-bearbeiten="${esc(f.id)}" data-mf-zid="${esc(f.id)}" draggable="true" title="Ziehen, um die Reihenfolge zu ändern">
             <span class="mf-z-haupt"><b>${esc(f.bezeichnung)}</b><small>${[f.sage_artikelnr ? esc(f.sage_artikelnr) : '', f.oem_nr ? 'OEM ' + esc(f.oem_nr) : '', arr(f.alternativen).length ? arr(f.alternativen).length + ' Alt.' : ''].filter(Boolean).join(' · ')}</small></span>
-            <span class="mf-z-wofuer">${esc(wofuer) || '<i>nicht zugeordnet</i>'}</span>
+            <span class="mf-z-wofuer">${esc(wofuer) || (ohneMotor ? esc([f.menge, f.notiz].filter(Boolean).join(' · ')) : '<i>nicht zugeordnet</i>')}</span>
             <span class="mf-z-iv">${esc(intervallText(f).replace('(was zuerst eintritt)', '').trim())}</span></button>`;
     }
 

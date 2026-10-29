@@ -498,3 +498,12 @@
 .proc-msg-details > summary::before { content: '▸'; display: inline-block; margin-right: var(--space-2); transition: transform var(--dur-fast, 0.15s) ease; }
 .proc-msg-details[open] > summary::before { transform: rotate(90deg); }
 .proc-msg-details > summary span { font-weight: 500; opacity: 0.6; margin-left: var(--space-1); }
+
+/* Stand einem Schritt zuordnen */
+.stand-schritt { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin: var(--space-2) 0 var(--space-3); }
+.stand-schritt select { flex: 1 1 200px; min-width: 0; }
+.stand-schritt input { flex: 1 1 100%; }
+.stand-schritt-chip { display: inline-flex; align-items: center; gap: var(--space-1); margin-bottom: var(--space-1); padding: 2px var(--space-2); border-radius: var(--radius-pill); background: var(--success-soft); color: var(--success); font-size: var(--fs-xs); font-weight: 600; cursor: pointer; }
+.stand-schritt-meta { font-size: var(--fs-xs); color: var(--info); font-weight: 600; }
+
+.proc-angebot-x { margin-left: auto; }

@@ -138,9 +138,15 @@
         const { data, error } = await sb().from('dokument_seiten').select('seite, text').eq('document_id', docId).order('seite').limit(1000);
         if (error || !data || !data.length) return 0;
         const kopf = s => String(s.text || '').split('\n').slice(0, 3).join(' ');
-        const treffer = data.filter(s => /Wartung/i.test(kopf(s)) && /Wartungsplan der Betriebsstoffe|Einmalige Wartung|Wartung (nach|alle)|T[äa]gliche Wartung|Baugruppe\s*\|\s*T[äa]tigkeit/i.test(s.text || '')).map(s => s.seite);
+        const treffer = data.filter(s => /^\s*(ARJES IMPAKTOR\s+)?Wartung\b/i.test(String(s.text || '')) && /Wartungsplan der Betriebsstoffe|Einmalige Wartung|Wartung (nach|alle)|T[äa]gliche Wartung|Baugruppe\s*\|\s*T[äa]tigkeit/i.test(s.text || '')).map(s => s.seite);
         if (!treffer.length) return 0;
-        const von = Math.min(...treffer), bis = Math.min(Math.max(...treffer), von + 29);
+        const sortiert = [...new Set(treffer)].sort((x, y) => x - y);
+        // Inhaltsverzeichnis (Seite 5) und Nachweisformulare am Ende liegen weit weg: nur den zusammenhängenden Block nehmen, der mit „Wartung“ beginnt
+        let blocks = [], akt = [sortiert[0]];
+        sortiert.slice(1).forEach(x => { if (x - akt[akt.length - 1] <= 2) akt.push(x); else { blocks.push(akt); akt = [x]; } });
+        blocks.push(akt);
+        const block = blocks.filter(bl => bl.length >= 2).sort((x, y) => y.length - x.length)[0] || blocks[0];
+        const von = Math.min(...block), bis = Math.min(Math.max(...block), von + 29);
         const seiten = data.filter(s => s.seite >= von && s.seite <= bis);
         const PROMPT_W = `Das ist der Wartungsteil einer Betriebsanleitung (Text je Seite). Liste ALLE planmäßigen Wartungsarbeiten nach Intervall auf. Antworte NUR mit JSON:
 {"plan":[{"intervall":"z. B. Täglich vor Arbeitsbeginn | Einmalig nach 16 Stunden | Nach 100 Stunden oder einem Monat | Alle 500 Stunden oder halbjährlich","stunden":Zahl der kleinsten Stundenangabe (täglich/vor jedem Start = 0, sonst die Stunden),"baugruppe":"z. B. Motor, Getriebe, Hydraulik","taetigkeit":"kurz, in einem Satz, wie in der Anleitung","seite":N}]}
